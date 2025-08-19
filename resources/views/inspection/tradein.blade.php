@@ -396,26 +396,46 @@
                                                                 <div class="mt-4">
                                                                     <h5>Photos </h5>
                                                                     <div id="photoGallery{{$inspection->id}}" class="row g-2 mt-2">
-                                                                        @if($inspection->photos)
-                                                                            @foreach($inspection->getPhotosWithUrls() as $photo)
-                                                                            <div class="col-md-3 col-sm-4 col-6 photo-item" data-photo-index="{{$photo['index']}}">
+                                                                       @if($inspection->photos)
+                                                                        @php
+                                                                            $inspectionPhotos = $inspection->photos ?? [];
+                                                                        @endphp
+                                                                        @foreach($inspectionPhotos as $index => $photoPath)
+                                                                            @php
+                                                                                // Generate S3 URL
+                                                                                if (str_starts_with($photoPath, 'http')) {
+                                                                                    $photoUrl = $photoPath;
+                                                                                } else {
+                                                                                    $bucket = config('filesystems.disks.s3.bucket');
+                                                                                    $region = config('filesystems.disks.s3.region');
+                                                                                    $photoUrl = "https://{$bucket}.s3.{$region}.amazonaws.com/{$photoPath}";
+                                                                                }
+                                                                                $photoName = basename($photoPath);
+                                                                            @endphp
+                                                                            <div class="col-md-3 col-sm-4 col-6 photo-item" data-photo-index="{{$index}}">
                                                                                 <div class="card">
-                                                                                    <img src="{{ $photo['url'] }}" 
+                                                                                    <img src="{{ $photoUrl }}" 
                                                                                         class="card-img-top photo-thumbnail" 
-                                                                                        alt="{{$photo['name']}}"
+                                                                                        alt="{{$photoName}}"
                                                                                         style="height: 150px; object-fit: cover; cursor: pointer;"
-                                                                                        onclick="showPhotoPreview('{{$inspection->id}}', '{{ $photo['url'] }}', '{{$photo['name']}}')">
+                                                                                        onclick="showPhotoPreview('{{$inspection->id}}', '{{ $photoUrl }}', '{{$photoName}}')"
+                                                                                        loading="lazy"
+                                                                                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                                                    <div style="display: none; height: 150px; background: #f8f9fa; border: 1px solid #dee2e6; align-items: center; justify-content: center; flex-direction: column;">
+                                                                                        <i class="fas fa-image text-muted"></i>
+                                                                                        <small class="text-muted">Failed to load</small>
+                                                                                    </div>
                                                                                     <div class="card-body p-2">
                                                                                         <button type="button" class="btn btn-danger btn-sm mt-1 delete-photo-btn" 
-                                                                                                data-photo-index="{{$photo['index']}}"
+                                                                                                data-photo-index="{{$index}}"
                                                                                                 data-inspection-id="{{$inspection->id}}">
                                                                                             <i class="fas fa-trash"></i>
                                                                                         </button>
                                                                                     </div>
                                                                                 </div>
                                                                             </div>
-                                                                            @endforeach
-                                                                        @endif
+                                                                        @endforeach
+                                                                    @endif
                                                                     </div>
                                                                     
                                                                     <div id="emptyPhotosMessage{{$inspection->id}}" class="text-center text-muted mt-3" 
@@ -1020,102 +1040,183 @@
                                                 const { jsPDF } = window.jspdf;
 
                                                 async function generateInspectionPDF(inspectionId) {
-                                                const element = document.querySelector(`.inspection-container${inspectionId}`);
-                                                const buttons = document.querySelectorAll(`button[onclick*="generateInspectionPDF(${inspectionId})"]`);
-                                                
-                                                if (!element) {
-                                                    console.error('Inspection container not found');
-                                                    alert('Report content not found. Please refresh and try again.');
-                                                    return;
-                                                }
+                                                    const element = document.querySelector(`.inspection-container${inspectionId}`);
+                                                    const buttons = document.querySelectorAll(`button[onclick*="generateInspectionPDF(${inspectionId})"]`);
+                                                    
+                                                    if (!element) {
+                                                        console.error('Inspection container not found');
+                                                        alert('Report content not found. Please refresh and try again.');
+                                                        return;
+                                                    }
 
-                                                // Show loading state
-                                                const originalButtonHTMLs = [];
-                                                buttons.forEach(button => {
-                                                    originalButtonHTMLs.push(button.innerHTML);
-                                                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
-                                                    button.disabled = true;
-                                                });
-
-                                                try {
-                                                    // Clone element for capture
-                                                    const elementClone = element.cloneNode(true);
-                                                    elementClone.style.position = 'absolute';
-                                                    elementClone.style.left = '-9999px';
-                                                    elementClone.style.width = '210mm';
-                                                    document.body.appendChild(elementClone);
-
-                                                    // Create PDF
-                                                    const pdf = new jsPDF({
-                                                    orientation: 'portrait',
-                                                    unit: 'mm',
-                                                    format: 'a4',
-                                                    hotfixes: ["px_scaling"]
+                                                    // Show loading state
+                                                    const originalButtonHTMLs = [];
+                                                    buttons.forEach(button => {
+                                                        originalButtonHTMLs.push(button.innerHTML);
+                                                        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+                                                        button.disabled = true;
                                                     });
 
-                                                    // Capture with html2canvas
-                                                    const canvas = await html2canvas(elementClone, {
-                                                    scale: 2,
-                                                    logging: false,
-                                                    useCORS: true,
-                                                    scrollY: 0,
-                                                    windowHeight: elementClone.scrollHeight,
-                                                    onclone: (clonedDoc) => {
-                                                        clonedDoc.querySelectorAll('*').forEach(el => {
-                                                        el.style.opacity = '1';
-                                                        el.style.overflow = 'visible';
+                                                    try {
+                                                        // Clone element for capture
+                                                        const elementClone = element.cloneNode(true);
+                                                        elementClone.style.position = 'absolute';
+                                                        elementClone.style.left = '-9999px';
+                                                        elementClone.style.width = '210mm';
+                                                        elementClone.style.backgroundColor = 'white';
+                                                        document.body.appendChild(elementClone);
+
+                                                        // Convert S3 images to base64 using proxy
+                                                        const images = elementClone.querySelectorAll('img');
+                                                        console.log(`Found ${images.length} images to process`);
+                                                        
+                                                        const imagePromises = Array.from(images).map(async (img, index) => {
+                                                            try {
+                                                                // Skip if image is already a data URL or local asset
+                                                                if (img.src.startsWith('data:') || img.src.includes('assets/images/') || img.src.includes('/dashboardv1/')) {
+                                                                    console.log(`Skipping local image ${index}: ${img.src.substring(0, 50)}...`);
+                                                                    return;
+                                                                }
+
+                                                                console.log(`Processing S3 image ${index}: ${img.src.substring(0, 80)}...`);
+                                                                
+                                                                // Use proxy route for S3 images
+                                                                const proxyUrl = `/proxy-image?url=${encodeURIComponent(img.src)}`;
+                                                                const response = await fetch(proxyUrl);
+                                                                
+                                                                if (!response.ok) {
+                                                                    throw new Error(`HTTP ${response.status}`);
+                                                                }
+                                                                
+                                                                const blob = await response.blob();
+                                                                const base64 = await new Promise((resolve, reject) => {
+                                                                    const reader = new FileReader();
+                                                                    reader.onload = () => resolve(reader.result);
+                                                                    reader.onerror = reject;
+                                                                    reader.readAsDataURL(blob);
+                                                                });
+                                                                
+                                                                console.log(`Successfully converted image ${index} to base64`);
+                                                                img.src = base64;
+                                                                
+                                                                // Wait for image to load
+                                                                return new Promise((resolve) => {
+                                                                    if (img.complete) {
+                                                                        resolve();
+                                                                    } else {
+                                                                        img.onload = () => {
+                                                                            console.log(`Image ${index} loaded successfully`);
+                                                                            resolve();
+                                                                        };
+                                                                        img.onerror = () => {
+                                                                            console.log(`Image ${index} failed to load after conversion`);
+                                                                            resolve();
+                                                                        };
+                                                                    }
+                                                                });
+                                                                
+                                                            } catch (error) {
+                                                                console.warn(`Failed to load image ${index}:`, img.src, error);
+                                                                
+                                                                // Create a visible placeholder
+                                                                const placeholder = document.createElement('div');
+                                                                placeholder.style.width = '220px';
+                                                                placeholder.style.height = '220px';
+                                                                placeholder.style.backgroundColor = '#f8f9fa';
+                                                                placeholder.style.border = '2px solid #dee2e6';
+                                                                placeholder.style.display = 'flex';
+                                                                placeholder.style.alignItems = 'center';
+                                                                placeholder.style.justifyContent = 'center';
+                                                                placeholder.style.flexDirection = 'column';
+                                                                placeholder.style.color = '#6c757d';
+                                                                placeholder.style.fontSize = '14px';
+                                                                placeholder.innerHTML = `
+                                                                    <i class="fas fa-image" style="font-size: 24px; margin-bottom: 8px;"></i>
+                                                                    <span>Photo ${index + 1}</span>
+                                                                `;
+                                                                
+                                                                // Replace the image with placeholder
+                                                                img.parentNode.replaceChild(placeholder, img);
+                                                            }
+                                                        });
+
+                                                        // Wait for all images to be processed
+                                                        console.log('Waiting for all images to process...');
+                                                        await Promise.all(imagePromises);
+                                                        console.log('All images processed');
+
+                                                        // Additional delay to ensure rendering
+                                                        await new Promise(resolve => setTimeout(resolve, 2000));
+
+                                                        console.log('Starting PDF capture...');
+
+                                                        // Create PDF with better settings
+                                                        const pdf = new jsPDF({
+                                                            orientation: 'portrait',
+                                                            unit: 'mm',
+                                                            format: 'a4',
+                                                            hotfixes: ["px_scaling"]
+                                                        });
+
+                                                        // Capture with html2canvas
+                                                        const canvas = await html2canvas(elementClone, {
+                                                            scale: 1.5, // Reduced scale for better performance
+                                                            logging: true, // Enable logging for debugging
+                                                            useCORS: true,
+                                                            allowTaint: true,
+                                                            scrollY: 0,
+                                                            windowHeight: elementClone.scrollHeight,
+                                                            backgroundColor: '#ffffff',
+                                                            removeContainer: false,
+                                                            imageTimeout: 15000,
+                                                            onclone: (clonedDoc) => {
+                                                                console.log('Cloned document for capture');
+                                                                clonedDoc.querySelectorAll('*').forEach(el => {
+                                                                    el.style.opacity = '1';
+                                                                    el.style.overflow = 'visible';
+                                                                });
+                                                            }
+                                                        });
+                                                        
+                                                        console.log('Canvas captured successfully');
+                                                        document.body.removeChild(elementClone);
+
+                                                        // Convert to PDF
+                                                        const imgData = canvas.toDataURL('image/png', 0.8);
+                                                        const pdfWidth = pdf.internal.pageSize.getWidth() - 20;
+                                                        const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+                                                        // Multi-page support
+                                                        let heightLeft = imgHeight;
+                                                        let position = 10;
+                                                        const pageHeight = pdf.internal.pageSize.getHeight() - 20;
+
+                                                        pdf.addImage(imgData, 'PNG', 10, position, pdfWidth, imgHeight);
+                                                        heightLeft -= pageHeight;
+
+                                                        while (heightLeft >= 0) {
+                                                            position = heightLeft - imgHeight + 10;
+                                                            pdf.addPage();
+                                                            pdf.addImage(imgData, 'PNG', 10, position, pdfWidth, imgHeight);
+                                                            heightLeft -= pageHeight;
+                                                        }
+
+                                                        // Generate filename
+                                                        const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+                                                        const fileName = `Vehicle_Inspection_Report_${inspectionId}_${timestamp}.pdf`;
+                                                        
+                                                        console.log('Saving PDF:', fileName);
+                                                        pdf.save(fileName);
+
+                                                    } catch (error) {
+                                                        console.error("PDF generation error:", error);
+                                                        alert(`Failed to generate PDF: ${error.message}. Please try again.`);
+                                                    } finally {
+                                                        buttons.forEach((button, index) => {
+                                                            button.innerHTML = originalButtonHTMLs[index];
+                                                            button.disabled = false;
                                                         });
                                                     }
-                                                    });
-                                                    document.body.removeChild(elementClone);
-
-                                                    // PDF generation
-                                                    const imgData = canvas.toDataURL('image/png');
-                                                    const pdfWidth = pdf.internal.pageSize.getWidth() - 20;
-                                                    const imgHeight = (canvas.height * pdfWidth) / canvas.width;
-
-                                                    // Multi-page support
-                                                    let heightLeft = imgHeight;
-                                                    let position = 10;
-                                                    const pageHeight = pdf.internal.pageSize.getHeight() - 20;
-
-                                                    while (heightLeft >= 0) {
-                                                    pdf.addImage(imgData, 'PNG', 10, position, pdfWidth, imgHeight);
-                                                    heightLeft -= pageHeight;
-                                                    position -= pageHeight;
-                                                    if (heightLeft > 0) pdf.addPage();
-                                                    }
-
-                                                    // DYNAMIC NAMING SOLUTION - FIXED
-                                                    const customerNameElement = element.querySelector('.inventory-item label');
-                                                    let customerName = 'Inspection_Report';
-                                                    
-                                                    if (customerNameElement) {
-                                                    // Extract just the name part (after "Customer Name")
-                                                    const text = customerNameElement.textContent || customerNameElement.innerText;
-                                                    const nameMatch = text.match(/Customer Name\s*([^\n]+)/);
-                                                    customerName = nameMatch ? nameMatch[1].trim() : 'Inspection_Report';
-                                                    
-                                                    // Clean the filename
-                                                    customerName = customerName
-                                                        .replace(/\s+/g, '_')
-                                                        .replace(/[^a-zA-Z0-9_-]/g, '')
-                                                        .substring(0, 50); // Limit length
-                                                    }
-
-                                                    // Final filename with timestamp
-                                                    const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-                                                    pdf.save(`${customerName}_${inspectionId}_${timestamp}.pdf`);
-
-                                                } catch (error) {
-                                                    console.error("PDF generation error:", error);
-                                                    alert("Failed to generate PDF. Please try again.");
-                                                } finally {
-                                                    buttons.forEach((button, index) => {
-                                                    button.innerHTML = originalButtonHTMLs[index];
-                                                    button.disabled = false;
-                                                    });
-                                                }
                                                 }
                                                 </script>
                                                 

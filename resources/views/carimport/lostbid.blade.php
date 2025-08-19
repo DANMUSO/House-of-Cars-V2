@@ -50,25 +50,46 @@
                                     <div class="modal-body">
                                         <div class="row">
                                    
-                                        @php
-                                            // Decode the JSON string into an array of image paths
-                                            $imagePaths = json_decode($bid->photos);
-                                        @endphp
+                                    @php
+                                        // Decode the JSON string into an array of image paths
+                                        $imagePaths = json_decode($bid->photos);
+                                    @endphp
 
-                                        @if ($imagePaths && is_array($imagePaths))
-                                            @foreach ($imagePaths as $imagePath)
-                                                @php
-                                                    // Generate the URL for each image
-                                                    $imageUrl = asset('storage/' . $imagePath);
-                                                @endphp
-                                                <div class="col-md-12 col-lg-6 mb-3">
-                                                    <img src="{{ $imageUrl }}" alt="Car Image" width="100%" class="img-hover-zoom">
+                                    @if ($imagePaths && is_array($imagePaths))
+                                        @foreach ($imagePaths as $imagePath)
+                                            @php
+                                                // Check if the image path is already a full S3 URL or just the S3 key
+                                                if (str_starts_with($imagePath, 'https://')) {
+                                                    // Already a full URL
+                                                    $imageUrl = $imagePath;
+                                                } else {
+                                                    // Generate S3 URL from the key path
+                                                    $bucket = config('filesystems.disks.s3.bucket');
+                                                    $region = config('filesystems.disks.s3.region');
+                                                    $imageUrl = "https://{$bucket}.s3.{$region}.amazonaws.com/{$imagePath}";
+                                                }
+                                            @endphp
+                                            <div class="col-md-12 col-lg-6 mb-3">
+                                                <img src="{{ $imageUrl }}" 
+                                                    alt="Car Image" 
+                                                    width="100%" 
+                                                    class="img-hover-zoom"
+                                                    loading="lazy"
+                                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                                <div style="display: none; text-align: center; padding: 20px; background: #f8f9fa; border: 1px solid #dee2e6;">
+                                                    <i class="fas fa-image fa-2x text-muted mb-2"></i>
+                                                    <p class="text-muted mb-0">Image failed to load</p>
                                                 </div>
-                                            @endforeach
-                                        @else
-                                            <p>No images available for this car.</p>
-                                        @endif
-
+                                            </div>
+                                        @endforeach
+                                    @else
+                                        <div class="col-12">
+                                            <div class="text-center py-4">
+                                                <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                                                <p class="text-muted">No images available for this car.</p>
+                                            </div>
+                                        </div>
+                                    @endif
                                         </div>
                                     </div>
                                 </div>

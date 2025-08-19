@@ -429,29 +429,42 @@
                                     <div class="row g-3">
                                         <div class="col-md-6">
                                             <div class="spec-item p-3 bg-light rounded">
-                                                <div class="spec-label text-muted small mb-1">VIN Number</div>
-                                                <div class="spec-value fw-semibold">{{ $car->vin }}</div>
+                                                <div class="spec-label text-muted small mb-1">
+                                                    VIN Number<br>
+                                                    {{ $car->vin }}
+                                                </div>
+                                               
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="spec-item p-3 bg-light rounded">
-                                                <div class="spec-label text-muted small mb-1">Engine Type</div>
-                                                <div class="spec-value fw-semibold">{{ $car->engine_type }}</div>
+                                                <div class="spec-label text-muted small mb-1">
+                                                    Engine Type
+                                                    <br>
+                                                    {{ $car->engine_type }}
+
+
+                                                </div>
+                                                <div class="spec-value fw-semibold"></div>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="spec-item p-3 bg-light rounded">
-                                                <div class="spec-label text-muted small mb-1">Mileage</div>
-                                                <div class="spec-value fw-semibold">
-                                                    <i class="fas fa-tachometer-alt me-2 text-primary"></i>
+                                                <div class="spec-label text-muted small mb-1">
+                                                    Mileage<br>
+                                                         <i class="fas fa-tachometer-alt me-2 text-primary"></i>
                                                     {{ number_format($car->mileage) }} km
                                                 </div>
+                                              
+                                                
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="spec-item p-3 bg-light rounded">
-                                                <div class="spec-label text-muted small mb-1">Body Type</div>
-                                                <div class="spec-value fw-semibold">{{ $car->body_type }}</div>
+                                                <div class="spec-label text-muted small mb-1">
+                                                    Body Type<br>
+                                                 {{ $car->body_type }}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -477,7 +490,7 @@
                                                     <div class="carousel-inner rounded-3 shadow-sm">
                                                         @foreach($photos as $index => $photo)
                                                             <div class="carousel-item {{ $index == 0 ? 'active' : '' }}">
-                                                                <img src="{{ asset('storage/' . $photo) }}" 
+                                                                <img src="https://houseofcars.s3.eu-central-1.amazonaws.com/{{$photo }}" 
                                                                      class="d-block w-100" 
                                                                      style="height: 320px; object-fit: cover;" 
                                                                      alt="Vehicle Photo {{ $index + 1 }}"
@@ -506,7 +519,7 @@
                                                         <div class="row g-2">
                                                             @foreach(array_slice($photos, 0, 4) as $index => $photo)
                                                                 <div class="col-3">
-                                                                    <img src="{{ asset('storage/' . $photo) }}" 
+                                                                    <img src="https://houseofcars.s3.eu-central-1.amazonaws.com/{{$photo}}" 
                                                                          class="img-thumbnail cursor-pointer thumbnail-img" 
                                                                          style="height: 60px; object-fit: cover; width: 100%;"
                                                                          data-bs-target="#carouselImport{{$cash->id}}" 
@@ -615,38 +628,39 @@
                                     <div class="row g-3">
                                         <div class="col-md-6">
                                             <div class="spec-item p-3 bg-light rounded">
-                                                <div class="spec-label text-muted small mb-1">Vehicle Make</div>
-                                                <div class="spec-value fw-semibold">
-                                                    <i class="fas fa-industry me-2 text-primary"></i>
+                                                <div class="spec-label text-muted small mb-1">Vehicle Make
+                                                    <br>
+                                                     <i class="fas fa-industry me-2 text-primary"></i>
                                                     {{ $car->vehicle_make }}
                                                 </div>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="spec-item p-3 bg-light rounded">
-                                                <div class="spec-label text-muted small mb-1">Number Plate</div>
-                                                <div class="spec-value fw-semibold">
+                                                <div class="spec-label text-muted small mb-1">Number Plate<br>
                                                     <i class="fas fa-id-card me-2 text-success"></i>
                                                     {{ $car->number_plate }}
                                                 </div>
+                                              
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="spec-item p-3 bg-light rounded">
-                                                <div class="spec-label text-muted small mb-1">Chassis Number</div>
-                                                <div class="spec-value fw-semibold">
-                                                    <i class="fas fa-barcode me-2 text-info"></i>
+                                                <div class="spec-label text-muted small mb-1">Chassis Number<br>
+                                                        <i class="fas fa-barcode me-2 text-info"></i>
                                                     {{ $car->chasis_no }}
                                                 </div>
+                                              
                                             </div>
                                         </div>
                                         <div class="col-md-6">
                                             <div class="spec-item p-3 bg-light rounded">
-                                                <div class="spec-label text-muted small mb-1">Vehicle ID</div>
-                                                <div class="spec-value fw-semibold">
-                                                    <i class="fas fa-hashtag me-2 text-warning"></i>
+                                                <div class="spec-label text-muted small mb-1">Vehicle ID<br>
+                                                       <i class="fas fa-hashtag me-2 text-warning"></i>
                                                     #{{ $car->id }}
                                                 </div>
+                                               
+                                                
                                             </div>
                                         </div>
                                     </div>
@@ -696,7 +710,7 @@
                                                     <div class="carousel-inner rounded-3 shadow-sm">
                                                         @foreach($photos as $index => $photo)
                                                             <div class="carousel-item {{ $index == 0 ? 'active' : '' }}">
-                                                                <img src="{{ asset($photo) }}" 
+                                                                <img src="https://houseofcars.s3.eu-central-1.amazonaws.com/{{$photo}}" 
                                                                      class="d-block w-100" 
                                                                      style="height: 320px; object-fit: cover;" 
                                                                      alt="Vehicle Photo {{ $index + 1 }}"
@@ -725,7 +739,7 @@
                                                         <div class="row g-2">
                                                             @foreach(array_slice($photos, 0, 4) as $index => $photo)
                                                                 <div class="col-3">
-                                                                    <img src="{{ asset($photo) }}" 
+                                                                    <img src="https://houseofcars.s3.eu-central-1.amazonaws.com/{{$photo}}" 
                                                                          class="img-thumbnail cursor-pointer thumbnail-img" 
                                                                          style="height: 60px; object-fit: cover; width: 100%;"
                                                                          data-bs-target="#carouselCustomer{{$cash->id}}" 

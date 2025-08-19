@@ -532,6 +532,98 @@
                                             Vehicle details not available.
                                         </div>
                                     @endif
+                                    <!-- Extended Vehicle Details -->
+                    @if($agreement->customerVehicle)
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">Customer Vehicle Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <strong>Customer Name:</strong> {{ $agreement->customerVehicle->customer_name ?? 'N/A' }}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Phone Number:</strong> {{ $agreement->customerVehicle->phone_no ?? 'N/A' }}
+                                    </div>
+                                    <div class="col-md-4">
+                                        <strong>Email:</strong> {{ $agreement->customerVehicle->email ?? 'N/A' }}
+                                    </div>
+                                </div>
+                                
+                                @if(isset($agreement->customerVehicle->photos) && !empty($agreement->customerVehicle->photos))
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <strong>Vehicle Photos:</strong>
+                                            <div class="d-flex gap-2 mt-2">
+                                                @php
+                                                    $photos = is_string($agreement->customerVehicle->photos) ? 
+                                                             json_decode($agreement->customerVehicle->photos, true) : 
+                                                             $agreement->customerVehicle->photos;
+                                                @endphp
+                                                @if(is_array($photos))
+                                                    @foreach($photos as $photo)
+                                                        <img src="https://houseofcars.s3.eu-central-1.amazonaws.com/{{$photo}}" alt="Vehicle Photo" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
+                                                    @endforeach
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+
+                    @if($agreement->carImport)
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">Import Vehicle Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <strong>Engine:</strong> {{ $agreement->carImport->engine ?? 'N/A' }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>Transmission:</strong> {{ $agreement->carImport->transmission ?? 'N/A' }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>Fuel Type:</strong> {{ $agreement->carImport->fuel_type ?? 'N/A' }}
+                                    </div>
+                                    <div class="col-md-3">
+                                        <strong>Mileage:</strong> {{ $agreement->carImport->mileage ?? 'N/A' }}
+                                    </div>
+                                </div>
+                                
+                                @if(isset($agreement->carImport->photos) && !empty($agreement->carImport->photos))
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <strong>Vehicle Photos:</strong>
+                                            <div class="row mt-2">
+                                                @php
+                                                    $photos = is_string($agreement->carImport->photos) ? 
+                                                             json_decode($agreement->carImport->photos, true) : 
+                                                             $agreement->carImport->photos;
+                                                @endphp
+                                                @if(is_array($photos))
+                                                    @foreach($photos as $photo)
+                                                        <div class="col-md-4 mb-3">
+                                                            <div class="card">
+                                                                <img src="https://houseofcars.s3.eu-central-1.amazonaws.com/{{$photo}}" 
+                                                                     alt="Vehicle Photo" 
+                                                                     class="card-img-top img-fluid" 
+                                                                     style="object-fit: cover; height: 200px; width: 100%;">
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
                                 </div>
                             </div>
                         </div>

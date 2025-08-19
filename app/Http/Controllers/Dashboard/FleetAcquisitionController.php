@@ -18,96 +18,501 @@ class FleetAcquisitionController extends Controller
         return view('fleetacquisition.index', compact('fleetAcquisitions'));
     }
 
-    public function store(Request $request)
-    {
-        $request->validate([
-            // Vehicle Information
-            'vehicle_make' => 'required|string|max:255',
-            'vehicle_model' => 'required|string|max:255',
-            'vehicle_year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
-            'engine_capacity' => 'required|string|max:50',
-            'chassis_number' => 'required|string|unique:fleet_acquisitions,chassis_number|max:255',
-            'engine_number' => 'required|string|unique:fleet_acquisitions,engine_number|max:255',
-            'registration_number' => 'nullable|string|max:20',
-            'vehicle_category' => 'required|in:commercial,passenger,utility,special_purpose',
-            'purchase_price' => 'required|numeric|min:0',
-            'market_value' => 'required|numeric|min:0',
-            'vehicle_photos.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            
-            // Financial Details
-            'down_payment' => 'required|numeric|min:0',
-            'interest_rate' => 'required|numeric|min:0|max:100',
-            'loan_duration_months' => 'required|integer|min:1|max:120',
-            'first_payment_date' => 'required|date',
-            'insurance_premium' => 'nullable|numeric|min:0',
-            
-            // Legal & Compliance
-            'hp_agreement_number' => 'required|string|unique:fleet_acquisitions,hp_agreement_number|max:255',
-            'logbook_custody' => 'required|in:financier,company',
-            'insurance_policy_number' => 'nullable|string|max:255',
-            'insurance_company' => 'nullable|string|max:255',
-            'insurance_expiry_date' => 'nullable|date',
-            'company_kra_pin' => 'required|string|max:20',
-            'business_permit_number' => 'nullable|string|max:255',
-            
-            // Vendor/Financier Information
-            'financing_institution' => 'required|string|max:255',
-            'financier_contact_person' => 'nullable|string|max:255',
-            'financier_phone' => 'nullable|string|max:20',
-            'financier_email' => 'nullable|email|max:255',
-            'financier_agreement_ref' => 'nullable|string|max:255',
+public function store(Request $request)
+{
+    $request->validate([
+        // Vehicle Information
+        'vehicle_make' => 'required|string|max:255',
+        'vehicle_model' => 'required|string|max:255',
+        'vehicle_year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
+        'engine_capacity' => 'required|string|max:50',
+        'chassis_number' => 'required|string|unique:fleet_acquisitions,chassis_number|max:255',
+        'engine_number' => 'required|string|unique:fleet_acquisitions,engine_number|max:255',
+        'registration_number' => 'nullable|string|max:20',
+        'vehicle_category' => 'required|in:commercial,passenger,utility,special_purpose',
+        'purchase_price' => 'required|numeric|min:0',
+        'market_value' => 'required|numeric|min:0',
+        'vehicle_photos.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        
+        // Financial Details
+        'down_payment' => 'required|numeric|min:0',
+        'interest_rate' => 'required|numeric|min:0|max:100',
+        'loan_duration_months' => 'required|integer|min:1|max:120',
+        'first_payment_date' => 'required|date',
+        'insurance_premium' => 'nullable|numeric|min:0',
+        
+        // Legal & Compliance
+        'hp_agreement_number' => 'required|string|unique:fleet_acquisitions,hp_agreement_number|max:255',
+        'logbook_custody' => 'required|in:financier,company',
+        'insurance_policy_number' => 'nullable|string|max:255',
+        'insurance_company' => 'nullable|string|max:255',
+        'insurance_expiry_date' => 'nullable|date',
+        'company_kra_pin' => 'required|string|max:20',
+        'business_permit_number' => 'nullable|string|max:255',
+        
+        // Vendor/Financier Information
+        'financing_institution' => 'required|string|max:255',
+        'financier_contact_person' => 'nullable|string|max:255',
+        'financier_phone' => 'nullable|string|max:20',
+        'financier_email' => 'nullable|email|max:255',
+        'financier_agreement_ref' => 'nullable|string|max:255',
+    ]);
+
+    DB::beginTransaction();
+    
+    try {
+        \Log::info('Starting fleet acquisition creation', [
+            'vehicle_make' => $request->vehicle_make,
+            'vehicle_model' => $request->vehicle_model,
+            'has_photos' => $request->hasFile('vehicle_photos')
         ]);
 
-        DB::beginTransaction();
+        // Handle photo uploads to S3
+        $photosPaths = [];
+        $uploadErrors = [];
         
-        try {
-            // Handle photo uploads
-            $photosPaths = [];
-            if ($request->hasFile('vehicle_photos')) {
-                foreach ($request->file('vehicle_photos') as $photo) {
-                    $path = $photo->store('fleet_photos', 'public');
-                    $photosPaths[] = $path;
+        if ($request->hasFile('vehicle_photos')) {
+            \Log::info('Processing fleet vehicle photos', [
+                'photo_count' => count($request->file('vehicle_photos'))
+            ]);
+
+            foreach ($request->file('vehicle_photos') as $index => $photo) {
+                try {
+                    // Generate unique filename
+                    $originalName = pathinfo($photo->getClientOriginalName(), PATHINFO_FILENAME);
+                    $extension = $photo->getClientOriginalExtension();
+                    $filename = $originalName . '_' . time() . '_' . uniqid() . '.' . $extension;
+                    
+                    // Upload to S3 using direct method
+                    $filePath = $this->uploadFleetPhotoToS3Direct($photo, $filename);
+                    
+                    $photosPaths[] = $filePath;
+                    
+                    \Log::info('Fleet photo uploaded successfully', [
+                        'index' => $index,
+                        'filename' => $filename,
+                        'path' => $filePath
+                    ]);
+                    
+                } catch (\Exception $e) {
+                    $error = "Failed to upload photo " . ($index + 1) . ": " . $e->getMessage();
+                    $uploadErrors[] = $error;
+                    
+                    \Log::error('Fleet photo upload failed', [
+                        'index' => $index,
+                        'filename' => $photo->getClientOriginalName(),
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+            
+            // If all photos failed but some were required
+            if (empty($photosPaths) && !empty($uploadErrors)) {
+                \Log::warning('All fleet photos failed to upload', [
+                    'errors' => $uploadErrors
+                ]);
+            }
+        }
+
+        // Calculate financial details
+        $purchasePrice = $request->purchase_price;
+        $downPayment = $request->down_payment;
+        $interestRate = $request->interest_rate / 100;
+        $months = $request->loan_duration_months;
+        
+        $principalAmount = $purchasePrice - $downPayment;
+        $totalInterest = $principalAmount * $interestRate * ($months / 12);
+        $totalAmountPayable = $principalAmount + $totalInterest;
+        $monthlyInstallment = $totalAmountPayable / $months;
+        
+        \Log::info('Financial calculations completed', [
+            'principal_amount' => $principalAmount,
+            'total_interest' => $totalInterest,
+            'monthly_installment' => $monthlyInstallment
+        ]);
+        
+        $fleetAcquisition = FleetAcquisition::create(array_merge($request->all(), [
+            'vehicle_photos' => $photosPaths,
+            'monthly_installment' => $monthlyInstallment,
+            'total_interest' => $totalInterest,
+            'total_amount_payable' => $totalAmountPayable,
+            'outstanding_balance' => $totalAmountPayable,
+            'amount_paid' => 0,
+            'payments_made' => 0,
+            'status' => 'pending'
+        ]));
+
+        DB::commit();
+        
+        \Log::info('Fleet acquisition created successfully', [
+            'id' => $fleetAcquisition->id,
+            'vehicle_make' => $fleetAcquisition->vehicle_make,
+            'photo_count' => count($photosPaths)
+        ]);
+        
+        $response = [
+            'success' => true,
+            'message' => 'Fleet acquisition record created successfully',
+            'data' => $fleetAcquisition
+        ];
+        
+        // Include warnings if some photos failed
+        if (!empty($uploadErrors)) {
+            $response['warnings'] = $uploadErrors;
+            $response['message'] .= ' (Some photos failed to upload)';
+        }
+        
+        return response()->json($response);
+        
+    } catch (\Exception $e) {
+        DB::rollback();
+        
+        // Clean up uploaded photos if database save fails
+        if (!empty($photosPaths)) {
+            $this->cleanupFleetPhotos($photosPaths);
+        }
+        
+        \Log::error('Fleet acquisition creation failed', [
+            'error' => $e->getMessage(),
+            'vehicle_make' => $request->vehicle_make ?? 'unknown'
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Error creating fleet acquisition record: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+public function update(Request $request, $id)
+{
+    $fleetAcquisition = FleetAcquisition::findOrFail($id);
+    
+    $request->validate([
+        // Vehicle Information
+        'vehicle_make' => 'required|string|max:255',
+        'vehicle_model' => 'required|string|max:255',
+        'vehicle_year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
+        'engine_capacity' => 'required|string|max:50',
+        'chassis_number' => 'required|string|max:255|unique:fleet_acquisitions,chassis_number,' . $id,
+        'engine_number' => 'required|string|max:255|unique:fleet_acquisitions,engine_number,' . $id,
+        'registration_number' => 'nullable|string|max:20',
+        'vehicle_category' => 'required|in:commercial,passenger,utility,special_purpose',
+        'purchase_price' => 'required|numeric|min:0',
+        'market_value' => 'required|numeric|min:0',
+        'vehicle_photos.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        
+        // Financial Details
+        'down_payment' => 'required|numeric|min:0',
+        'interest_rate' => 'required|numeric|min:0|max:100',
+        'loan_duration_months' => 'required|integer|min:1|max:120',
+        'first_payment_date' => 'required|date',
+        'insurance_premium' => 'nullable|numeric|min:0',
+        
+        // Other fields validation...
+        'hp_agreement_number' => 'required|string|max:255|unique:fleet_acquisitions,hp_agreement_number,' . $id,
+        'financing_institution' => 'required|string|max:255',
+    ]);
+
+    DB::beginTransaction();
+    
+    try {
+        \Log::info('Starting fleet acquisition update', [
+            'id' => $id,
+            'vehicle_make' => $request->vehicle_make,
+            'has_new_photos' => $request->hasFile('vehicle_photos'),
+            'replace_photos' => $request->has('replace_photos') && $request->replace_photos == '1'
+        ]);
+
+        // Handle photo uploads
+        $photosPaths = $fleetAcquisition->vehicle_photos ?? [];
+        $oldPhotoPaths = $photosPaths; // Keep reference for cleanup
+        $uploadErrors = [];
+        
+        if ($request->hasFile('vehicle_photos')) {
+            \Log::info('Processing new fleet photos', [
+                'new_photo_count' => count($request->file('vehicle_photos')),
+                'existing_photo_count' => count($photosPaths),
+                'replace_mode' => $request->has('replace_photos') && $request->replace_photos == '1'
+            ]);
+
+            // Delete old photos if replacing
+            if ($request->has('replace_photos') && $request->replace_photos == '1') {
+                \Log::info('Replacing existing photos - will cleanup old photos after successful upload');
+                $photosPaths = []; // Clear current paths, will add new ones
+            }
+            
+            // Add new photos
+            foreach ($request->file('vehicle_photos') as $index => $photo) {
+                try {
+                    // Generate unique filename
+                    $originalName = pathinfo($photo->getClientOriginalName(), PATHINFO_FILENAME);
+                    $extension = $photo->getClientOriginalExtension();
+                    $filename = $originalName . '_' . time() . '_' . uniqid() . '.' . $extension;
+                    
+                    // Upload to S3 using direct method
+                    $filePath = $this->uploadFleetPhotoToS3Direct($photo, $filename);
+                    
+                    $photosPaths[] = $filePath;
+                    
+                    \Log::info('New fleet photo uploaded successfully', [
+                        'index' => $index,
+                        'filename' => $filename,
+                        'path' => $filePath
+                    ]);
+                    
+                } catch (\Exception $e) {
+                    $error = "Failed to upload photo " . ($index + 1) . ": " . $e->getMessage();
+                    $uploadErrors[] = $error;
+                    
+                    \Log::error('New fleet photo upload failed', [
+                        'index' => $index,
+                        'filename' => $photo->getClientOriginalName(),
+                        'error' => $e->getMessage()
+                    ]);
                 }
             }
 
-            // Calculate financial details
-            $purchasePrice = $request->purchase_price;
-            $downPayment = $request->down_payment;
-            $interestRate = $request->interest_rate / 100;
-            $months = $request->loan_duration_months;
-            
-            $principalAmount = $purchasePrice - $downPayment;
-            $totalInterest = $principalAmount * $interestRate * ($months / 12);
-            $totalAmountPayable = $principalAmount + $totalInterest;
-            $monthlyInstallment = $totalAmountPayable / $months;
-            
-            $fleetAcquisition = FleetAcquisition::create(array_merge($request->all(), [
-                'vehicle_photos' => $photosPaths,
-                'monthly_installment' => $monthlyInstallment,
-                'total_interest' => $totalInterest,
-                'total_amount_payable' => $totalAmountPayable,
-                'outstanding_balance' => $totalAmountPayable,
-                'amount_paid' => 0,
-                'payments_made' => 0,
-                'status' => 'pending'
-            ]));
+            // If all new photos failed and we were replacing, revert to old photos
+            if (empty($photosPaths) && $request->has('replace_photos') && $request->replace_photos == '1') {
+                $photosPaths = $oldPhotoPaths;
+                \Log::warning('All new photos failed, reverting to old photos');
+            }
+        }
+        
+        // Recalculate financial details
+        $purchasePrice = $request->purchase_price;
+        $downPayment = $request->down_payment;
+        $interestRate = $request->interest_rate / 100;
+        $months = $request->loan_duration_months;
+        
+        $principalAmount = $purchasePrice - $downPayment;
+        $totalInterest = $principalAmount * $interestRate * ($months / 12);
+        $totalAmountPayable = $principalAmount + $totalInterest;
+        $monthlyInstallment = $totalAmountPayable / $months;
+        
+        \Log::info('Updated financial calculations', [
+            'principal_amount' => $principalAmount,
+            'total_interest' => $totalInterest,
+            'monthly_installment' => $monthlyInstallment
+        ]);
+        
+        $fleetAcquisition->update(array_merge($request->all(), [
+            'vehicle_photos' => $photosPaths,
+            'monthly_installment' => $monthlyInstallment,
+            'total_interest' => $totalInterest,
+            'total_amount_payable' => $totalAmountPayable,
+            'outstanding_balance' => $totalAmountPayable - $fleetAcquisition->amount_paid,
+        ]));
 
-            DB::commit();
+        // Clean up old photos only if we successfully uploaded new ones and were replacing
+        if ($request->hasFile('vehicle_photos') && 
+            $request->has('replace_photos') && 
+            $request->replace_photos == '1' && 
+            !empty($photosPaths) && 
+            $photosPaths !== $oldPhotoPaths) {
             
-            return response()->json([
-                'success' => true,
-                'message' => 'Fleet acquisition record created successfully',
-                'data' => $fleetAcquisition
-            ]);
+            $this->cleanupFleetPhotos($oldPhotoPaths);
+        }
+
+        DB::commit();
+        
+        \Log::info('Fleet acquisition updated successfully', [
+            'id' => $fleetAcquisition->id,
+            'vehicle_make' => $fleetAcquisition->vehicle_make,
+            'final_photo_count' => count($photosPaths)
+        ]);
+        
+        $response = [
+            'success' => true,
+            'message' => 'Fleet acquisition record updated successfully',
+            'data' => $fleetAcquisition
+        ];
+        
+        // Include warnings if some photos failed
+        if (!empty($uploadErrors)) {
+            $response['warnings'] = $uploadErrors;
+            $response['message'] .= ' (Some photos failed to upload)';
+        }
+        
+        return response()->json($response);
+        
+    } catch (\Exception $e) {
+        DB::rollback();
+        
+        \Log::error('Fleet acquisition update failed', [
+            'id' => $id,
+            'error' => $e->getMessage()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Error updating fleet acquisition record: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Upload fleet photo directly to S3 using AWS SDK with SSL disabled
+ */
+private function uploadFleetPhotoToS3Direct($photo, $filename)
+{
+    try {
+        $s3Client = new \Aws\S3\S3Client([
+            'version' => 'latest',
+            'region'  => config('filesystems.disks.s3.region'),
+            'credentials' => [
+                'key'    => config('filesystems.disks.s3.key'),
+                'secret' => config('filesystems.disks.s3.secret'),
+            ],
+            'http' => [
+                'verify' => false // Disable SSL verification for development
+            ]
+        ]);
+
+        $key = "fleet_photos/" . $filename;
+        
+        $result = $s3Client->putObject([
+            'Bucket' => config('filesystems.disks.s3.bucket'),
+            'Key'    => $key,
+            'Body'   => fopen($photo->getPathname(), 'r'),
+            'ContentType' => $photo->getMimeType(),
+            'CacheControl' => 'max-age=31536000', // 1 year cache for images
+        ]);
+
+        \Log::info('Direct S3 fleet photo upload successful', [
+            'key' => $key,
+            'object_url' => $result['ObjectURL'] ?? 'N/A'
+        ]);
+
+        return $key; // Return the S3 key path
+
+    } catch (\Exception $e) {
+        \Log::error('Direct S3 fleet photo upload failed', [
+            'filename' => $filename,
+            'error' => $e->getMessage()
+        ]);
+        throw new \Exception('Direct S3 fleet photo upload failed: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Clean up fleet photos from S3
+ */
+private function cleanupFleetPhotos($photoPaths)
+{
+    if (empty($photoPaths)) {
+        return;
+    }
+    
+    try {
+        $s3Client = new \Aws\S3\S3Client([
+            'version' => 'latest',
+            'region'  => config('filesystems.disks.s3.region'),
+            'credentials' => [
+                'key'    => config('filesystems.disks.s3.key'),
+                'secret' => config('filesystems.disks.s3.secret'),
+            ],
+            'http' => [
+                'verify' => false
+            ]
+        ]);
+
+        foreach ($photoPaths as $photoPath) {
+            try {
+                $s3Client->deleteObject([
+                    'Bucket' => config('filesystems.disks.s3.bucket'),
+                    'Key' => $photoPath
+                ]);
+                
+                \Log::info('Cleaned up fleet photo', ['path' => $photoPath]);
+                
+            } catch (\Exception $e) {
+                \Log::warning('Failed to cleanup fleet photo', [
+                    'path' => $photoPath,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+        
+    } catch (\Exception $e) {
+        \Log::error('Fleet photo cleanup process failed', [
+            'error' => $e->getMessage(),
+            'photo_count' => count($photoPaths)
+        ]);
+    }
+}
+
+/**
+ * Get fleet photo URLs for display
+ */
+public function getFleetPhotoUrls($fleetAcquisition)
+{
+    $photoPaths = $fleetAcquisition->vehicle_photos ?? [];
+    $photoUrls = [];
+    
+    foreach ($photoPaths as $photoPath) {
+        try {
+            // Check if it's already a full URL
+            if (str_starts_with($photoPath, 'https://')) {
+                $photoUrls[] = $photoPath;
+                continue;
+            }
+            
+            // Generate temporary URL for photo (valid for 24 hours)
+            $photoUrls[] = $this->generateFleetPhotoTemporaryUrl($photoPath, 1440);
             
         } catch (\Exception $e) {
-            DB::rollback();
-            return response()->json([
-                'success' => false,
-                'message' => 'Error creating fleet acquisition record: ' . $e->getMessage()
-            ], 500);
+            \Log::warning('Failed to generate fleet photo URL', [
+                'path' => $photoPath,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Fallback to direct S3 URL
+            $bucket = config('filesystems.disks.s3.bucket');
+            $region = config('filesystems.disks.s3.region');
+            $photoUrls[] = "https://{$bucket}.s3.{$region}.amazonaws.com/{$photoPath}";
         }
     }
+    
+    return $photoUrls;
+}
+
+/**
+ * Generate temporary URL for fleet photo
+ */
+private function generateFleetPhotoTemporaryUrl($key, $minutes = 1440)
+{
+    try {
+        $s3Client = new \Aws\S3\S3Client([
+            'version' => 'latest',
+            'region'  => config('filesystems.disks.s3.region'),
+            'credentials' => [
+                'key'    => config('filesystems.disks.s3.key'),
+                'secret' => config('filesystems.disks.s3.secret'),
+            ],
+            'http' => [
+                'verify' => false
+            ]
+        ]);
+
+        $command = $s3Client->getCommand('GetObject', [
+            'Bucket' => config('filesystems.disks.s3.bucket'),
+            'Key' => $key
+        ]);
+
+        $request = $s3Client->createPresignedRequest($command, "+{$minutes} minutes");
+
+        return (string) $request->getUri();
+
+    } catch (\Exception $e) {
+        \Log::error('Failed to generate fleet photo temporary URL', [
+            'key' => $key,
+            'error' => $e->getMessage()
+        ]);
+        throw $e;
+    }
+}
 
     public function show($id)
     {
@@ -125,94 +530,7 @@ class FleetAcquisitionController extends Controller
         }
     }
 
-    public function update(Request $request, $id)
-    {
-        $fleetAcquisition = FleetAcquisition::findOrFail($id);
-        
-        $request->validate([
-            // Vehicle Information
-            'vehicle_make' => 'required|string|max:255',
-            'vehicle_model' => 'required|string|max:255',
-            'vehicle_year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
-            'engine_capacity' => 'required|string|max:50',
-            'chassis_number' => 'required|string|max:255|unique:fleet_acquisitions,chassis_number,' . $id,
-            'engine_number' => 'required|string|max:255|unique:fleet_acquisitions,engine_number,' . $id,
-            'registration_number' => 'nullable|string|max:20',
-            'vehicle_category' => 'required|in:commercial,passenger,utility,special_purpose',
-            'purchase_price' => 'required|numeric|min:0',
-            'market_value' => 'required|numeric|min:0',
-            'vehicle_photos.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            
-            // Financial Details
-            'down_payment' => 'required|numeric|min:0',
-            'interest_rate' => 'required|numeric|min:0|max:100',
-            'loan_duration_months' => 'required|integer|min:1|max:120',
-            'first_payment_date' => 'required|date',
-            'insurance_premium' => 'nullable|numeric|min:0',
-            
-            // Other fields validation...
-            'hp_agreement_number' => 'required|string|max:255|unique:fleet_acquisitions,hp_agreement_number,' . $id,
-            'financing_institution' => 'required|string|max:255',
-        ]);
-
-        DB::beginTransaction();
-        
-        try {
-            // Handle photo uploads
-            $photosPaths = $fleetAcquisition->vehicle_photos ?? [];
-            
-            if ($request->hasFile('vehicle_photos')) {
-                // Delete old photos if replacing
-                if ($request->has('replace_photos') && $request->replace_photos == '1') {
-                    foreach ($photosPaths as $oldPath) {
-                        Storage::disk('public')->delete($oldPath);
-                    }
-                    $photosPaths = [];
-                }
-                
-                // Add new photos
-                foreach ($request->file('vehicle_photos') as $photo) {
-                    $path = $photo->store('fleet_photos', 'public');
-                    $photosPaths[] = $path;
-                }
-            }
-            
-            // Recalculate financial details
-            $purchasePrice = $request->purchase_price;
-            $downPayment = $request->down_payment;
-            $interestRate = $request->interest_rate / 100;
-            $months = $request->loan_duration_months;
-            
-            $principalAmount = $purchasePrice - $downPayment;
-            $totalInterest = $principalAmount * $interestRate * ($months / 12);
-            $totalAmountPayable = $principalAmount + $totalInterest;
-            $monthlyInstallment = $totalAmountPayable / $months;
-            
-            $fleetAcquisition->update(array_merge($request->all(), [
-                'vehicle_photos' => $photosPaths,
-                'monthly_installment' => $monthlyInstallment,
-                'total_interest' => $totalInterest,
-                'total_amount_payable' => $totalAmountPayable,
-                'outstanding_balance' => $totalAmountPayable - $fleetAcquisition->amount_paid,
-            ]));
-
-            DB::commit();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Fleet acquisition record updated successfully',
-                'data' => $fleetAcquisition
-            ]);
-            
-        } catch (\Exception $e) {
-            DB::rollback();
-            return response()->json([
-                'success' => false,
-                'message' => 'Error updating fleet acquisition record: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
+  
     public function destroy($id)
     {
         try {

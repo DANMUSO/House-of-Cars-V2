@@ -191,47 +191,120 @@ class InspectionController extends Controller
      * Upload photos to inspection
      */
     public function uploadPhotos(Request $request, VehicleInspection $inspection)
-    {
-        $request->validate([
-            'photos.*' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048'
+{
+    $request->validate([
+        'photos.*' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048'
+    ]);
+
+    try {
+        \Log::info('Starting inspection photo upload', [
+            'inspection_id' => $inspection->id,
+            'has_photos' => $request->hasFile('photos'),
+            'photo_count' => $request->hasFile('photos') ? count($request->file('photos')) : 0
         ]);
 
         $uploadedPhotos = [];
         $existingPhotos = $inspection->photos ?? [];
+        $uploadErrors = [];
         
         if ($request->hasFile('photos')) {
-            foreach ($request->file('photos') as $photo) {
-                // Store photo in car_bids directory
-                $photoPath = $photo->store('car_bids', 'public');
-                $existingPhotos[] = $photoPath;
-                
-                // Add to response array with index
-                $uploadedPhotos[] = [
-                    'index' => count($existingPhotos) - 1,
-                    'url' => Storage::url($photoPath),
-                    'path' => $photoPath,
-                    'name' => basename($photoPath)
-                ];
+            foreach ($request->file('photos') as $index => $photo) {
+                try {
+                    // Generate unique filename
+                    $originalName = pathinfo($photo->getClientOriginalName(), PATHINFO_FILENAME);
+                    $extension = $photo->getClientOriginalExtension();
+                    $filename = $originalName . '_' . time() . '_' . uniqid() . '.' . $extension;
+                    
+                    // Upload to S3 using direct method
+                    $photoPath = $this->uploadInspectionPhotoToS3Direct($photo, $filename);
+                    
+                    $existingPhotos[] = $photoPath;
+                    
+                    // Generate S3 URL for response
+                    $bucket = config('filesystems.disks.s3.bucket');
+                    $region = config('filesystems.disks.s3.region');
+                    $photoUrl = "https://{$bucket}.s3.{$region}.amazonaws.com/{$photoPath}";
+                    
+                    // Add to response array with index
+                    $uploadedPhotos[] = [
+                        'index' => count($existingPhotos) - 1,
+                        'url' => $photoUrl,
+                        'path' => $photoPath,
+                        'name' => $filename
+                    ];
+                    
+                    \Log::info('Inspection photo uploaded successfully', [
+                        'inspection_id' => $inspection->id,
+                        'index' => $index,
+                        'filename' => $filename,
+                        'path' => $photoPath
+                    ]);
+                    
+                } catch (\Exception $e) {
+                    $error = "Failed to upload photo " . ($index + 1) . ": " . $e->getMessage();
+                    $uploadErrors[] = $error;
+                    
+                    \Log::error('Inspection photo upload failed', [
+                        'inspection_id' => $inspection->id,
+                        'index' => $index,
+                        'filename' => $photo->getClientOriginalName(),
+                        'error' => $e->getMessage()
+                    ]);
+                }
             }
 
             // Update inspection with new photos array
             $inspection->update(['photos' => $existingPhotos]);
+            
+            \Log::info('Inspection photos updated successfully', [
+                'inspection_id' => $inspection->id,
+                'total_photos' => count($existingPhotos),
+                'new_photos' => count($uploadedPhotos),
+                'errors' => count($uploadErrors)
+            ]);
         }
 
-        return response()->json([
+        $response = [
             'success' => true,
             'photos' => $uploadedPhotos,
             'total_count' => count($existingPhotos),
             'message' => count($uploadedPhotos) . ' photo(s) uploaded successfully!'
-        ]);
-    }
+        ];
+        
+        // Include warnings if some photos failed
+        if (!empty($uploadErrors)) {
+            $response['warnings'] = $uploadErrors;
+            $response['message'] .= ' (Some photos failed to upload)';
+        }
 
-    /**
-     * Delete a specific photo by index
-     */
-    public function deletePhoto(VehicleInspection $inspection, $photoIndex)
-    {
+        return response()->json($response);
+        
+    } catch (\Exception $e) {
+        \Log::error('Inspection photo upload process failed', [
+            'inspection_id' => $inspection->id,
+            'error' => $e->getMessage()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Photo upload failed: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Delete a specific photo by index
+ */
+public function deletePhoto(VehicleInspection $inspection, $photoIndex)
+{
+    try {
         $photos = $inspection->photos ?? [];
+        
+        \Log::info('Starting inspection photo deletion', [
+            'inspection_id' => $inspection->id,
+            'photo_index' => $photoIndex,
+            'total_photos' => count($photos)
+        ]);
         
         // Check if photo index exists
         if (!isset($photos[$photoIndex])) {
@@ -243,9 +316,21 @@ class InspectionController extends Controller
 
         $photoPath = $photos[$photoIndex];
 
-        // Delete file from storage
-        if (Storage::disk('public')->exists($photoPath)) {
-            Storage::disk('public')->delete($photoPath);
+        // Delete file from S3
+        try {
+            $this->deleteInspectionPhotoFromS3Direct($photoPath);
+            
+            \Log::info('Inspection photo deleted from S3', [
+                'inspection_id' => $inspection->id,
+                'photo_path' => $photoPath
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::warning('Failed to delete inspection photo from S3, continuing with database cleanup', [
+                'inspection_id' => $inspection->id,
+                'photo_path' => $photoPath,
+                'error' => $e->getMessage()
+            ]);
         }
 
         // Remove photo from array and reindex
@@ -255,26 +340,277 @@ class InspectionController extends Controller
         // Update inspection
         $inspection->update(['photos' => $photos]);
 
+        \Log::info('Inspection photo deleted successfully', [
+            'inspection_id' => $inspection->id,
+            'remaining_photos' => count($photos)
+        ]);
+
         return response()->json([
             'success' => true,
             'total_count' => count($photos),
             'message' => 'Photo deleted successfully!'
         ]);
+        
+    } catch (\Exception $e) {
+        \Log::error('Inspection photo deletion failed', [
+            'inspection_id' => $inspection->id,
+            'photo_index' => $photoIndex,
+            'error' => $e->getMessage()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to delete photo: ' . $e->getMessage()
+        ], 500);
     }
+}
 
-    /**
-     * Get all photos for an inspection
-     */
-    public function getPhotos(VehicleInspection $inspection)
-    {
-        $photos = $inspection->getPhotosWithUrls();
+/**
+ * Get all photos for an inspection
+ */
+public function getPhotos(VehicleInspection $inspection)
+{
+    try {
+        \Log::info('Getting inspection photos', [
+            'inspection_id' => $inspection->id
+        ]);
+        
+        $photos = $this->getInspectionPhotosWithUrls($inspection);
 
         return response()->json([
             'success' => true,
             'photos' => $photos,
             'total_count' => count($photos)
         ]);
+        
+    } catch (\Exception $e) {
+        \Log::error('Failed to get inspection photos', [
+            'inspection_id' => $inspection->id,
+            'error' => $e->getMessage()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to get photos: ' . $e->getMessage()
+        ], 500);
     }
+}
+
+/**
+ * Upload inspection photo directly to S3 using AWS SDK with SSL disabled
+ */
+private function uploadInspectionPhotoToS3Direct($photo, $filename)
+{
+    try {
+        $s3Client = new \Aws\S3\S3Client([
+            'version' => 'latest',
+            'region'  => config('filesystems.disks.s3.region'),
+            'credentials' => [
+                'key'    => config('filesystems.disks.s3.key'),
+                'secret' => config('filesystems.disks.s3.secret'),
+            ],
+            'http' => [
+                'verify' => false // Disable SSL verification for development
+            ]
+        ]);
+
+        $key = "inspection_photos/" . $filename;
+        
+        $result = $s3Client->putObject([
+            'Bucket' => config('filesystems.disks.s3.bucket'),
+            'Key'    => $key,
+            'Body'   => fopen($photo->getPathname(), 'r'),
+            'ContentType' => $photo->getMimeType(),
+            'CacheControl' => 'max-age=31536000', // 1 year cache for images
+        ]);
+
+        \Log::info('Direct S3 inspection photo upload successful', [
+            'key' => $key,
+            'object_url' => $result['ObjectURL'] ?? 'N/A'
+        ]);
+
+        return $key; // Return the S3 key path
+
+    } catch (\Exception $e) {
+        \Log::error('Direct S3 inspection photo upload failed', [
+            'filename' => $filename,
+            'error' => $e->getMessage()
+        ]);
+        throw new \Exception('Direct S3 inspection photo upload failed: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Delete inspection photo from S3
+ */
+private function deleteInspectionPhotoFromS3Direct($photoPath)
+{
+    try {
+        // Skip if it's already a full URL (legacy data)
+        if (str_starts_with($photoPath, 'http')) {
+            \Log::info('Skipping S3 deletion of legacy URL', ['path' => $photoPath]);
+            return;
+        }
+        
+        $s3Client = new \Aws\S3\S3Client([
+            'version' => 'latest',
+            'region'  => config('filesystems.disks.s3.region'),
+            'credentials' => [
+                'key'    => config('filesystems.disks.s3.key'),
+                'secret' => config('filesystems.disks.s3.secret'),
+            ],
+            'http' => [
+                'verify' => false
+            ]
+        ]);
+
+        $s3Client->deleteObject([
+            'Bucket' => config('filesystems.disks.s3.bucket'),
+            'Key' => $photoPath
+        ]);
+        
+        \Log::info('Inspection photo deleted from S3', ['path' => $photoPath]);
+
+    } catch (\Exception $e) {
+        \Log::error('Failed to delete inspection photo from S3', [
+            'path' => $photoPath,
+            'error' => $e->getMessage()
+        ]);
+        throw $e;
+    }
+}
+
+/**
+ * Get inspection photos with URLs (replaces the model method)
+ */
+private function getInspectionPhotosWithUrls(VehicleInspection $inspection)
+{
+    $photoPaths = $inspection->photos ?? [];
+    $photos = [];
+    
+    foreach ($photoPaths as $index => $photoPath) {
+        try {
+            // Check if it's already a full URL (legacy data)
+            if (str_starts_with($photoPath, 'http')) {
+                $photoUrl = $photoPath;
+            } else {
+                // Generate S3 URL from the key path
+                $bucket = config('filesystems.disks.s3.bucket');
+                $region = config('filesystems.disks.s3.region');
+                $photoUrl = "https://{$bucket}.s3.{$region}.amazonaws.com/{$photoPath}";
+            }
+            
+            $photos[] = [
+                'index' => $index,
+                'url' => $photoUrl,
+                'path' => $photoPath,
+                'name' => basename($photoPath)
+            ];
+            
+        } catch (\Exception $e) {
+            \Log::warning('Failed to generate inspection photo URL', [
+                'inspection_id' => $inspection->id,
+                'index' => $index,
+                'path' => $photoPath,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Skip this photo if URL generation fails
+            continue;
+        }
+    }
+    
+    return $photos;
+}
+
+/**
+ * Generate temporary URL for inspection photo (optional - for enhanced security)
+ */
+private function generateInspectionPhotoTemporaryUrl($key, $minutes = 1440)
+{
+    try {
+        $s3Client = new \Aws\S3\S3Client([
+            'version' => 'latest',
+            'region'  => config('filesystems.disks.s3.region'),
+            'credentials' => [
+                'key'    => config('filesystems.disks.s3.key'),
+                'secret' => config('filesystems.disks.s3.secret'),
+            ],
+            'http' => [
+                'verify' => false
+            ]
+        ]);
+
+        $command = $s3Client->getCommand('GetObject', [
+            'Bucket' => config('filesystems.disks.s3.bucket'),
+            'Key' => $key
+        ]);
+
+        $request = $s3Client->createPresignedRequest($command, "+{$minutes} minutes");
+
+        return (string) $request->getUri();
+
+    } catch (\Exception $e) {
+        \Log::error('Failed to generate inspection photo temporary URL', [
+            'key' => $key,
+            'error' => $e->getMessage()
+        ]);
+        throw $e;
+    }
+}
+
+/**
+ * Clean up multiple inspection photos from S3 (utility method)
+ */
+private function cleanupInspectionPhotos($photoPaths)
+{
+    if (empty($photoPaths)) {
+        return;
+    }
+    
+    try {
+        $s3Client = new \Aws\S3\S3Client([
+            'version' => 'latest',
+            'region'  => config('filesystems.disks.s3.region'),
+            'credentials' => [
+                'key'    => config('filesystems.disks.s3.key'),
+                'secret' => config('filesystems.disks.s3.secret'),
+            ],
+            'http' => [
+                'verify' => false
+            ]
+        ]);
+
+        foreach ($photoPaths as $photoPath) {
+            try {
+                // Skip if it's already a full URL (legacy data)
+                if (str_starts_with($photoPath, 'http')) {
+                    \Log::info('Skipping cleanup of legacy URL', ['path' => $photoPath]);
+                    continue;
+                }
+                
+                $s3Client->deleteObject([
+                    'Bucket' => config('filesystems.disks.s3.bucket'),
+                    'Key' => $photoPath
+                ]);
+                
+                \Log::info('Cleaned up inspection photo', ['path' => $photoPath]);
+                
+            } catch (\Exception $e) {
+                \Log::warning('Failed to cleanup inspection photo', [
+                    'path' => $photoPath,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+        
+    } catch (\Exception $e) {
+        \Log::error('Inspection photo cleanup process failed', [
+            'error' => $e->getMessage(),
+            'photo_count' => count($photoPaths)
+        ]);
+    }
+}
 
     /**
      * Example of how to create CarImport with photos (if needed)

@@ -393,22 +393,41 @@
                                                     </div>
                                                     <div class="modal-body">
                                                         <div class="row">
-                                                        @php
-                                                            $imagePaths = json_decode($vehicle->photos);
-                                                        @endphp
+@php
+    $imagePaths = json_decode($vehicle->photos);
+@endphp
 
-                                                        @if ($imagePaths && is_array($imagePaths))
-                                                            @foreach ($imagePaths as $imagePath)
-                                                                @php
-                                                                    $imageUrl = asset($imagePath);
-                                                                @endphp
-                                                                <div class="col-md-12 col-lg-6 mb-3">
-                                                                    <img src="{{ $imageUrl }}" alt="Car Image" width="100%" class="img-hover-zoom rounded shadow">
-                                                                </div>
-                                                            @endforeach
-                                                        @else
-                                                            <p>No images available for this car.</p>
-                                                        @endif
+@if ($imagePaths && is_array($imagePaths))
+    @foreach ($imagePaths as $imagePath)
+        @php
+            // Check if the photo path is already a full URL (legacy data) or S3 key
+            if (str_starts_with($imagePath, 'http')) {
+                // Legacy full URL - use as is
+                $imageUrl = $imagePath;
+            } else {
+                // S3 key path - generate S3 URL
+                $bucket = config('filesystems.disks.s3.bucket');
+                $region = config('filesystems.disks.s3.region');
+                $imageUrl = "https://{$bucket}.s3.{$region}.amazonaws.com/{$imagePath}";
+            }
+        @endphp
+        <div class="col-md-12 col-lg-6 mb-3">
+            <img src="{{ $imageUrl }}" 
+                 alt="Car Image" 
+                 width="100%" 
+                 class="img-hover-zoom rounded shadow"
+                 loading="lazy"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <div style="display: none; text-align: center; padding: 20px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.375rem;"
+                 class="rounded shadow">
+                <i class="fas fa-image fa-2x text-muted mb-2"></i>
+                <p class="text-muted mb-0">Failed to load image</p>
+            </div>
+        </div>
+    @endforeach
+@else
+    <p>No images available for this car.</p>
+@endif
                                                     </div>
                                                     </div>
                                                 </div>

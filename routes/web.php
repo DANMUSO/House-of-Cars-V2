@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-
+use Illuminate\Http\Request;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -61,7 +61,49 @@ Route::middleware(['auth'])->group(function () {
     })->name('dashboard');
 
 });
-
+Route::get('/proxy-image', function(Request $request) {
+    $imageUrl = $request->query('url');
+    
+    // Validate the URL is from your S3 bucket
+    if (!$imageUrl || !str_contains($imageUrl, 'houseofcars.s3.eu-central-1.amazonaws.com')) {
+        abort(404);
+    }
+    
+    try {
+        // Get image content
+        $context = stream_context_create([
+            'http' => [
+                'timeout' => 30,
+                'user_agent' => 'House of Cars PDF Generator'
+            ]
+        ]);
+        
+        $imageContent = file_get_contents($imageUrl, false, $context);
+        
+        if ($imageContent === false) {
+            abort(404);
+        }
+        
+        // Determine content type from URL
+        $extension = pathinfo(parse_url($imageUrl, PHP_URL_PATH), PATHINFO_EXTENSION);
+        $contentType = match(strtolower($extension)) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            'gif' => 'image/gif',
+            default => 'image/jpeg'
+        };
+        
+        return response($imageContent, 200, [
+            'Content-Type' => $contentType,
+            'Access-Control-Allow-Origin' => '*',
+            'Cache-Control' => 'public, max-age=3600'
+        ]);
+        
+    } catch (Exception $e) {
+        abort(404);
+    }
+})->name('proxy.image');
 Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Suppport-Staff,HR'])->group(function () {
     // List all Upload Agreement
     

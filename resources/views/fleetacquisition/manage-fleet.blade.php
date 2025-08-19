@@ -375,24 +375,286 @@
                                     <h5 class="card-title mb-0"><i class="fas fa-camera text-primary"></i> Vehicle Photos</h5>
                                 </div>
                                 <div class="card-body">
-                                    @if($fleet->vehicle_photos && count($fleet->vehicle_photos) > 0)
-                                        <div class="row g-2">
-                                            @foreach(array_slice($fleet->vehicle_photos, 0, 10) as $index => $photo)
-                                                <div class="col-6">
-                                                    <img src="{{ asset('storage/' . $photo) }}" 
-                                                        alt="Vehicle Photo" 
-                                                        class="img-fluid rounded vehicle-photo-thumb" 
-                                                        style="height: 80px; width: 100%; object-fit: cover; cursor: pointer;"
-                                                        onclick="viewPhoto('{{ $photo }}')">
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    @else
-                                        <div class="text-center text-muted">
-                                            <i class="fas fa-camera fa-3x mb-2 opacity-50"></i>
-                                            <p>No photos available</p>
-                                        </div>
-                                    @endif
+                                    
+@if($fleet->vehicle_photos && count($fleet->vehicle_photos) > 0)
+    <div class="row g-2">
+        @foreach(array_slice($fleet->vehicle_photos, 0, 10) as $index => $photo)
+            @php
+                // Check if the photo path is already a full S3 URL or just the S3 key
+                if (str_starts_with($photo, 'https://')) {
+                    // Already a full URL
+                    $photoUrl = $photo;
+                } else {
+                    // Generate S3 URL from the key path
+                    $bucket = config('filesystems.disks.s3.bucket');
+                    $region = config('filesystems.disks.s3.region');
+                    $photoUrl = "https://{$bucket}.s3.{$region}.amazonaws.com/{$photo}";
+                }
+            @endphp
+            <div class="col-6">
+                <div class="position-relative">
+                    <img src="{{ $photoUrl }}" 
+                        alt="Vehicle Photo {{ $index + 1 }}" 
+                        class="img-fluid rounded vehicle-photo-thumb" 
+                        style="height: 80px; width: 100%; object-fit: cover; cursor: pointer; transition: transform 0.2s;"
+                        loading="lazy"
+                        onclick="viewPhoto('{{ $photoUrl }}', {{ $index }})"
+                        onmouseover="this.style.transform='scale(1.05)'"
+                        onmouseout="this.style.transform='scale(1)'"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    
+                    <!-- Error fallback -->
+                    <div style="display: none; height: 80px; width: 100%; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.375rem; align-items: center; justify-content: center; flex-direction: column;">
+                        <i class="fas fa-image text-muted mb-1"></i>
+                        <small class="text-muted">Failed to load</small>
+                    </div>
+                    
+                    <!-- Photo number indicator -->
+                    <span class="position-absolute top-0 start-0 bg-dark text-white px-2 py-1 rounded-end" style="font-size: 0.75rem;">
+                        {{ $index + 1 }}
+                    </span>
+                </div>
+            </div>
+        @endforeach
+        
+        @if(count($fleet->vehicle_photos) > 10)
+            <div class="col-12 mt-2">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Showing 10 of {{ count($fleet->vehicle_photos) }} photos
+                </small>
+            </div>
+        @endif
+    </div>
+@else
+    <div class="text-center text-muted py-4">
+        <i class="fas fa-camera fa-3x mb-2 opacity-50"></i>
+        <p class="mb-0">No photos available</p>
+        <small>Photos will appear here once uploaded</small>
+    </div>
+@endif
+
+<!-- Photo Viewer Modal -->
+<div class="modal fade" id="photoViewerModal" tabindex="-1" aria-labelledby="photoViewerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="photoViewerModalLabel">
+                    <i class="fas fa-car me-2"></i>Vehicle Photo
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 text-center" style="background: #000;">
+                <div id="photoContainer" style="min-height: 400px; display: flex; align-items: center; justify-content: center;">
+                    <div class="spinner-border text-light" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <div>
+                    <span class="text-muted" id="photoCounter"></span>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-outline-secondary me-2" id="prevPhoto">
+                        <i class="fas fa-chevron-left me-1"></i>Previous
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary me-2" id="nextPhoto">
+                        <i class="fas fa-chevron-right me-1"></i>Next
+                    </button>
+                    <a href="#" target="_blank" class="btn btn-primary me-2" id="openInNewTab">
+                        <i class="fas fa-external-link-alt me-1"></i>Open in New Tab
+                    </a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.vehicle-photo-thumb {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.vehicle-photo-thumb:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+#photoViewerModal .modal-body img {
+    max-width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+}
+
+.photo-navigation {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.5);
+    color: white;
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.photo-navigation:hover {
+    background: rgba(0,0,0,0.8);
+    color: white;
+}
+
+.photo-navigation.prev {
+    left: 20px;
+}
+
+.photo-navigation.next {
+    right: 20px;
+}
+</style>
+
+<script>
+let currentPhotoIndex = 0;
+let allPhotos = [];
+
+// Initialize photos array from PHP
+@if($fleet->vehicle_photos && count($fleet->vehicle_photos) > 0)
+allPhotos = [
+    @foreach($fleet->vehicle_photos as $photo)
+        @php
+            if (str_starts_with($photo, 'https://')) {
+                $photoUrl = $photo;
+            } else {
+                $bucket = config('filesystems.disks.s3.bucket');
+                $region = config('filesystems.disks.s3.region');
+                $photoUrl = "https://{$bucket}.s3.{$region}.amazonaws.com/{$photo}";
+            }
+        @endphp
+        '{{ $photoUrl }}'@if(!$loop->last),@endif
+    @endforeach
+];
+@endif
+
+function viewPhoto(photoUrl, index = 0) {
+    currentPhotoIndex = index;
+    
+    const modal = new bootstrap.Modal(document.getElementById('photoViewerModal'));
+    const photoContainer = document.getElementById('photoContainer');
+    const photoCounter = document.getElementById('photoCounter');
+    const openInNewTab = document.getElementById('openInNewTab');
+    
+    // Show loading spinner
+    photoContainer.innerHTML = `
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    `;
+    
+    // Load the image
+    const img = new Image();
+    img.onload = function() {
+        photoContainer.innerHTML = '';
+        img.className = 'img-fluid';
+        img.style.maxHeight = '80vh';
+        img.style.objectFit = 'contain';
+        photoContainer.appendChild(img);
+    };
+    
+    img.onerror = function() {
+        photoContainer.innerHTML = `
+            <div class="text-center text-light py-5">
+                <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                <p>Failed to load image</p>
+                <button class="btn btn-outline-light" onclick="location.reload()">
+                    <i class="fas fa-refresh me-1"></i>Retry
+                </button>
+            </div>
+        `;
+    };
+    
+    img.src = photoUrl;
+    
+    // Update counter and navigation
+    photoCounter.textContent = `Photo ${index + 1} of ${allPhotos.length}`;
+    openInNewTab.href = photoUrl;
+    
+    // Show/hide navigation buttons
+    document.getElementById('prevPhoto').style.display = allPhotos.length > 1 ? 'inline-block' : 'none';
+    document.getElementById('nextPhoto').style.display = allPhotos.length > 1 ? 'inline-block' : 'none';
+    
+    modal.show();
+}
+
+// Navigation functions
+document.getElementById('prevPhoto').addEventListener('click', function() {
+    if (currentPhotoIndex > 0) {
+        viewPhoto(allPhotos[currentPhotoIndex - 1], currentPhotoIndex - 1);
+    } else {
+        // Loop to last photo
+        viewPhoto(allPhotos[allPhotos.length - 1], allPhotos.length - 1);
+    }
+});
+
+document.getElementById('nextPhoto').addEventListener('click', function() {
+    if (currentPhotoIndex < allPhotos.length - 1) {
+        viewPhoto(allPhotos[currentPhotoIndex + 1], currentPhotoIndex + 1);
+    } else {
+        // Loop to first photo
+        viewPhoto(allPhotos[0], 0);
+    }
+});
+
+// Keyboard navigation
+document.addEventListener('keydown', function(e) {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('photoViewerModal'));
+    if (modal && modal._isShown) {
+        if (e.key === 'ArrowLeft') {
+            document.getElementById('prevPhoto').click();
+        } else if (e.key === 'ArrowRight') {
+            document.getElementById('nextPhoto').click();
+        } else if (e.key === 'Escape') {
+            modal.hide();
+        }
+    }
+});
+
+// Touch/swipe support for mobile
+let touchStartX = 0;
+let touchEndX = 0;
+
+document.getElementById('photoContainer').addEventListener('touchstart', function(e) {
+    touchStartX = e.changedTouches[0].screenX;
+});
+
+document.getElementById('photoContainer').addEventListener('touchend', function(e) {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+});
+
+function handleSwipe() {
+    const swipeThreshold = 50;
+    const diff = touchStartX - touchEndX;
+    
+    if (Math.abs(diff) > swipeThreshold) {
+        if (diff > 0) {
+            // Swiped left - next photo
+            document.getElementById('nextPhoto').click();
+        } else {
+            // Swiped right - previous photo
+            document.getElementById('prevPhoto').click();
+        }
+    }
+}
+</script>
                                 </div>
                             </div>
                         </div>
@@ -1117,32 +1379,6 @@ function viewPayment(paymentId) {
                 title: 'Error!',
                 text: xhr.responseJSON?.message || 'Unable to load payment details.'
             });
-        }
-    });
-}
-
-// View Photo Function
-function viewPhoto(photoPath) {
-    if (!photoPath) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error!',
-            text: 'Photo path not provided.'
-        });
-        return;
-    }
-    
-    Swal.fire({
-        imageUrl: `/storage/${photoPath}`,
-        imageAlt: 'Vehicle Photo',
-        showCloseButton: true,
-        showConfirmButton: false,
-        width: '90%',
-        padding: '1rem',
-        background: 'rgba(0,0,0,0.9)',
-        backdrop: 'rgba(0,0,0,0.8)',
-        customClass: {
-            image: 'img-fluid'
         }
     });
 }

@@ -2449,7 +2449,7 @@ window['showUploadSection' + {{ $agreement->id }}] = function() {
                                                 @endphp
                                                 @if(is_array($photos))
                                                     @foreach($photos as $photo)
-                                                        <img src="{{ asset($photo) }}" alt="Vehicle Photo" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
+                                                        <img src="https://houseofcars.s3.eu-central-1.amazonaws.com/{{$photo}}" alt="Vehicle Photo" class="img-thumbnail" style="width: 100px; height: 100px; object-fit: cover;">
                                                     @endforeach
                                                 @endif
                                             </div>
@@ -2495,7 +2495,7 @@ window['showUploadSection' + {{ $agreement->id }}] = function() {
                                                     @foreach($photos as $photo)
                                                         <div class="col-md-4 mb-3">
                                                             <div class="card">
-                                                                <img src="{{ Str::startsWith($photo, '/storage/') ? asset($photo) : asset('storage/' . $photo) }}" 
+                                                                <img src="https://houseofcars.s3.eu-central-1.amazonaws.com/{{$photo}}" 
                                                                      alt="Vehicle Photo" 
                                                                      class="card-img-top img-fluid" 
                                                                      style="object-fit: cover; height: 200px; width: 100%;">
