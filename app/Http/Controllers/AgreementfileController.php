@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\AgreementFile;
+use App\Models\Agreementfile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 
