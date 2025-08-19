@@ -1761,7 +1761,6 @@ window.testLumpSumModal = function() {
                                 @csrf
                                 <input type="hidden" name="agreement_id" value="{{ $agreement->id }}">
                                 <input type="hidden" name="agreement_type" value="HirePurchase">
-                                
                                 <div class="row align-items-end">
                                     <div class="col-md-8">
                                         <label for="agreement_file{{ $agreement->id }}" class="form-label">
@@ -1938,108 +1937,6 @@ window.testLumpSumModal = function() {
 </style>
 
 <script>
-  // Fixed downloadReceipt function - Place this at the top of your page
-function downloadReceipt() {
-    console.log('Download button clicked!'); // Debug line
-    
-    try {
-        // Get the receipt content div
-        const receiptContent = document.getElementById('receiptContent');
-        
-        if (!receiptContent) {
-            console.error('receiptContent div not found!');
-            alert('Receipt content not found!');
-            return;
-        }
-
-        console.log('Receipt content found:', receiptContent);
-
-        // Get customer name for filename
-        const customerNameElement = document.getElementById('customerName');
-        const customerName = customerNameElement ? customerNameElement.textContent.trim() : 'Customer';
-        const fileName = customerName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_') || 'Receipt';
-
-        // Create a new window for printing/downloading
-        const printWindow = window.open('', '_blank', 'width=800,height=600');
-        
-        if (!printWindow) {
-            alert('Please allow popups for this site to download the receipt.');
-            return;
-        }
-
-        // Write the complete HTML structure to the new window
-        printWindow.document.write(`
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>${fileName} - Receipt</title>
-                <style>
-                    * {
-                        margin: 0;
-                        padding: 0;
-                        box-sizing: border-box;
-                    }
-                    
-                    body {
-                        font-family: Arial, sans-serif;
-                        background: white;
-                        color: #000;
-                        padding: 20px;
-                        line-height: 1.4;
-                    }
-                    
-                    /* Print styles */
-                    @page {
-                        size: A4;
-                        margin: 1cm;
-                    }
-                    
-                    @media print {
-                        body {
-                            margin: 0;
-                            padding: 0;
-                            background: white;
-                        }
-                        
-                        /* Ensure all colors print correctly */
-                        * {
-                            -webkit-print-color-adjust: exact !important;
-                            color-adjust: exact !important;
-                            print-color-adjust: exact !important;
-                        }
-                    }
-                    
-                    /* Ensure images print */
-                    img {
-                        max-width: 100%;
-                        height: auto;
-                    }
-                </style>
-            </head>
-            <body>
-                ${receiptContent.innerHTML}
-                <script>
-                    window.onload = function() {
-                        setTimeout(function() {
-                            window.print();
-                            window.close();
-                        }, 500);
-                    };
-                </script>
-            </body>
-            </html>
-        `);
-        
-        printWindow.document.close();
-        console.log('Print window created successfully');
-        
-    } catch (error) {
-        console.error('Error downloading receipt:', error);
-        alert('Error downloading receipt: ' + error.message);
-    }
-}  
 $(document).ready(function() {
     const agreementId = {{ $agreement->id }};
     let currentPdfUrl = null;
@@ -2188,21 +2085,25 @@ $(document).ready(function() {
 });
 
 // Check if agreement already exists
- function checkExistingAgreement(agreementId) {
-    const agreementType = 'HirePurchase'; // or get this dynamically
+function checkExistingAgreement(agreementId) {
+    const agreementType = 'HirePurchase';
     
-    $.get('{{ url("/agreements") }}/' + agreementId + '/' + agreementType)
-        .done(function(data, status, xhr) {
-            const pdfUrl = '{{ url("/agreements") }}/' + agreementId + '/' + agreementType;
+    $.ajax({
+        url: '/agreements/' + agreementId + '/' + agreementType,
+        type: 'HEAD', // Use HEAD request to check if file exists without downloading
+        success: function(data, status, xhr) {
+            // If successful, the agreement exists
+            const pdfUrl = '/agreements/' + agreementId + '/' + agreementType;
             currentPdfUrl = pdfUrl;
             displayPDF(pdfUrl, agreementId);
             showAgreementManagement(agreementId);
-        })
-        .fail(function() {
+        },
+        error: function(xhr) {
+            // If 404 or any error, assume no agreement exists
             showUploadSection(agreementId);
-        });
+        }
+    });
 }
-
 // Display PDF with multiple fallback methods
 function displayPDF(pdfUrl, agreementId) {
     $('#emptyState' + agreementId).hide();

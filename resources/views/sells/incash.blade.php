@@ -1215,19 +1215,25 @@ $(document).ready(function() {
 });
 
 // Check if agreement already exists
+// Alternative fix - replace the checkExistingAgreement function:
 function checkExistingAgreement(agreementId) {
-    const agreementType = 'InCash'; // or get this dynamically
+    const agreementType = 'InCash';
     
-    $.get('{{ url("/agreements") }}/' + agreementId + '/' + agreementType)
-        .done(function(data, status, xhr) {
-            const pdfUrl = '{{ url("/agreements") }}/' + agreementId + '/' + agreementType;
+    $.ajax({
+        url: '/agreements/' + agreementId + '/' + agreementType,
+        type: 'HEAD', // Use HEAD request to check if file exists without downloading
+        success: function(data, status, xhr) {
+            // If successful, the agreement exists
+            const pdfUrl = '/agreements/' + agreementId + '/' + agreementType;
             currentPdfUrl = pdfUrl;
             displayPDF(pdfUrl, agreementId);
             showAgreementManagement(agreementId);
-        })
-        .fail(function() {
+        },
+        error: function(xhr) {
+            // If 404 or any error, assume no agreement exists
             showUploadSection(agreementId);
-        });
+        }
+    });
 }
 
 // Display PDF with multiple fallback methods

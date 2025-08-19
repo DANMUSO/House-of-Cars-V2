@@ -13,7 +13,9 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
-
+Route::get('/check-upload-limits', function() {
+       
+});
 Route::get('/', function () {
     return view('welcome');
 });
@@ -62,6 +64,7 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Suppport-Staff,HR'])->group(function () {
     // List all Upload Agreement
+    
     Route::post('/upload-agreement', [App\Http\Controllers\AgreementfileController::class, 'upload'])->name('agreement.upload');
     Route::get('/agreements/{id}/{type}', [App\Http\Controllers\AgreementfileController::class, 'show'])->name('agreement.show');
     Route::delete('/agreements/{id}', [App\Http\Controllers\AgreementfileController::class, 'destroy'])->name('agreement.delete');
