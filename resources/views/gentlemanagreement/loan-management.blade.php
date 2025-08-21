@@ -61,9 +61,11 @@
             
             @if($agreement->status !== 'completed')
                 <!-- Record Payment Button -->
+                @if(in_array(Auth::user()->role, ['Accountant','Managing-Director']))
                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#recordPaymentModal">
                     <i class="fas fa-credit-card"></i> Record Payment 
                 </button>
+                @endif
                 
                 <!-- Send Reminder Button -->
                 <button type="button" class="btn btn-outline-info" onclick="sendPaymentReminder({{ $agreement->id }})">
@@ -194,9 +196,11 @@
                             </p>
                         </div>
                         @if($agreement->status !== 'completed')
+                         @if(in_array(Auth::user()->role, ['Accountant','Managing-Director']))
                             <button class="btn btn-{{ $daysUntilDue < 0 ? 'danger' : 'primary' }}" data-bs-toggle="modal" data-bs-target="#recordPaymentModal">
                                 <i class="fas fa-credit-card"></i> Pay Now
                             </button>
+                            @endif
                         @endif
                     </div>
                 </div>
@@ -249,9 +253,11 @@
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5>Payment History</h5>
                         @if($agreement->status !== 'completed')
+                         @if(in_array(Auth::user()->role, ['Accountant','Managing-Director']))
                             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#recordPaymentModal">
                                 <i class="fas fa-plus"></i> Add Payment
                             </button>
+                        @endif
                         @endif
                     </div>
                     
@@ -311,9 +317,11 @@
                                         <i class="fas fa-print"></i>
                                     </button>
                                                 @if(!isset($payment->is_verified) || !$payment->is_verified)
+                                                 @if(in_array(Auth::user()->role, ['Accountant','Managing-Director']))
                                                     <button class="btn btn-outline-success" onclick="verifyPayment({{ $payment->id }})">
                                                         <i class="fas fa-check"></i>
                                                     </button>
+                                                @endif
                                                 @endif
                                             </div>
                                         </td>
@@ -418,12 +426,14 @@
                                             </td>
                                             <td>
                                                 @if(!$isPaid && $agreement->status !== 'completed')
+                                                 @if(in_array(Auth::user()->role, ['Accountant','Managing-Director']))
                                                     <button class="btn btn-sm btn-primary" 
                                                             onclick="quickPayment({{ $schedule->total_amount }}, '{{ $schedule->due_date }}', {{ $schedule->installment_number }})"
                                                             data-bs-toggle="modal" 
                                                             data-bs-target="#recordPaymentModal">
                                                         <i class="fas fa-credit-card"></i> Pay
                                                     </button>
+                                                    @endif
                                                 @else
                                                     -
                                                 @endif
@@ -1608,10 +1618,11 @@ window['showUploadSection' + {{ $agreement->id }}] = function() {
                         <label class="form-label">Notes (Optional)</label>
                         <textarea class="form-control" name="payment_notes" rows="2" placeholder="Additional notes about this payment"></textarea>
                     </div>
-                    
+                      @if(in_array(Auth::user()->role, ['Accountant','Managing-Director']))
                     <button type="submit" class="btn btn-success w-100">
                         <i class="fas fa-save"></i> Record Payment
                     </button>
+                    @endif
                 </form>
             </div>
         </div>

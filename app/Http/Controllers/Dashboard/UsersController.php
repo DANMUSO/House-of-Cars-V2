@@ -28,9 +28,9 @@ class UsersController extends Controller
             'email'        => 'required|email|unique:users,email',
             'phone'        => 'required|string|max:20',
             'national_id'  => 'required|string|unique:users,national_id',
-            'role'         => 'required|string|in:Managing-Director,Accountant,Showroom-Manager,Salesperson,Support-Staff,Client',
+            'role'         => 'required|string|in:Managing-Director,Accountant,Showroom-Manager,Salesperson,Support-Staff,HR',
             'gender'       => 'required|string|in:Male,Female',
-            'password'       => 'required|integer', // Only for leave allocation, not saved
+            'password'       => 'required|string', // Only for leave allocation, not saved
         ]);
 
         try {
@@ -220,7 +220,7 @@ class UsersController extends Controller
                 'editemail' => 'required|email|unique:users,email,' . $request->id,
                 'editphone' => 'required|string|max:20',
                 'editnational_id' => 'required|string|unique:users,national_id,' . $request->id,
-                'editrole' => 'required|string|in:Managing-Director,Accountant,Showroom-Manager,Salesperson,Support-Staff,Client',
+                'editrole' => 'required|string|in:Managing-Director,Accountant,Showroom-Manager,Salesperson,Support-Staff,HR',
             ]);
 
             $id = $request->id;

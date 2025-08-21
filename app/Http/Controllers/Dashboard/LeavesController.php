@@ -17,13 +17,24 @@ class LeavesController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+   public function index()
     {
-        // Get leave applications with proper relationships
-        $leaveApplications = LeaveApplication::with(['user', 'leaveDay'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $userRole = Auth::user()->role;
         
+        // Apply role-based filtering
+        if (in_array($userRole, ['Managing-Director', 'HR'])) {
+            // Show all leave applications for Managing Director and HR
+            $leaveApplications = LeaveApplication::with(['user', 'leaveDay'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } else {
+            // Show only user's own leave applications for other roles
+            $leaveApplications = LeaveApplication::with(['user', 'leaveDay'])
+                ->where('user_id', Auth::id())
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
+
         // Get current user's ACTIVE leave balances only
         $userLeaveBalances = collect();
         if (Auth::check()) {
@@ -32,11 +43,11 @@ class LeavesController extends Controller
                 ->where('status', 'active')
                 ->get()
                 ->keyBy('leave_type');
-                
+                        
             // If user has no leave balances, create default ones
             if ($userLeaveBalances->isEmpty()) {
                 $this->createDefaultLeaveBalances(Auth::id());
-                
+                                
                 // Reload the leave balances
                 $userLeaveBalances = LeaveDay::where('user_id', Auth::id())
                     ->where('year', date('Y'))
@@ -45,10 +56,10 @@ class LeavesController extends Controller
                     ->keyBy('leave_type');
             }
         }
-        
+                
         // Get handover suggestions based on user role
         $handoverSuggestions = $this->getHandoverSuggestions();
-        
+                
         // If it's an AJAX request, return JSON
         if (request()->ajax()) {
             return response()->json([
@@ -57,7 +68,7 @@ class LeavesController extends Controller
                 'handoverSuggestions' => $handoverSuggestions
             ]);
         }
-        
+                
         return view('leaves.index', compact('leaveApplications', 'userLeaveBalances', 'handoverSuggestions'));
     }
 
@@ -170,35 +181,6 @@ class LeavesController extends Controller
         }
 
         return $suggestions;
-    }
-
-    /**
-     * Check if user can approve leaves (without role package)
-     */
-    private function canApproveLeaves($user = null)
-    {
-        $user = $user ?? Auth::user();
-        
-        // Check if user has role field
-        if (isset($user->role)) {
-            $allowedRoles = ['manager', 'managing-director', 'supervisor', 'admin', 'hr'];
-            return in_array(strtolower($user->role), $allowedRoles);
-        }
-        
-        // Check if user has is_admin field
-        if (isset($user->is_admin)) {
-            return $user->is_admin == 1;
-        }
-        
-        // Check if user has permissions field (JSON)
-        if (isset($user->permissions)) {
-            $permissions = is_string($user->permissions) ? json_decode($user->permissions, true) : $user->permissions;
-            return in_array('approve-leaves', $permissions ?? []);
-        }
-        
-        // Default: only specific user IDs can approve (change as needed)
-        $adminUserIds = [1]; // Add admin user IDs here
-        return in_array($user->id, $adminUserIds);
     }
 
     /**
@@ -326,159 +308,219 @@ class LeavesController extends Controller
     /**
      * Approve a leave application and deduct days
      */
-    public function approve(Request $request, LeaveApplication $leave)
-    {
+     /**
+ * Approve a leave application and deduct days
+ */
+public function approve(Request $request, $id)
+{
+    try {
+        DB::beginTransaction();
+
+        // Find the leave application by ID
+        $leave = LeaveApplication::findOrFail($id);
         
-        try {
-            DB::beginTransaction();
+        Log::info("Attempting to approve leave application {$id}. Current status: {$leave->status}");
 
-            if ($leave->status !== 'Pending') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This application has already been processed.'
-                ], 400);
-            }
+        // Check if user has permission to approve leaves
+        if (!in_array(auth()->user()->role, ['Managing-Director', 'HR'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You do not have permission to approve leave applications.'
+            ], 403);
+        }
 
-            // Double-check if user still has enough leave days
-            $leaveDay = $leave->leaveDay;
-            if ($leaveDay->remaining_days < $leave->total_days) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'User no longer has sufficient leave balance. Current balance: ' . $leaveDay->remaining_days . ' days.'
-                ], 400);
-            }
+        // Additional check: Users cannot approve their own applications
+        if ($leave->user_id === auth()->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot approve your own leave application.'
+            ], 403);
+        }
 
-            // Update application status
-            $leave->update([
-                'status' => 'Approved',
-                'approved_by' => Auth::id(),
-                'approved_date' => now(),
-                'comments' => $request->comments ?? null,
-            ]);
+        // Refresh model to get latest data
+        $leave->refresh();
 
-            // Deduct leave days from the user's balance
+        if ($leave->status !== 'Pending') {
+            return response()->json([
+                'success' => false,
+                'message' => "This application has already been processed. Current status: {$leave->status}"
+            ], 400);
+        }
+
+        // Double-check if user still has enough leave days
+        $leaveDay = $leave->leaveDay;
+        if ($leaveDay && $leaveDay->remaining_days < $leave->total_days) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User no longer has sufficient leave balance. Current balance: ' . $leaveDay->remaining_days . ' days.'
+            ], 400);
+        }
+
+        // Update application status
+        $leave->update([
+            'status' => 'Approved',
+            'approved_by' => Auth::id(),
+            'approved_date' => now(),
+            'comments' => $request->input('comments'),
+        ]);
+
+        // Deduct leave days from the user's balance (if leaveDay exists)
+        if ($leaveDay) {
             $leaveDay->update([
                 'used_days' => $leaveDay->used_days + $leave->total_days,
                 'remaining_days' => $leaveDay->remaining_days - $leave->total_days,
             ]);
+        }
 
-            DB::commit();
+        DB::commit();
 
-            Log::info("Leave approved for user {$leave->user->name}. Deducted {$leave->total_days} days from {$leave->leave_type}. Remaining: {$leaveDay->remaining_days} days.");
+        Log::info("Leave approved for user {$leave->user->name}. Application ID: {$id}");
 
+        return response()->json([
+            'success' => true,
+            'message' => "Leave application approved successfully!"
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollback();
+        Log::error("Leave approval failed for ID {$id}: " . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to approve leave application. Error: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Reject a leave application
+ */
+public function reject(Request $request, $id)
+{
+    try {
+        // Find the leave application by ID
+        $leave = LeaveApplication::findOrFail($id);
+        
+        Log::info("Attempting to reject leave application {$id}. Current status: {$leave->status}");
+
+        // Check if user has permission to reject leaves
+        if (!in_array(auth()->user()->role, ['Managing-Director', 'HR'])) {
             return response()->json([
-                'success' => true,
-                'message' => "Leave application approved successfully! {$leave->total_days} days deducted from {$leave->leave_type} balance."
-            ]);
+                'success' => false,
+                'message' => 'You do not have permission to reject leave applications.'
+            ], 403);
+        }
 
-        } catch (\Exception $e) {
-            DB::rollback();
-            Log::error('Leave approval failed: ' . $e->getMessage());
+        // Additional check: Users cannot reject their own applications
+        if ($leave->user_id === auth()->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot reject your own leave application.'
+            ], 403);
+        }
+
+        // Refresh model to get latest data
+        $leave->refresh();
+
+        if ($leave->status !== 'Pending') {
+            Log::warning("Cannot reject leave application {$id}. Status is '{$leave->status}' instead of 'Pending'");
             
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to approve leave application.'
-            ], 500);
+                'message' => "This application has already been processed. Current status: {$leave->status}"
+            ], 400);
         }
+
+        $leave->update([
+            'status' => 'Rejected',
+            'approved_by' => Auth::id(),
+            'approved_date' => now(),
+            'comments' => $request->input('comments', 'Application rejected'),
+        ]);
+
+        Log::info("Leave application {$id} rejected successfully by user " . Auth::id());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Leave application rejected successfully!'
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error("Leave rejection failed for ID {$id}: " . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to reject leave application. Error: ' . $e->getMessage()
+        ], 500);
     }
+}
 
-    /**
-     * Reject a leave application
-     */
-    public function reject(Request $request, LeaveApplication $leave)
-    {
-       
+/**
+ * Cancel a leave application and restore days if already approved
+ */
+public function cancel(Request $request, $id)
+{
+    try {
+        DB::beginTransaction();
 
-        try {
-            if ($leave->status !== 'Pending') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This application has already been processed.'
-                ], 400);
-            }
+        // Find the leave application by ID
+        $leave = LeaveApplication::findOrFail($id);
 
-            $leave->update([
-                'status' => 'Rejected',
-                'approved_by' => Auth::id(),
-                'approved_date' => now(),
-                'comments' => $request->comments ?? 'Application rejected',
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Leave application rejected successfully!'
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Leave rejection failed: ' . $e->getMessage());
-            
+        // Only allow cancellation by the applicant
+        if ($leave->user_id !== Auth::id()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to reject leave application.'
-            ], 500);
+                'message' => 'You can only cancel your own applications.'
+            ], 403);
         }
-    }
 
-    /**
-     * Cancel a leave application and restore days if already approved
-     */
-    public function cancel(LeaveApplication $leave)
-    {
-        try {
-            DB::beginTransaction();
+        // Refresh model to get latest data
+        $leave->refresh();
 
-            // Only allow cancellation by the applicant
-            if ($leave->user_id !== Auth::id()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You can only cancel your own applications.'
-                ], 403);
-            }
-
-            if (!in_array($leave->status, ['Pending', 'Approved'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This application cannot be cancelled.'
-                ], 400);
-            }
-
-            // If application was approved, restore the leave days
-            if ($leave->status === 'Approved') {
-                $leaveDay = $leave->leaveDay;
-                $leaveDay->update([
-                    'used_days' => $leaveDay->used_days - $leave->total_days,
-                    'remaining_days' => $leaveDay->remaining_days + $leave->total_days,
-                ]);
-
-                Log::info("Leave cancelled for user {$leave->user->name}. Restored {$leave->total_days} days to {$leave->leave_type}. New balance: {$leaveDay->remaining_days} days.");
-            }
-
-            $leave->update([
-                'status' => 'Cancelled',
-                'cancelled_date' => now(),
-            ]);
-
-            DB::commit();
-
-            $message = $leave->status === 'Approved' 
-                ? "Leave application cancelled successfully! {$leave->total_days} days have been restored to your {$leave->leave_type} balance."
-                : 'Leave application cancelled successfully!';
-
-            return response()->json([
-                'success' => true,
-                'message' => $message
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollback();
-            Log::error('Leave cancellation failed: ' . $e->getMessage());
-            
+        if (!in_array($leave->status, ['Pending', 'Approved'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to cancel leave application.'
-            ], 500);
+                'message' => 'This application cannot be cancelled.'
+            ], 400);
         }
+
+        // If application was approved, restore the leave days
+        if ($leave->status === 'Approved' && $leave->leaveDay) {
+            $leaveDay = $leave->leaveDay;
+            $leaveDay->update([
+                'used_days' => $leaveDay->used_days - $leave->total_days,
+                'remaining_days' => $leaveDay->remaining_days + $leave->total_days,
+            ]);
+
+            Log::info("Leave cancelled for user {$leave->user->name}. Restored {$leave->total_days} days to {$leave->leave_type}.");
+        }
+
+        $leave->update([
+            'status' => 'Cancelled',
+            'cancelled_date' => now(),
+        ]);
+
+        DB::commit();
+
+        $message = $leave->status === 'Approved' 
+            ? "Leave application cancelled successfully! {$leave->total_days} days have been restored to your {$leave->leave_type} balance."
+            : 'Leave application cancelled successfully!';
+
+        return response()->json([
+            'success' => true,
+            'message' => $message
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollback();
+        Log::error("Leave cancellation failed for ID {$id}: " . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to cancel leave application.'
+        ], 500);
     }
+}
 
     /**
      * Get user's active leave balances
@@ -537,8 +579,6 @@ class LeavesController extends Controller
             'approved_applications' => LeaveApplication::where('status', 'Approved')->whereYear('created_at', $currentYear)->count(),
             'rejected_applications' => LeaveApplication::where('status', 'Rejected')->whereYear('created_at', $currentYear)->count(),
         ];
-
-        // 
 
         return response()->json([
             'success' => true,

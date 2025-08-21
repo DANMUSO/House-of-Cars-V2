@@ -480,13 +480,6 @@
                                                         <i class="fas fa-trash"></i> Delete
                                                     </button>
                                                 @endif
-                                                
-                                                @if(in_array(strtolower($agreement->status), ['active']))
-                                                    <button class="btn btn-outline-info mb-1" 
-                                                            onclick="recordPayment({{ $agreement->id }}, {{ $agreement->monthly_payment ?? 0 }})">
-                                                        <i class="fas fa-money-bill"></i> Record Payment
-                                                    </button>
-                                                @endif
                                             </div>
                                         </td>
                                     </tr>

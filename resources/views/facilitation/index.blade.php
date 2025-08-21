@@ -298,127 +298,125 @@
                         </h5>
                     </div>
                     <div class="card-body">
+                        
                         <div class="table-responsive"> 
-                            <table id="responsive-datatable" class="table table-bordered table-hover nowrap w-100">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th><i class="fas fa-user me-1"></i>Requester</th>
-                                        <th><i class="fas fa-tag me-1"></i>Request Type</th>
-                                        <th><i class="fas fa-money-bill me-1"></i>Amount</th>
-                                        <th><i class="fas fa-info-circle me-1"></i>Status</th>
-                                        <th><i class="fas fa-calendar me-1"></i>Date</th>
-                                        <th><i class="fas fa-cog me-1"></i>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($facilitations as $facilitation)
-                                    <tr>
-                                        <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="avatar-sm me-2">
-                                                    <span class="avatar-title rounded-circle bg-primary text-white">
-                                                        {{ substr($facilitation->requester->first_name, 0, 1) }}{{ substr($facilitation->requester->last_name, 0, 1) }}
-                                                    </span>
-                                                </div>
-                                                <div>
-                                                    <h6 class="mb-0">{{ $facilitation->requester->first_name }} {{ $facilitation->requester->last_name }}</h6>
-                                                    <small class="text-muted">{{ $facilitation->requester->email }}</small>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-info fs-6">
-                                                @switch($facilitation->request)
-                                                    @case('Fuel')
-                                                        🚗 {{ $facilitation->request }}
-                                                        @break
-                                                    @case('Transport')
-                                                        🚌 {{ $facilitation->request }}
-                                                        @break
-                                                    @case('Repairs')
-                                                        🔧 {{ $facilitation->request }}
-                                                        @break
-                                                    @case('Amount')
-                                                        💰 {{ $facilitation->request }}
-                                                        @break
-                                                    @case('Allowance')
-                                                        💳 {{ $facilitation->request }}
-                                                        @break
-                                                    @case('Airtime')
-                                                        📱 {{ $facilitation->request }}
-                                                        @break
-                                                    @case('Advance')
-                                                        💵 {{ $facilitation->request }}
-                                                        @break
-                                                    @default
-                                                        {{ $facilitation->request }}
-                                                @endswitch
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <strong class="text-success">KES {{ number_format($facilitation->amount, 2) }}</strong>
-                                        </td>
-                                        <td>
-                                            @if($facilitation->status == 1)
-                                                <span class="badge bg-warning text-dark">
-                                                    <i class="fas fa-clock me-1"></i>Pending
-                                                </span>
-                                            @elseif($facilitation->status == 2)
-                                                <span class="badge bg-success">
-                                                    <i class="fas fa-check me-1"></i>Approved
-                                                </span>
-                                                @if($facilitation->approver)
-                                                <br><small class="text-muted">by {{ $facilitation->approver->first_name }} {{ $facilitation->approver->last_name }}</small>
-                                                <br><small class="text-muted">{{ $facilitation->approved_at->format('M d, Y H:i') }}</small>
-                                                @endif
-                                            @elseif($facilitation->status == 3)
-                                                <span class="badge bg-danger">
-                                                    <i class="fas fa-times me-1"></i>Rejected
-                                                </span>
-                                                @if($facilitation->rejector)
-                                                <br><small class="text-muted">by {{ $facilitation->rejector->first_name }} {{ $facilitation->rejector->last_name }}</small>
-                                                <br><small class="text-muted">{{ $facilitation->rejected_at->format('M d, Y H:i') }}</small>
-                                                @endif
-                                            @else
-                                                <span class="badge bg-secondary">Unknown</span>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            <strong>{{ $facilitation->formatted_date }}</strong>
-                                            <br><small class="text-muted">{{ $facilitation->created_at->diffForHumans() }}</small>
-                                            <br><small class="text-muted">{{ $facilitation->created_at}}</small>
-                                        </td>
-                                        
-                                        <td>
-                                            @if($facilitation->status == 1)
-                                            <div class="btn-group-vertical" role="group">
-                                                <button class="btn btn-success btn-sm approve-frequest mb-1" data-id="{{ $facilitation->id }}">
-                                                    <i class="fas fa-check me-1"></i> Approve
-                                                </button>
-                                                <button class="btn btn-danger btn-sm reject-frequest" data-id="{{ $facilitation->id }}">
-                                                    <i class="fas fa-times me-1"></i> Reject
-                                                </button>
-                                            </div>
-                                            @else
-                                                <span class="text-muted">
-                                                    <i class="fas fa-ban me-1"></i>No actions needed
-                                                </span>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                    @empty
-                                    <tr>
-                                        <td colspan="7" class="text-center py-4">
-                                            <div class="text-muted">
-                                                <i class="fas fa-inbox fa-3x mb-3"></i>
-                                                <h5>No facilitation requests found</h5>
-                                                <p>Click "Send Request" to create your first facilitation request.</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
+                  <table id="responsive-datatable" class="table table-bordered table-hover nowrap w-100">
+    <thead class="table-dark">
+        <tr>
+            <th><i class="fas fa-user me-1"></i>Requester</th>
+            <th><i class="fas fa-tag me-1"></i>Request Type</th>
+            <th><i class="fas fa-money-bill me-1"></i>Amount</th>
+            <th><i class="fas fa-info-circle me-1"></i>Status</th>
+            <th><i class="fas fa-calendar me-1"></i>Date</th>
+            @if(in_array(Auth::user()->role, ['Managing-Director', 'Accountant']))
+                <th><i class="fas fa-cog me-1"></i>Actions</th>
+            @endif
+        </tr>
+    </thead>
+    <tbody>
+        @forelse($facilitations as $facilitation)
+            <tr>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="avatar-sm me-2">
+                            <span class="avatar-title rounded-circle bg-primary text-white">
+                                {{ substr($facilitation->requester->first_name, 0, 1) }}{{ substr($facilitation->requester->last_name, 0, 1) }}
+                            </span>
+                        </div>
+                        <div>
+                            <h6 class="mb-0">{{ $facilitation->requester->first_name }} {{ $facilitation->requester->last_name }}</h6>
+                            <small class="text-muted">{{ $facilitation->requester->email }}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge bg-info fs-6">
+                        @switch($facilitation->request)
+                            @case('Fuel')
+                                🚗 {{ $facilitation->request }}
+                                @break
+                            @case('Transport')
+                                🚌 {{ $facilitation->request }}
+                                @break
+                            @case('Repairs')
+                                🔧 {{ $facilitation->request }}
+                                @break
+                            @case('Amount')
+                                💰 {{ $facilitation->request }}
+                                @break
+                            @case('Allowance')
+                                💳 {{ $facilitation->request }}
+                                @break
+                            @case('Airtime')
+                                📱 {{ $facilitation->request }}
+                                @break
+                            @case('Advance')
+                                💵 {{ $facilitation->request }}
+                                @break
+                            @default
+                                {{ $facilitation->request }}
+                        @endswitch
+                    </span>
+                </td>
+                <td>
+                    <strong class="text-success">KES {{ number_format($facilitation->amount, 2) }}</strong>
+                </td>
+                <td>
+                    @if($facilitation->status == '1')
+                        <span class="badge bg-warning text-dark">
+                            <i class="fas fa-clock me-1"></i>Pending
+                        </span>
+                    @elseif($facilitation->status == '2')
+                        <span class="badge bg-success">
+                            <i class="fas fa-check me-1"></i>Approved
+                        </span>
+                    @elseif($facilitation->status == '3')
+                        <span class="badge bg-danger">
+                            <i class="fas fa-times me-1"></i>Rejected
+                        </span>
+                    @else
+                        <span class="badge bg-secondary">Unknown</span>
+                    @endif
+                </td>
+                <td>
+                    <strong>{{ $facilitation->created_at->format('M d, Y') }}</strong>
+                    <br><small class="text-muted">{{ $facilitation->created_at->diffForHumans() }}</small>
+                    <br><small class="text-muted">{{ $facilitation->created_at->format('Y-m-d H:i:s') }}</small>
+                </td>
+                
+                {{-- Actions column only for Managing Director and Accountant --}}
+                @if(in_array(Auth::user()->role, ['Managing-Director', 'Accountant']))
+                <td>
+                    @if($facilitation->status == '1')
+                    <div class="btn-group-vertical" role="group">
+                        <button class="btn btn-success btn-sm approve-frequest mb-1" data-id="{{ $facilitation->id }}">
+                            <i class="fas fa-check me-1"></i> Approve
+                        </button>
+                        <button class="btn btn-danger btn-sm reject-frequest" data-id="{{ $facilitation->id }}">
+                            <i class="fas fa-times me-1"></i> Reject
+                        </button>
+                    </div>
+                    @else
+                        <span class="text-muted">
+                            <i class="fas fa-ban me-1"></i>No actions needed
+                        </span>
+                    @endif
+                </td>
+                @endif
+            </tr>
+        @empty
+        <tr>
+            <td colspan="@if(in_array(Auth::user()->role, ['Managing-Director', 'Accountant'])) 6 @else 5 @endif" class="text-center py-4">
+                <div class="text-muted">
+                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                    <h5>No facilitation requests found</h5>
+                    <p>Click "Send Request" to create your first facilitation request.</p>
+                </div>
+            </td>
+        </tr>
+        @endforelse
+    </tbody>
+</table>
                         </div>
                     </div>
                 </div>

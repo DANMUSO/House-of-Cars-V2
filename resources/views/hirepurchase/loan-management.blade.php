@@ -233,6 +233,7 @@
     
     @if($agreement->status !== 'completed')
         <!-- Regular Payment Button -->
+          @if(in_array(Auth::user()->role, ['Accountant','Managing-Director']))
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#recordPaymentModal">
             <i class="fas fa-credit-card"></i> Record Payment 
         </button>
@@ -241,6 +242,7 @@
         <button type="button" class="btn lump-sum-btn"  id="lumpSumPaymentBtn" onclick="openLumpSumModal()">
             <i class="fas fa-money-bill-wave"></i> Lump Sum & Reschedule
         </button>
+        @endif
     @endif
 </div>
 
@@ -1368,9 +1370,11 @@ window.testLumpSumModal = function() {
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5>Payment History</h5>
                         @if($agreement->status !== 'completed')
+                         @if(in_array(Auth::user()->role, ['Accountant','Managing-Director']))
                             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#recordPaymentModal">
                                 <i class="fas fa-plus"></i> Add Payment
                             </button>
+                         @endif
                         @endif
                     </div>
  <!-- Receipt Download Modal -->
@@ -1588,9 +1592,11 @@ window.testLumpSumModal = function() {
                                                     <i class="fas fa-print"></i>
                                                 </button>
                                                 @if(!isset($payment->is_verified) || !$payment->is_verified)
+                                                 @if(in_array(Auth::user()->role, ['Accountant','Managing-Director']))
                                                     <button class="btn btn-outline-success" onclick="verifyPayment({{ $payment->id }})">
                                                         <i class="fas fa-check"></i>
                                                     </button>
+                                                @endif
                                                 @endif
                                             </div>
                                         </td>

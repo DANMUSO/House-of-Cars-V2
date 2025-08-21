@@ -9,12 +9,24 @@ use Illuminate\Http\Request;
 
 class FacilitationController extends Controller
 {
-    public function index()
-    {
-
-        $facilitations = Facilitation::with('requester')->get();
-        return view('facilitation.index',compact('facilitations'));
-    }
+     public function index()
+        {
+            $userRole = Auth::user()->role;
+            
+            if (in_array($userRole, ['Managing-Director', 'Accountant'])) {
+                // Show all facilitations for Managing Director and Accountant
+                $facilitations = Facilitation::with('requester')
+                                        ->orderBy('created_at', 'desc')
+                                        ->get();
+            } else {
+                // Show only user's own facilitations for other roles
+                $facilitations = Facilitation::where('request_id', Auth::id())
+                                        ->with('requester')
+                                        ->orderBy('created_at', 'desc')
+                                        ->get();
+            }
+            return view('facilitation.index', compact('facilitations'));
+        }
 
     public function store(Request $request)
     {
@@ -58,7 +70,7 @@ class FacilitationController extends Controller
                 'status' =>2,
             ]);
 
-            return redirect()->route('facilitation.requests')->with('success', 'Request updated successfully!');
+            return redirect()->route('Facilitation.requests')->with('success', 'Request updated successfully!');
         }
     public function reject(Request $request)
         {
@@ -72,6 +84,6 @@ class FacilitationController extends Controller
                 'status' =>3,
             ]);
 
-            return redirect()->route('facilitation.requests')->with('success', 'Request rejected successfully!');
+            return redirect()->route('Facilitation.requests')->with('success', 'Request rejected successfully!');
         }
 }

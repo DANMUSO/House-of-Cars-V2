@@ -105,6 +105,30 @@ Route::get('/proxy-image', function(Request $request) {
     }
 })->name('proxy.image');
 Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Suppport-Staff,HR'])->group(function () {
+         // Leave Applications Routes
+    Route::prefix('leave-applications')->name('leave-applications.')->group(function () {
+        
+        // Store new leave application (AJAX)
+        Route::post('/', [App\Http\Controllers\Dashboard\LeavesController::class, 'store'])->name('store');
+        
+        // View specific leave application (AJAX)
+        Route::get('/{id}', [App\Http\Controllers\Dashboard\LeavesController::class, 'show'])->name('show');
+        
+        // Approve leave application (AJAX) - use {id} parameter, not {leave}
+        Route::post('/{id}/approve', [App\Http\Controllers\Dashboard\LeavesController::class, 'approve'])
+            ->name('approve');
+        
+        // Reject leave application (AJAX) - use {id} parameter, not {leave}
+        Route::post('/{id}/reject', [App\Http\Controllers\Dashboard\LeavesController::class, 'reject'])
+            ->name('reject');
+        
+        // Cancel leave application (AJAX) - use {id} parameter, not {leave}
+        Route::post('/{id}/cancel', [App\Http\Controllers\Dashboard\LeavesController::class, 'cancel'])
+            ->name('cancel');
+    });
+        
+        // Main leave management page
+        Route::get('/leave-management', [App\Http\Controllers\Dashboard\LeavesController::class, 'index'])->name('leave.index');
     // List all Upload Agreement
     
     Route::post('/upload-agreement', [App\Http\Controllers\AgreementfileController::class, 'upload'])->name('agreement.upload');
@@ -254,34 +278,7 @@ Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Sa
 
 
     
-    Route::middleware(['auth'])->group(function () {
     
-        // Leave Applications Routes
-        Route::prefix('leave-applications')->name('leave-applications.')->group(function () {
-            
-            // Store new leave application (AJAX)
-            Route::post('/', [App\Http\Controllers\Dashboard\LeavesController::class, 'store'])->name('store');
-            
-            // View specific leave application (AJAX)
-            Route::get('/{id}', [App\Http\Controllers\Dashboard\LeavesController::class, 'show'])->name('show');
-            
-            // Approve leave application (AJAX) - requires permission
-            Route::post('/{id}/approve', [App\Http\Controllers\Dashboard\LeavesController::class, 'approve'])
-                ->name('approve')
-                ->middleware('permission:approve-leaves');
-            
-            // Reject leave application (AJAX) - requires permission  
-            Route::post('/{id}/reject', [App\Http\Controllers\Dashboard\LeavesController::class, 'reject'])
-                ->name('reject')
-                ->middleware('permission:approve-leaves');
-            
-            // Cancel leave application (AJAX) - only own applications
-            Route::post('/{id}/cancel', [App\Http\Controllers\Dashboard\LeavesController::class, 'cancel'])->name('cancel');
-        });
-        
-        // Main leave management page
-        Route::get('/leave-management', [App\Http\Controllers\Dashboard\LeavesController::class, 'index'])->name('leave.index');
-    });
     // Add these routes to your web.php file
     Route::post('/hire-purchase/payments/store', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'storePayment'])->name('hire-purchase.payments.store');
     Route::post('/hire-purchase/payments/{payment}/verify', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'verifyPayment'])->name('hire-purchase.payments.verify');

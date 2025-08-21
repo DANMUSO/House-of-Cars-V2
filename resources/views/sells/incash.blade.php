@@ -375,435 +375,435 @@
                                         <tr>
                                             <td>{{ $index + 1 }}
                                                 <div class="container mt-5">
-  <!-- Button to Open Modal -->
-  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#VehicleModal{{$cash->id}}">
-     <span class="me-2">View 🚗</span>
-  </button>
-</div>
-
-
-<!-- Professional Vehicle Details Modal -->
-<div class="modal fade" id="VehicleModal{{$cash->id}}" tabindex="-1" aria-labelledby="VehicleModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content border-0 shadow-lg">
-            <!-- Modal Header -->
-            <div class="modal-header bg-gradient-primary text-white border-0 py-3">
-                <div class="d-flex align-items-center">
-                    <div class="modal-icon me-3">
-                        <i class="fas fa-car fa-lg"></i>
-                    </div>
-                    <div>
-                        <h5 class="modal-title mb-0" id="VehicleModalLabel">Vehicle Details</h5>
-                        <small class="opacity-75">Complete vehicle information and gallery</small>
-                    </div>
-                </div>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <!-- Modal Body -->
-            <div class="modal-body p-0">
-                @if ($cash->car_type == 'import')
-                    @php $car = $importCars->get($cash->car_id); @endphp
-                    @if($car)
-                        <div class="row g-0">
-                            <!-- Vehicle Information Panel -->
-                            <div class="col-lg-7 p-4">
-                                <!-- Header Section -->
-                                <div class="vehicle-header mb-4">
-                                    <div class="d-flex align-items-center justify-content-between mb-3">
-                                        <div class="vehicle-type-badge">
-                                            <span class="badge bg-primary fs-6 px-3 py-2">
-                                                <i class="fas fa-ship me-2"></i>Import Vehicle
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <h3 class="text-dark mb-2">{{ $car->make }} {{ $car->model }}</h3>
-                                    <p class="text-muted mb-0">{{ $car->year }} • {{ $car->body_type }}</p>
-                                </div>
-
-                                <!-- Vehicle Specifications -->
-                                <div class="specs-section mb-4">
-                                    <h6 class="section-title text-uppercase fw-bold text-muted mb-3">
-                                        <i class="fas fa-cogs me-2"></i>Vehicle Specifications
-                                    </h6>
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <div class="spec-item p-3 bg-light rounded">
-                                                <div class="spec-label text-muted small mb-1">
-                                                    VIN Number<br>
-                                                    {{ $car->vin }}
+                                                <!-- Button to Open Modal -->
+                                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#VehicleModal{{$cash->id}}">
+                                                    <span class="me-2">View 🚗</span>
+                                                </button>
                                                 </div>
-                                               
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="spec-item p-3 bg-light rounded">
-                                                <div class="spec-label text-muted small mb-1">
-                                                    Engine Type
-                                                    <br>
-                                                    {{ $car->engine_type }}
 
 
-                                                </div>
-                                                <div class="spec-value fw-semibold"></div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="spec-item p-3 bg-light rounded">
-                                                <div class="spec-label text-muted small mb-1">
-                                                    Mileage<br>
-                                                         <i class="fas fa-tachometer-alt me-2 text-primary"></i>
-                                                    {{ number_format($car->mileage) }} km
-                                                </div>
-                                              
-                                                
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="spec-item p-3 bg-light rounded">
-                                                <div class="spec-label text-muted small mb-1">
-                                                    Body Type<br>
-                                                 {{ $car->body_type }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                                                <!-- Professional Vehicle Details Modal -->
+                                                <div class="modal fade" id="VehicleModal{{$cash->id}}" tabindex="-1" aria-labelledby="VehicleModalLabel" aria-hidden="true">
+                                                    <div class="modal-dialog modal-xl">
+                                                        <div class="modal-content border-0 shadow-lg">
+                                                            <!-- Modal Header -->
+                                                            <div class="modal-header bg-gradient-primary text-white border-0 py-3">
+                                                                <div class="d-flex align-items-center">
+                                                                    <div class="modal-icon me-3">
+                                                                        <i class="fas fa-car fa-lg"></i>
+                                                                    </div>
+                                                                    <div>
+                                                                        <h5 class="modal-title mb-0" id="VehicleModalLabel">Vehicle Details</h5>
+                                                                        <small class="opacity-75">Complete vehicle information and gallery</small>
+                                                                    </div>
+                                                                </div>
+                                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
 
-                            <!-- Vehicle Photos Panel -->
-                            <div class="col-lg-5 bg-light border-start">
-                                <div class="photo-section h-100 p-4">
-                                    <h6 class="section-title text-uppercase fw-bold text-muted mb-3">
-                                        <i class="fas fa-images me-2"></i>Vehicle Gallery
-                                    </h6>
-                                    @if($car->photos)
-                                        @php
-                                            $photos = json_decode($car->photos, true);
-                                            if (is_string($photos)) {
-                                                $photos = json_decode($photos, true);
-                                            }
-                                        @endphp
-                                        @if(is_array($photos) && count($photos) > 0)
-                                            <div class="gallery-container">
-                                                <div id="carouselImport{{$cash->id}}" class="carousel slide" data-bs-ride="carousel">
-                                                    <div class="carousel-inner rounded-3 shadow-sm">
-                                                        @foreach($photos as $index => $photo)
-                                                            <div class="carousel-item {{ $index == 0 ? 'active' : '' }}">
-                                                                <img src="https://houseofcars.s3.eu-central-1.amazonaws.com/{{$photo }}" 
-                                                                     class="d-block w-100" 
-                                                                     style="height: 320px; object-fit: cover;" 
-                                                                     alt="Vehicle Photo {{ $index + 1 }}"
-                                                                     loading="lazy">
-                                                                <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded">
-                                                                    <small>Photo {{ $index + 1 }} of {{ count($photos) }}</small>
+                                                            <!-- Modal Body -->
+                                                            <div class="modal-body p-0">
+                                                                @if ($cash->car_type == 'import')
+                                                                    @php $car = $importCars->get($cash->car_id); @endphp
+                                                                    @if($car)
+                                                                        <div class="row g-0">
+                                                                            <!-- Vehicle Information Panel -->
+                                                                            <div class="col-lg-7 p-4">
+                                                                                <!-- Header Section -->
+                                                                                <div class="vehicle-header mb-4">
+                                                                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                                                                        <div class="vehicle-type-badge">
+                                                                                            <span class="badge bg-primary fs-6 px-3 py-2">
+                                                                                                <i class="fas fa-ship me-2"></i>Import Vehicle
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <h3 class="text-dark mb-2">{{ $car->make }} {{ $car->model }}</h3>
+                                                                                    <p class="text-muted mb-0">{{ $car->year }} • {{ $car->body_type }}</p>
+                                                                                </div>
+
+                                                                                <!-- Vehicle Specifications -->
+                                                                                <div class="specs-section mb-4">
+                                                                                    <h6 class="section-title text-uppercase fw-bold text-muted mb-3">
+                                                                                        <i class="fas fa-cogs me-2"></i>Vehicle Specifications
+                                                                                    </h6>
+                                                                                    <div class="row g-3">
+                                                                                        <div class="col-md-6">
+                                                                                            <div class="spec-item p-3 bg-light rounded">
+                                                                                                <div class="spec-label text-muted small mb-1">
+                                                                                                    VIN Number<br>
+                                                                                                    {{ $car->vin }}
+                                                                                                </div>
+                                                                                            
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div class="col-md-6">
+                                                                                            <div class="spec-item p-3 bg-light rounded">
+                                                                                                <div class="spec-label text-muted small mb-1">
+                                                                                                    Engine Type
+                                                                                                    <br>
+                                                                                                    {{ $car->engine_type }}
+
+
+                                                                                                </div>
+                                                                                                <div class="spec-value fw-semibold"></div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div class="col-md-6">
+                                                                                            <div class="spec-item p-3 bg-light rounded">
+                                                                                                <div class="spec-label text-muted small mb-1">
+                                                                                                    Mileage<br>
+                                                                                                        <i class="fas fa-tachometer-alt me-2 text-primary"></i>
+                                                                                                    {{ number_format($car->mileage) }} km
+                                                                                                </div>
+                                                                                            
+                                                                                                
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div class="col-md-6">
+                                                                                            <div class="spec-item p-3 bg-light rounded">
+                                                                                                <div class="spec-label text-muted small mb-1">
+                                                                                                    Body Type<br>
+                                                                                                {{ $car->body_type }}
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <!-- Vehicle Photos Panel -->
+                                                                            <div class="col-lg-5 bg-light border-start">
+                                                                                <div class="photo-section h-100 p-4">
+                                                                                    <h6 class="section-title text-uppercase fw-bold text-muted mb-3">
+                                                                                        <i class="fas fa-images me-2"></i>Vehicle Gallery
+                                                                                    </h6>
+                                                                                    @if($car->photos)
+                                                                                        @php
+                                                                                            $photos = json_decode($car->photos, true);
+                                                                                            if (is_string($photos)) {
+                                                                                                $photos = json_decode($photos, true);
+                                                                                            }
+                                                                                        @endphp
+                                                                                        @if(is_array($photos) && count($photos) > 0)
+                                                                                            <div class="gallery-container">
+                                                                                                <div id="carouselImport{{$cash->id}}" class="carousel slide" data-bs-ride="carousel">
+                                                                                                    <div class="carousel-inner rounded-3 shadow-sm">
+                                                                                                        @foreach($photos as $index => $photo)
+                                                                                                            <div class="carousel-item {{ $index == 0 ? 'active' : '' }}">
+                                                                                                                <img src="https://houseofcars.s3.eu-central-1.amazonaws.com/{{$photo }}" 
+                                                                                                                    class="d-block w-100" 
+                                                                                                                    style="height: 320px; object-fit: cover;" 
+                                                                                                                    alt="Vehicle Photo {{ $index + 1 }}"
+                                                                                                                    loading="lazy">
+                                                                                                                <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded">
+                                                                                                                    <small>Photo {{ $index + 1 }} of {{ count($photos) }}</small>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        @endforeach
+                                                                                                    </div>
+                                                                                                    @if(count($photos) > 1)
+                                                                                                        <button class="carousel-control-prev" type="button" data-bs-target="#carouselImport{{$cash->id}}" data-bs-slide="prev">
+                                                                                                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                                                                                            <span class="visually-hidden">Previous</span>
+                                                                                                        </button>
+                                                                                                        <button class="carousel-control-next" type="button" data-bs-target="#carouselImport{{$cash->id}}" data-bs-slide="next">
+                                                                                                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                                                                                            <span class="visually-hidden">Next</span>
+                                                                                                        </button>
+                                                                                                    @endif
+                                                                                                </div>
+                                                                                                
+                                                                                                <!-- Photo Thumbnails -->
+                                                                                                @if(count($photos) > 1)
+                                                                                                    <div class="photo-thumbnails mt-3">
+                                                                                                        <div class="row g-2">
+                                                                                                            @foreach(array_slice($photos, 0, 4) as $index => $photo)
+                                                                                                                <div class="col-3">
+                                                                                                                    <img src="https://houseofcars.s3.eu-central-1.amazonaws.com/{{$photo}}" 
+                                                                                                                        class="img-thumbnail cursor-pointer thumbnail-img" 
+                                                                                                                        style="height: 60px; object-fit: cover; width: 100%;"
+                                                                                                                        data-bs-target="#carouselImport{{$cash->id}}" 
+                                                                                                                        data-bs-slide-to="{{ $index }}"
+                                                                                                                        alt="Thumbnail {{ $index + 1 }}">
+                                                                                                                </div>
+                                                                                                            @endforeach
+                                                                                                        </div>
+                                                                                                        @if(count($photos) > 4)
+                                                                                                            <div class="text-center mt-2">
+                                                                                                                <small class="text-muted">+{{ count($photos) - 4 }} more photos</small>
+                                                                                                            </div>
+                                                                                                        @endif
+                                                                                                    </div>
+                                                                                                @endif
+                                                                                            </div>
+                                                                                        @else
+                                                                                            <div class="no-photos text-center py-5">
+                                                                                                <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                                                                                                <h6 class="text-muted">No Photos Available</h6>
+                                                                                                <p class="text-muted small mb-0">Vehicle images have not been uploaded yet</p>
+                                                                                            </div>
+                                                                                        @endif
+                                                                                    @else
+                                                                                        <div class="no-photos text-center py-5">
+                                                                                            <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                                                                                            <h6 class="text-muted">No Photos Available</h6>
+                                                                                            <p class="text-muted small mb-0">Vehicle images have not been uploaded yet</p>
+                                                                                        </div>
+                                                                                    @endif
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    @else
+                                                                        <div class="error-state text-center py-5">
+                                                                            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                                                                            <h5 class="text-muted">Vehicle Not Found</h5>
+                                                                            <p class="text-muted">The import vehicle information could not be retrieved.</p>
+                                                                        </div>
+                                                                    @endif
+
+                                                                @elseif ($cash->car_type == 'customer')
+                                                                    @php $car = $customerCars->get($cash->car_id); @endphp
+                                                                    @if($car)
+                                                                        <div class="row g-0">
+                                                                            <!-- Vehicle Information Panel -->
+                                                                            <div class="col-lg-7 p-4">
+                                                                                <!-- Header Section -->
+                                                                                <div class="vehicle-header mb-4">
+                                                                                    <div class="d-flex align-items-center justify-content-between mb-3">
+                                                                                        <div class="vehicle-type-badge">
+                                                                                            <span class="badge bg-info fs-6 px-3 py-2">
+                                                                                                <i class="fas fa-user-friends me-2"></i>Customer Vehicle
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <h3 class="text-dark mb-2">{{ $car->vehicle_make }}</h3>
+                                                                                    <p class="text-muted mb-0">{{ $car->number_plate }} • Listed {{ date('M d, Y', strtotime($car->created_at)) }}</p>
+                                                                                </div>
+
+                                                                                <!-- Owner Information -->
+                                                                                <div class="owner-section mb-4">
+                                                                                    <h6 class="section-title text-uppercase fw-bold text-muted mb-3">
+                                                                                        <i class="fas fa-user me-2"></i>Owner Information
+                                                                                    </h6>
+                                                                                    <div class="owner-card border rounded p-3">
+                                                                                        <div class="row g-3">
+                                                                                            <div class="col-md-6">
+                                                                                                <div class="owner-detail">
+                                                                                                    <div class="detail-label text-muted small mb-1">Full Name</div>
+                                                                                                    <div class="detail-value fw-semibold">
+                                                                                                        <i class="fas fa-user-circle me-2 text-primary"></i>
+                                                                                                        {{ $car->customer_name }}
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <div class="col-md-6">
+                                                                                                <div class="owner-detail">
+                                                                                                    <div class="detail-label text-muted small mb-1">Phone Number</div>
+                                                                                                    <div class="detail-value fw-semibold">
+                                                                                                        <i class="fas fa-phone me-2 text-success"></i>
+                                                                                                        <a href="tel:{{ $car->phone_no }}" class="text-decoration-none">{{ $car->phone_no }}</a>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            @if($car->email)
+                                                                                                <div class="col-12">
+                                                                                                    <div class="owner-detail">
+                                                                                                        <div class="detail-label text-muted small mb-1">Email Address</div>
+                                                                                                        <div class="detail-value fw-semibold">
+                                                                                                            <i class="fas fa-envelope me-2 text-info"></i>
+                                                                                                            <a href="mailto:{{ $car->email }}" class="text-decoration-none">{{ $car->email }}</a>
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            @endif
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                <!-- Vehicle Details -->
+                                                                                <div class="specs-section mb-4">
+                                                                                    <h6 class="section-title text-uppercase fw-bold text-muted mb-3">
+                                                                                        <i class="fas fa-car me-2"></i>Vehicle Details
+                                                                                    </h6>
+                                                                                    <div class="row g-3">
+                                                                                        <div class="col-md-6">
+                                                                                            <div class="spec-item p-3 bg-light rounded">
+                                                                                                <div class="spec-label text-muted small mb-1">Vehicle Make
+                                                                                                    <br>
+                                                                                                    <i class="fas fa-industry me-2 text-primary"></i>
+                                                                                                    {{ $car->vehicle_make }}
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div class="col-md-6">
+                                                                                            <div class="spec-item p-3 bg-light rounded">
+                                                                                                <div class="spec-label text-muted small mb-1">Number Plate<br>
+                                                                                                    <i class="fas fa-id-card me-2 text-success"></i>
+                                                                                                    {{ $car->number_plate }}
+                                                                                                </div>
+                                                                                            
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div class="col-md-6">
+                                                                                            <div class="spec-item p-3 bg-light rounded">
+                                                                                                <div class="spec-label text-muted small mb-1">Chassis Number<br>
+                                                                                                        <i class="fas fa-barcode me-2 text-info"></i>
+                                                                                                    {{ $car->chasis_no }}
+                                                                                                </div>
+                                                                                            
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div class="col-md-6">
+                                                                                            <div class="spec-item p-3 bg-light rounded">
+                                                                                                <div class="spec-label text-muted small mb-1">Vehicle ID<br>
+                                                                                                    <i class="fas fa-hashtag me-2 text-warning"></i>
+                                                                                                    #{{ $car->id }}
+                                                                                                </div>
+                                                                                            
+                                                                                                
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                <!-- Pricing Information -->
+                                                                                <div class="pricing-section">
+                                                                                    <h6 class="section-title text-uppercase fw-bold text-muted mb-3">
+                                                                                        <i class="fas fa-tag me-2"></i>Pricing & Sale Information
+                                                                                    </h6>
+                                                                                    <div class="pricing-card border rounded p-3">
+                                                                                        <div class="row g-3 align-items-center">
+                                                                                            <div class="col-md-6">
+                                                                                                <div class="price-info text-center">
+                                                                                                    <div class="price-amount text-success fw-bold fs-3">
+                                                                                                        KSh {{ number_format($car->minimum_price, 2) }}
+                                                                                                    </div>
+                                                                                                    <small class="text-muted">Minimum Price</small>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                            <div class="col-md-6">
+                                                                                                <div class="sale-type text-center">
+                                                                                                    <span class="badge {{ $car->sell_type == '1' ? 'bg-primary' : 'bg-secondary' }} fs-6 px-3 py-2">
+                                                                                                        <i class="fas {{ $car->sell_type == '1' ? 'fa-gavel' : 'fa-handshake' }} me-2"></i>
+                                                                                                        {{ $car->sell_type == '1' ? 'Direct Sale' : 'Direct Sale' }}
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <!-- Vehicle Photos Panel -->
+                                                                            <div class="col-lg-5 bg-light border-start">
+                                                                                <div class="photo-section h-100 p-4">
+                                                                                    <h6 class="section-title text-uppercase fw-bold text-muted mb-3">
+                                                                                        <i class="fas fa-images me-2"></i>Vehicle Gallery
+                                                                                    </h6>
+                                                                                    @if($car->photos)
+                                                                                        @php
+                                                                                            $photos = json_decode($car->photos, true);
+                                                                                        @endphp
+                                                                                        @if(is_array($photos) && count($photos) > 0)
+                                                                                            <div class="gallery-container">
+                                                                                                <div id="carouselCustomer{{$cash->id}}" class="carousel slide" data-bs-ride="carousel">
+                                                                                                    <div class="carousel-inner rounded-3 shadow-sm">
+                                                                                                        @foreach($photos as $index => $photo)
+                                                                                                            <div class="carousel-item {{ $index == 0 ? 'active' : '' }}">
+                                                                                                                <img src="https://houseofcars.s3.eu-central-1.amazonaws.com/{{$photo}}" 
+                                                                                                                    class="d-block w-100" 
+                                                                                                                    style="height: 320px; object-fit: cover;" 
+                                                                                                                    alt="Vehicle Photo {{ $index + 1 }}"
+                                                                                                                    loading="lazy">
+                                                                                                                <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded">
+                                                                                                                    <small>Photo {{ $index + 1 }} of {{ count($photos) }}</small>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        @endforeach
+                                                                                                    </div>
+                                                                                                    @if(count($photos) > 1)
+                                                                                                        <button class="carousel-control-prev" type="button" data-bs-target="#carouselCustomer{{$cash->id}}" data-bs-slide="prev">
+                                                                                                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                                                                                            <span class="visually-hidden">Previous</span>
+                                                                                                        </button>
+                                                                                                        <button class="carousel-control-next" type="button" data-bs-target="#carouselCustomer{{$cash->id}}" data-bs-slide="next">
+                                                                                                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                                                                                            <span class="visually-hidden">Next</span>
+                                                                                                        </button>
+                                                                                                    @endif
+                                                                                                </div>
+                                                                                                
+                                                                                                <!-- Photo Thumbnails -->
+                                                                                                @if(count($photos) > 1)
+                                                                                                    <div class="photo-thumbnails mt-3">
+                                                                                                        <div class="row g-2">
+                                                                                                            @foreach(array_slice($photos, 0, 4) as $index => $photo)
+                                                                                                                <div class="col-3">
+                                                                                                                    <img src="https://houseofcars.s3.eu-central-1.amazonaws.com/{{$photo}}" 
+                                                                                                                        class="img-thumbnail cursor-pointer thumbnail-img" 
+                                                                                                                        style="height: 60px; object-fit: cover; width: 100%;"
+                                                                                                                        data-bs-target="#carouselCustomer{{$cash->id}}" 
+                                                                                                                        data-bs-slide-to="{{ $index }}"
+                                                                                                                        alt="Thumbnail {{ $index + 1 }}">
+                                                                                                                </div>
+                                                                                                            @endforeach
+                                                                                                        </div>
+                                                                                                        @if(count($photos) > 4)
+                                                                                                            <div class="text-center mt-2">
+                                                                                                                <small class="text-muted">+{{ count($photos) - 4 }} more photos</small>
+                                                                                                            </div>
+                                                                                                        @endif
+                                                                                                    </div>
+                                                                                                @endif
+                                                                                            </div>
+                                                                                        @else
+                                                                                            <div class="no-photos text-center py-5">
+                                                                                                <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                                                                                                <h6 class="text-muted">No Photos Available</h6>
+                                                                                                <p class="text-muted small mb-0">Vehicle images have not been uploaded yet</p>
+                                                                                            </div>
+                                                                                        @endif
+                                                                                    @else
+                                                                                        <div class="no-photos text-center py-5">
+                                                                                            <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                                                                                            <h6 class="text-muted">No Photos Available</h6>
+                                                                                            <p class="text-muted small mb-0">Vehicle images have not been uploaded yet</p>
+                                                                                        </div>
+                                                                                    @endif
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    @else
+                                                                        <div class="error-state text-center py-5">
+                                                                            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                                                                            <h5 class="text-muted">Vehicle Not Found</h5>
+                                                                            <p class="text-muted">The customer vehicle information could not be retrieved.</p>
+                                                                        </div>
+                                                                    @endif
+
+                                                                @else
+                                                                    <div class="error-state text-center py-5">
+                                                                        <i class="fas fa-info-circle fa-3x text-info mb-3"></i>
+                                                                        <h5 class="text-muted">No Vehicle Data</h5>
+                                                                        <p class="text-muted">No vehicle information is available for this record.</p>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+
+                                                            <!-- Modal Footer -->
+                                                            <div class="modal-footer bg-light border-0 py-3">
+                                                                <div class="w-100 d-flex justify-content-between align-items-center">
+                                                                    <div class="modal-info">
+                                                                        <small class="text-muted">
+                                                                            <i class="fas fa-clock me-1"></i>
+                                                                            Last updated: {{ now()->format('M d, Y g:i A') }}
+                                                                        </small>
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        @endforeach
-                                                    </div>
-                                                    @if(count($photos) > 1)
-                                                        <button class="carousel-control-prev" type="button" data-bs-target="#carouselImport{{$cash->id}}" data-bs-slide="prev">
-                                                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                                            <span class="visually-hidden">Previous</span>
-                                                        </button>
-                                                        <button class="carousel-control-next" type="button" data-bs-target="#carouselImport{{$cash->id}}" data-bs-slide="next">
-                                                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                                            <span class="visually-hidden">Next</span>
-                                                        </button>
-                                                    @endif
-                                                </div>
-                                                
-                                                <!-- Photo Thumbnails -->
-                                                @if(count($photos) > 1)
-                                                    <div class="photo-thumbnails mt-3">
-                                                        <div class="row g-2">
-                                                            @foreach(array_slice($photos, 0, 4) as $index => $photo)
-                                                                <div class="col-3">
-                                                                    <img src="https://houseofcars.s3.eu-central-1.amazonaws.com/{{$photo}}" 
-                                                                         class="img-thumbnail cursor-pointer thumbnail-img" 
-                                                                         style="height: 60px; object-fit: cover; width: 100%;"
-                                                                         data-bs-target="#carouselImport{{$cash->id}}" 
-                                                                         data-bs-slide-to="{{ $index }}"
-                                                                         alt="Thumbnail {{ $index + 1 }}">
-                                                                </div>
-                                                            @endforeach
                                                         </div>
-                                                        @if(count($photos) > 4)
-                                                            <div class="text-center mt-2">
-                                                                <small class="text-muted">+{{ count($photos) - 4 }} more photos</small>
-                                                            </div>
-                                                        @endif
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        @else
-                                            <div class="no-photos text-center py-5">
-                                                <i class="fas fa-image fa-3x text-muted mb-3"></i>
-                                                <h6 class="text-muted">No Photos Available</h6>
-                                                <p class="text-muted small mb-0">Vehicle images have not been uploaded yet</p>
-                                            </div>
-                                        @endif
-                                    @else
-                                        <div class="no-photos text-center py-5">
-                                            <i class="fas fa-image fa-3x text-muted mb-3"></i>
-                                            <h6 class="text-muted">No Photos Available</h6>
-                                            <p class="text-muted small mb-0">Vehicle images have not been uploaded yet</p>
-                                        </div>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                    @else
-                        <div class="error-state text-center py-5">
-                            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-                            <h5 class="text-muted">Vehicle Not Found</h5>
-                            <p class="text-muted">The import vehicle information could not be retrieved.</p>
-                        </div>
-                    @endif
-
-                @elseif ($cash->car_type == 'customer')
-                    @php $car = $customerCars->get($cash->car_id); @endphp
-                    @if($car)
-                        <div class="row g-0">
-                            <!-- Vehicle Information Panel -->
-                            <div class="col-lg-7 p-4">
-                                <!-- Header Section -->
-                                <div class="vehicle-header mb-4">
-                                    <div class="d-flex align-items-center justify-content-between mb-3">
-                                        <div class="vehicle-type-badge">
-                                            <span class="badge bg-info fs-6 px-3 py-2">
-                                                <i class="fas fa-user-friends me-2"></i>Customer Vehicle
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <h3 class="text-dark mb-2">{{ $car->vehicle_make }}</h3>
-                                    <p class="text-muted mb-0">{{ $car->number_plate }} • Listed {{ date('M d, Y', strtotime($car->created_at)) }}</p>
-                                </div>
-
-                                <!-- Owner Information -->
-                                <div class="owner-section mb-4">
-                                    <h6 class="section-title text-uppercase fw-bold text-muted mb-3">
-                                        <i class="fas fa-user me-2"></i>Owner Information
-                                    </h6>
-                                    <div class="owner-card border rounded p-3">
-                                        <div class="row g-3">
-                                            <div class="col-md-6">
-                                                <div class="owner-detail">
-                                                    <div class="detail-label text-muted small mb-1">Full Name</div>
-                                                    <div class="detail-value fw-semibold">
-                                                        <i class="fas fa-user-circle me-2 text-primary"></i>
-                                                        {{ $car->customer_name }}
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="owner-detail">
-                                                    <div class="detail-label text-muted small mb-1">Phone Number</div>
-                                                    <div class="detail-value fw-semibold">
-                                                        <i class="fas fa-phone me-2 text-success"></i>
-                                                        <a href="tel:{{ $car->phone_no }}" class="text-decoration-none">{{ $car->phone_no }}</a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            @if($car->email)
-                                                <div class="col-12">
-                                                    <div class="owner-detail">
-                                                        <div class="detail-label text-muted small mb-1">Email Address</div>
-                                                        <div class="detail-value fw-semibold">
-                                                            <i class="fas fa-envelope me-2 text-info"></i>
-                                                            <a href="mailto:{{ $car->email }}" class="text-decoration-none">{{ $car->email }}</a>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            @endif
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Vehicle Details -->
-                                <div class="specs-section mb-4">
-                                    <h6 class="section-title text-uppercase fw-bold text-muted mb-3">
-                                        <i class="fas fa-car me-2"></i>Vehicle Details
-                                    </h6>
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <div class="spec-item p-3 bg-light rounded">
-                                                <div class="spec-label text-muted small mb-1">Vehicle Make
-                                                    <br>
-                                                     <i class="fas fa-industry me-2 text-primary"></i>
-                                                    {{ $car->vehicle_make }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="spec-item p-3 bg-light rounded">
-                                                <div class="spec-label text-muted small mb-1">Number Plate<br>
-                                                    <i class="fas fa-id-card me-2 text-success"></i>
-                                                    {{ $car->number_plate }}
-                                                </div>
-                                              
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="spec-item p-3 bg-light rounded">
-                                                <div class="spec-label text-muted small mb-1">Chassis Number<br>
-                                                        <i class="fas fa-barcode me-2 text-info"></i>
-                                                    {{ $car->chasis_no }}
-                                                </div>
-                                              
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="spec-item p-3 bg-light rounded">
-                                                <div class="spec-label text-muted small mb-1">Vehicle ID<br>
-                                                       <i class="fas fa-hashtag me-2 text-warning"></i>
-                                                    #{{ $car->id }}
-                                                </div>
-                                               
-                                                
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Pricing Information -->
-                                <div class="pricing-section">
-                                    <h6 class="section-title text-uppercase fw-bold text-muted mb-3">
-                                        <i class="fas fa-tag me-2"></i>Pricing & Sale Information
-                                    </h6>
-                                    <div class="pricing-card border rounded p-3">
-                                        <div class="row g-3 align-items-center">
-                                            <div class="col-md-6">
-                                                <div class="price-info text-center">
-                                                    <div class="price-amount text-success fw-bold fs-3">
-                                                        KSh {{ number_format($car->minimum_price, 2) }}
-                                                    </div>
-                                                    <small class="text-muted">Minimum Price</small>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="sale-type text-center">
-                                                    <span class="badge {{ $car->sell_type == '1' ? 'bg-primary' : 'bg-secondary' }} fs-6 px-3 py-2">
-                                                        <i class="fas {{ $car->sell_type == '1' ? 'fa-gavel' : 'fa-handshake' }} me-2"></i>
-                                                        {{ $car->sell_type == '1' ? 'Direct Sale' : 'Direct Sale' }}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Vehicle Photos Panel -->
-                            <div class="col-lg-5 bg-light border-start">
-                                <div class="photo-section h-100 p-4">
-                                    <h6 class="section-title text-uppercase fw-bold text-muted mb-3">
-                                        <i class="fas fa-images me-2"></i>Vehicle Gallery
-                                    </h6>
-                                    @if($car->photos)
-                                        @php
-                                            $photos = json_decode($car->photos, true);
-                                        @endphp
-                                        @if(is_array($photos) && count($photos) > 0)
-                                            <div class="gallery-container">
-                                                <div id="carouselCustomer{{$cash->id}}" class="carousel slide" data-bs-ride="carousel">
-                                                    <div class="carousel-inner rounded-3 shadow-sm">
-                                                        @foreach($photos as $index => $photo)
-                                                            <div class="carousel-item {{ $index == 0 ? 'active' : '' }}">
-                                                                <img src="https://houseofcars.s3.eu-central-1.amazonaws.com/{{$photo}}" 
-                                                                     class="d-block w-100" 
-                                                                     style="height: 320px; object-fit: cover;" 
-                                                                     alt="Vehicle Photo {{ $index + 1 }}"
-                                                                     loading="lazy">
-                                                                <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded">
-                                                                    <small>Photo {{ $index + 1 }} of {{ count($photos) }}</small>
-                                                                </div>
-                                                            </div>
-                                                        @endforeach
-                                                    </div>
-                                                    @if(count($photos) > 1)
-                                                        <button class="carousel-control-prev" type="button" data-bs-target="#carouselCustomer{{$cash->id}}" data-bs-slide="prev">
-                                                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                                                            <span class="visually-hidden">Previous</span>
-                                                        </button>
-                                                        <button class="carousel-control-next" type="button" data-bs-target="#carouselCustomer{{$cash->id}}" data-bs-slide="next">
-                                                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                                                            <span class="visually-hidden">Next</span>
-                                                        </button>
-                                                    @endif
-                                                </div>
-                                                
-                                                <!-- Photo Thumbnails -->
-                                                @if(count($photos) > 1)
-                                                    <div class="photo-thumbnails mt-3">
-                                                        <div class="row g-2">
-                                                            @foreach(array_slice($photos, 0, 4) as $index => $photo)
-                                                                <div class="col-3">
-                                                                    <img src="https://houseofcars.s3.eu-central-1.amazonaws.com/{{$photo}}" 
-                                                                         class="img-thumbnail cursor-pointer thumbnail-img" 
-                                                                         style="height: 60px; object-fit: cover; width: 100%;"
-                                                                         data-bs-target="#carouselCustomer{{$cash->id}}" 
-                                                                         data-bs-slide-to="{{ $index }}"
-                                                                         alt="Thumbnail {{ $index + 1 }}">
-                                                                </div>
-                                                            @endforeach
-                                                        </div>
-                                                        @if(count($photos) > 4)
-                                                            <div class="text-center mt-2">
-                                                                <small class="text-muted">+{{ count($photos) - 4 }} more photos</small>
-                                                            </div>
-                                                        @endif
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        @else
-                                            <div class="no-photos text-center py-5">
-                                                <i class="fas fa-image fa-3x text-muted mb-3"></i>
-                                                <h6 class="text-muted">No Photos Available</h6>
-                                                <p class="text-muted small mb-0">Vehicle images have not been uploaded yet</p>
-                                            </div>
-                                        @endif
-                                    @else
-                                        <div class="no-photos text-center py-5">
-                                            <i class="fas fa-image fa-3x text-muted mb-3"></i>
-                                            <h6 class="text-muted">No Photos Available</h6>
-                                            <p class="text-muted small mb-0">Vehicle images have not been uploaded yet</p>
-                                        </div>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                    @else
-                        <div class="error-state text-center py-5">
-                            <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
-                            <h5 class="text-muted">Vehicle Not Found</h5>
-                            <p class="text-muted">The customer vehicle information could not be retrieved.</p>
-                        </div>
-                    @endif
-
-                @else
-                    <div class="error-state text-center py-5">
-                        <i class="fas fa-info-circle fa-3x text-info mb-3"></i>
-                        <h5 class="text-muted">No Vehicle Data</h5>
-                        <p class="text-muted">No vehicle information is available for this record.</p>
-                    </div>
-                @endif
-            </div>
-
-            <!-- Modal Footer -->
-            <div class="modal-footer bg-light border-0 py-3">
-                <div class="w-100 d-flex justify-content-between align-items-center">
-                    <div class="modal-info">
-                        <small class="text-muted">
-                            <i class="fas fa-clock me-1"></i>
-                            Last updated: {{ now()->format('M d, Y g:i A') }}
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
                                             </td>
                                             <td>
                                                 @if ($cash->car_type == 'import')
@@ -857,6 +857,7 @@
                                             </td>
                                             <td>
                                                 @if ($cash->status != 1)
+                                                @if(in_array(Auth::user()->role, ['Managing-Director', 'Accountant']))
                                                     <div class="btn-group-vertical" role="group">
                                                         <button class="btn btn-success btn-sm approveBtn mb-1" data-id="{{ $cash->id }}">
                                                             <i class="fas fa-check me-1"></i> Approve
@@ -866,6 +867,7 @@
                                                             <i class="fas fa-trash me-1"></i> Delete
                                                         </button>
                                                     </div>
+                                                @endif
                                                 @else
                                                 <!-- Button to trigger modal -->
                                                 
@@ -876,557 +878,559 @@
                                                 @endif
                                                  <br><br>
                                                 <div class="text-center">
+                                                    @if(in_array(Auth::user()->role, ['Accountant','Managing-Director','Showroom-Manager']))
                                                    <button type="button" class="btn btn-primary btn-sm agreementBtn" 
                                                             data-cash-id="{{ $cash->id }}"
                                                             data-bs-toggle="modal" 
                                                             data-bs-target="#agreementModal{{ $cash->id }}">
                                                         <i class="fas fa-file-contract me-1"></i> Agreement
                                                     </button>
+                                                    @endif
                                                 </div>
-<!-- Professional Agreement Modal -->
-<div class="modal fade" id="agreementModal{{ $cash->id }}" tabindex="-1" aria-labelledby="agreementModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
-                <h5 class="modal-title" id="agreementModalLabel">
-                    <i class="fas fa-file-contract me-2"></i>In Cash Sales Agreement
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-3">
-                <!-- Upload Section -->
-                <div id="uploadSection{{ $cash->id }}" class="mb-4">
-                    <div class="card border-primary">
-                        <div class="card-header bg-primary text-white">
-                            <h6 class="mb-0"><i class="fas fa-upload me-2"></i>Upload Agreement PDF</h6>
-                        </div>
-                        <div class="card-body">
-                            <form id="agreementUploadForm{{ $cash->id }}" enctype="multipart/form-data">
-                                @csrf
-                                <input type="hidden" name="agreement_id" value="{{ $cash->id }}">
-                                <input type="hidden" name="agreement_type" value="InCash">
-                                <div class="row align-items-end">
-                                    <div class="col-md-8">
-                                        <label for="agreement_file{{ $cash->id }}" class="form-label">
-                                            <i class="fas fa-file-pdf me-1"></i>Select PDF File
-                                        </label>
-                                        <input type="file" 
-                                               class="form-control" 
-                                               id="agreement_file{{ $cash->id }}" 
-                                               name="agreement_file" 
-                                               accept=".pdf" 
-                                               required>
-                                        <div class="form-text">Maximum file size: 1GB. Only PDF files are allowed.</div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <button type="submit" 
-                                                class="btn btn-primary w-100" 
-                                                id="uploadBtn{{ $cash->id }}">
-                                            <i class="fas fa-upload me-1"></i>Upload
-                                        </button>
-                                    </div>
-                                </div>
-                            </form>
-                            
-                            <!-- Progress Bar -->
-                            <div class="progress mt-3 d-none" id="uploadProgress{{ $cash->id }}">
-                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                                     role="progressbar" 
-                                     style="width: 0%"></div>
-                            </div>
-                            
-                            <!-- Upload Status -->
-                            <div id="uploadStatus{{ $cash->id }}" class="mt-2"></div>
-                        </div>
-                    </div>
-                </div>
+                                                <!-- Professional Agreement Modal -->
+                                                <div class="modal fade" id="agreementModal{{ $cash->id }}" tabindex="-1" aria-labelledby="agreementModalLabel" aria-hidden="true">
+                                                    <div class="modal-dialog modal-xl">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white;">
+                                                                <h5 class="modal-title" id="agreementModalLabel">
+                                                                    <i class="fas fa-file-contract me-2"></i>In Cash Sales Agreement
+                                                                </h5>
+                                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body p-3">
+                                                                <!-- Upload Section -->
+                                                                <div id="uploadSection{{ $cash->id }}" class="mb-4">
+                                                                    <div class="card border-primary">
+                                                                        <div class="card-header bg-primary text-white">
+                                                                            <h6 class="mb-0"><i class="fas fa-upload me-2"></i>Upload Agreement PDF</h6>
+                                                                        </div>
+                                                                        <div class="card-body">
+                                                                            <form id="agreementUploadForm{{ $cash->id }}" enctype="multipart/form-data">
+                                                                                @csrf
+                                                                                <input type="hidden" name="agreement_id" value="{{ $cash->id }}">
+                                                                                <input type="hidden" name="agreement_type" value="InCash">
+                                                                                <div class="row align-items-end">
+                                                                                    <div class="col-md-8">
+                                                                                        <label for="agreement_file{{ $cash->id }}" class="form-label">
+                                                                                            <i class="fas fa-file-pdf me-1"></i>Select PDF File
+                                                                                        </label>
+                                                                                        <input type="file" 
+                                                                                            class="form-control" 
+                                                                                            id="agreement_file{{ $cash->id }}" 
+                                                                                            name="agreement_file" 
+                                                                                            accept=".pdf" 
+                                                                                            required>
+                                                                                        <div class="form-text">Maximum file size: 1GB. Only PDF files are allowed.</div>
+                                                                                    </div>
+                                                                                    <div class="col-md-4">
+                                                                                        <button type="submit" 
+                                                                                                class="btn btn-primary w-100" 
+                                                                                                id="uploadBtn{{ $cash->id }}">
+                                                                                            <i class="fas fa-upload me-1"></i>Upload
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </form>
+                                                                            
+                                                                            <!-- Progress Bar -->
+                                                                            <div class="progress mt-3 d-none" id="uploadProgress{{ $cash->id }}">
+                                                                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                                                                    role="progressbar" 
+                                                                                    style="width: 0%"></div>
+                                                                            </div>
+                                                                            
+                                                                            <!-- Upload Status -->
+                                                                            <div id="uploadStatus{{ $cash->id }}" class="mt-2"></div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
 
-                <!-- Agreement Management Section (When PDF exists) -->
-                <div id="agreementManagement{{ $cash->id }}" class="mb-4" style="display: none;">
-                    <div class="card border-success">
-                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0"><i class="fas fa-file-check me-2"></i>Agreement Uploaded</h6>
-                            <button type="button" 
-                                    class="btn btn-outline-light btn-sm" 
-                                    id="deleteAgreementBtn{{ $cash->id }}"
-                                    title="Delete Agreement">
-                                <i class="fas fa-trash-alt"></i> Delete
-                            </button>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-8">
-                                    <p class="mb-2"><strong>Status:</strong> <span class="badge bg-success">Active</span></p>
-                                    <p class="mb-0"><strong>Actions:</strong></p>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="btn-group w-100" role="group">
-                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="openPDFNewTab{{ $cash->id }}()">
-                                            <i class="fas fa-external-link-alt"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-outline-success btn-sm" onclick="downloadPDF{{ $cash->id }}()">
-                                            <i class="fas fa-download"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-outline-info btn-sm" onclick="printPDF{{ $cash->id }}()">
-                                            <i class="fas fa-print"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                                                                <!-- Agreement Management Section (When PDF exists) -->
+                                                                <div id="agreementManagement{{ $cash->id }}" class="mb-4" style="display: none;">
+                                                                    <div class="card border-success">
+                                                                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                                                                            <h6 class="mb-0"><i class="fas fa-file-check me-2"></i>Agreement Uploaded</h6>
+                                                                            <button type="button" 
+                                                                                    class="btn btn-outline-light btn-sm" 
+                                                                                    id="deleteAgreementBtn{{ $cash->id }}"
+                                                                                    title="Delete Agreement">
+                                                                                <i class="fas fa-trash-alt"></i> Delete
+                                                                            </button>
+                                                                        </div>
+                                                                        <div class="card-body">
+                                                                            <div class="row">
+                                                                                <div class="col-md-8">
+                                                                                    <p class="mb-2"><strong>Status:</strong> <span class="badge bg-success">Active</span></p>
+                                                                                    <p class="mb-0"><strong>Actions:</strong></p>
+                                                                                </div>
+                                                                                <div class="col-md-4">
+                                                                                    <div class="btn-group w-100" role="group">
+                                                                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="openPDFNewTab{{ $cash->id }}()">
+                                                                                            <i class="fas fa-external-link-alt"></i>
+                                                                                        </button>
+                                                                                        <button type="button" class="btn btn-outline-success btn-sm" onclick="downloadPDF{{ $cash->id }}()">
+                                                                                            <i class="fas fa-download"></i>
+                                                                                        </button>
+                                                                                        <button type="button" class="btn btn-outline-info btn-sm" onclick="printPDF{{ $cash->id }}()">
+                                                                                            <i class="fas fa-print"></i>
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
 
-                <!-- PDF Display Section -->
-                <div id="agreementContent{{ $cash->id }}" style="min-height: 600px;">
-                    <div class="text-center py-5" id="emptyState{{ $cash->id }}">
-                        <i class="fas fa-file-pdf fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">No agreement uploaded yet. Please upload a PDF file above.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-1"></i>Close
-                </button>
-                <button type="button" class="btn btn-success" id="replaceBtn{{ $cash->id }}" style="display: none;" onclick="showUploadSection{{ $cash->id }}()">
-                    <i class="fas fa-sync-alt me-1"></i>Replace PDF
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+                                                                <!-- PDF Display Section -->
+                                                                <div id="agreementContent{{ $cash->id }}" style="min-height: 600px;">
+                                                                    <div class="text-center py-5" id="emptyState{{ $cash->id }}">
+                                                                        <i class="fas fa-file-pdf fa-3x text-muted mb-3"></i>
+                                                                        <p class="text-muted">No agreement uploaded yet. Please upload a PDF file above.</p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                                                    <i class="fas fa-times me-1"></i>Close
+                                                                </button>
+                                                                <button type="button" class="btn btn-success" id="replaceBtn{{ $cash->id }}" style="display: none;" onclick="showUploadSection{{ $cash->id }}()">
+                                                                    <i class="fas fa-sync-alt me-1"></i>Replace PDF
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteConfirmModal{{ $cash->id }}" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete this agreement? This action cannot be undone.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn{{ $cash->id }}">
-                    <i class="fas fa-trash-alt me-1"></i>Delete Agreement
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+                                                <!-- Delete Confirmation Modal -->
+                                                <div class="modal fade" id="deleteConfirmModal{{ $cash->id }}" tabindex="-1">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header bg-danger text-white">
+                                                                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete</h5>
+                                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <p>Are you sure you want to delete this agreement? This action cannot be undone.</p>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                <button type="button" class="btn btn-danger" id="confirmDeleteBtn{{ $cash->id }}">
+                                                                    <i class="fas fa-trash-alt me-1"></i>Delete Agreement
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
 
-<style>
-.pdf-viewer-container {
-    width: 100%;
-    height: 600px;
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-    background: #f8f9fa;
-    position: relative;
-    overflow: hidden;
-}
+                                                <style>
+                                                .pdf-viewer-container {
+                                                    width: 100%;
+                                                    height: 600px;
+                                                    border: 1px solid #dee2e6;
+                                                    border-radius: 0.375rem;
+                                                    background: #f8f9fa;
+                                                    position: relative;
+                                                    overflow: hidden;
+                                                }
 
-.pdf-embed {
-    width: 100%;
-    height: 100%;
-    border: none;
-    border-radius: 0.375rem;
-}
+                                                .pdf-embed {
+                                                    width: 100%;
+                                                    height: 100%;
+                                                    border: none;
+                                                    border-radius: 0.375rem;
+                                                }
 
-.pdf-loading-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.95);
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.375rem;
-}
+                                                .pdf-loading-overlay {
+                                                    position: absolute;
+                                                    top: 0;
+                                                    left: 0;
+                                                    right: 0;
+                                                    bottom: 0;
+                                                    background: rgba(255, 255, 255, 0.95);
+                                                    z-index: 10;
+                                                    display: flex;
+                                                    align-items: center;
+                                                    justify-content: center;
+                                                    border-radius: 0.375rem;
+                                                }
 
-.pdf-error-state {
-    height: 600px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-}
+                                                .pdf-error-state {
+                                                    height: 600px;
+                                                    display: flex;
+                                                    align-items: center;
+                                                    justify-content: center;
+                                                    background: #f8f9fa;
+                                                    border: 1px solid #dee2e6;
+                                                    border-radius: 0.375rem;
+                                                }
 
-.upload-dropzone {
-    border: 2px dashed #0d6efd;
-    border-radius: 0.375rem;
-    padding: 2rem;
-    text-align: center;
-    background: #f8f9fa;
-    transition: all 0.3s ease;
-}
+                                                .upload-dropzone {
+                                                    border: 2px dashed #0d6efd;
+                                                    border-radius: 0.375rem;
+                                                    padding: 2rem;
+                                                    text-align: center;
+                                                    background: #f8f9fa;
+                                                    transition: all 0.3s ease;
+                                                }
 
-.upload-dropzone:hover {
-    background: #e7f3ff;
-    border-color: #0b5ed7;
-}
+                                                .upload-dropzone:hover {
+                                                    background: #e7f3ff;
+                                                    border-color: #0b5ed7;
+                                                }
 
-.upload-dropzone.dragover {
-    background: #cfe2ff;
-    border-color: #0a58ca;
-}
-</style>
+                                                .upload-dropzone.dragover {
+                                                    background: #cfe2ff;
+                                                    border-color: #0a58ca;
+                                                }
+                                                </style>
 
-<script>
-$(document).ready(function() {
-    const agreementId = {{ $cash->id }};
-    let currentPdfUrl = null;
-    
-    // Check if agreement already exists when modal opens
-    $('#agreementModal' + agreementId).on('shown.bs.modal', function() {
-        checkExistingAgreement(agreementId);
-    });
-    
-    // File upload form submission
-    $('#agreementUploadForm' + agreementId).on('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        const uploadBtn = $('#uploadBtn' + agreementId);
-        const uploadProgress = $('#uploadProgress' + agreementId);
-        const uploadStatus = $('#uploadStatus' + agreementId);
-        
-        // Reset status
-        uploadStatus.empty();
-        uploadProgress.removeClass('d-none');
-        uploadBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Uploading...');
-        
-        $.ajax({
-            url: '{{ route("agreement.upload") }}',
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            timeout: 300000, // 5 minutes timeout for large files
-            xhr: function() {
-                const xhr = new window.XMLHttpRequest();
-                xhr.upload.addEventListener("progress", function(evt) {
-                    if (evt.lengthComputable) {
-                        const percentComplete = Math.round((evt.loaded / evt.total) * 100);
-                        uploadProgress.find('.progress-bar').css('width', percentComplete + '%');
-                        
-                        // Show file size progress for large files
-                        const loaded = (evt.loaded / (1024 * 1024 * 1024)).toFixed(2);
-                        const total = (evt.total / (1024 * 1024 * 1024)).toFixed(2);
-                        uploadProgress.find('.progress-bar').text(`${loaded}GB / ${total}GB (${percentComplete}%)`);
-                    }
-                }, false);
-                return xhr;
-            },
-            success: function(response) {
-                uploadStatus.html(`
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="fas fa-check-circle me-2"></i>Agreement uploaded successfully!
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                `);
-                
-                // Store PDF URL
-                currentPdfUrl = response.pdfUrl;
-                
-                // Display the uploaded PDF
-                displayPDF(currentPdfUrl, agreementId);
-                
-                // Show management section and hide upload section
-                showAgreementManagement(agreementId);
-                
-                // Reset form
-                $('#agreementUploadForm' + agreementId)[0].reset();
-            },
-            error: function(xhr) {
-                let errorMessage = 'Upload failed. Please try again.';
-                
-                if (xhr.status === 413) {
-                    errorMessage = 'File is too large. Maximum allowed size is 1GB.';
-                } else if (xhr.status === 408 || xhr.statusText === 'timeout') {
-                    errorMessage = 'Upload timed out. Please try again with a smaller file or check your internet connection.';
-                } else if (xhr.responseJSON && xhr.responseJSON.errors) {
-                    const errors = xhr.responseJSON.errors;
-                    errorMessage = Object.values(errors).flat().join('<br>');
-                }
-                
-                uploadStatus.html(`
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="fas fa-exclamation-triangle me-2"></i>${errorMessage}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                `);
-            },
-            complete: function() {
-                uploadProgress.addClass('d-none');
-                uploadBtn.prop('disabled', false).html('<i class="fas fa-upload me-1"></i>Upload');
-            }
-        });
-    });
-    
-    // Delete agreement functionality
-    $('#deleteAgreementBtn' + agreementId).on('click', function() {
-        $('#deleteConfirmModal' + agreementId).modal('show');
-    });
-    
-    $('#confirmDeleteBtn' + agreementId).on('click', function() {
-        deleteAgreement(agreementId);
-    });
-    
-    // File input validation
-    $('#agreement_file' + agreementId).on('change', function() {
-        const file = this.files[0];
-        const uploadStatus = $('#uploadStatus' + agreementId);
-        
-        if (file) {
-            if (file.type !== 'application/pdf') {
-                uploadStatus.html(`
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>Please select a PDF file only.
-                    </div>
-                `);
-                this.value = '';
-                return;
-            }
-            
-            // Check for 1GB limit (1073741824 bytes)
-            if (file.size > 1073741824) {
-                const fileSize = (file.size / (1024 * 1024 * 1024)).toFixed(2);
-                uploadStatus.html(`
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>File size (${fileSize}GB) exceeds the maximum limit of 1GB.
-                    </div>
-                `);
-                this.value = '';
-                return;
-            }
-            
-            // Show file size info for large files
-            const fileSize = file.size / (1024 * 1024);
-            if (fileSize > 100) { // Show size info for files larger than 100MB
-                const sizeText = fileSize > 1024 ? 
-                    `${(fileSize / 1024).toFixed(2)}GB` : 
-                    `${fileSize.toFixed(2)}MB`;
-                
-                uploadStatus.html(`
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>Large file selected (${sizeText}). Upload may take several minutes.
-                    </div>
-                `);
-            } else {
-                uploadStatus.empty();
-            }
-        }
-    });
-});
+                                                <script>
+                                                $(document).ready(function() {
+                                                    const agreementId = {{ $cash->id }};
+                                                    let currentPdfUrl = null;
+                                                    
+                                                    // Check if agreement already exists when modal opens
+                                                    $('#agreementModal' + agreementId).on('shown.bs.modal', function() {
+                                                        checkExistingAgreement(agreementId);
+                                                    });
+                                                    
+                                                    // File upload form submission
+                                                    $('#agreementUploadForm' + agreementId).on('submit', function(e) {
+                                                        e.preventDefault();
+                                                        
+                                                        const formData = new FormData(this);
+                                                        const uploadBtn = $('#uploadBtn' + agreementId);
+                                                        const uploadProgress = $('#uploadProgress' + agreementId);
+                                                        const uploadStatus = $('#uploadStatus' + agreementId);
+                                                        
+                                                        // Reset status
+                                                        uploadStatus.empty();
+                                                        uploadProgress.removeClass('d-none');
+                                                        uploadBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Uploading...');
+                                                        
+                                                        $.ajax({
+                                                            url: '{{ route("agreement.upload") }}',
+                                                            type: 'POST',
+                                                            data: formData,
+                                                            processData: false,
+                                                            contentType: false,
+                                                            timeout: 300000, // 5 minutes timeout for large files
+                                                            xhr: function() {
+                                                                const xhr = new window.XMLHttpRequest();
+                                                                xhr.upload.addEventListener("progress", function(evt) {
+                                                                    if (evt.lengthComputable) {
+                                                                        const percentComplete = Math.round((evt.loaded / evt.total) * 100);
+                                                                        uploadProgress.find('.progress-bar').css('width', percentComplete + '%');
+                                                                        
+                                                                        // Show file size progress for large files
+                                                                        const loaded = (evt.loaded / (1024 * 1024 * 1024)).toFixed(2);
+                                                                        const total = (evt.total / (1024 * 1024 * 1024)).toFixed(2);
+                                                                        uploadProgress.find('.progress-bar').text(`${loaded}GB / ${total}GB (${percentComplete}%)`);
+                                                                    }
+                                                                }, false);
+                                                                return xhr;
+                                                            },
+                                                            success: function(response) {
+                                                                uploadStatus.html(`
+                                                                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                                                        <i class="fas fa-check-circle me-2"></i>Agreement uploaded successfully!
+                                                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                                                    </div>
+                                                                `);
+                                                                
+                                                                // Store PDF URL
+                                                                currentPdfUrl = response.pdfUrl;
+                                                                
+                                                                // Display the uploaded PDF
+                                                                displayPDF(currentPdfUrl, agreementId);
+                                                                
+                                                                // Show management section and hide upload section
+                                                                showAgreementManagement(agreementId);
+                                                                
+                                                                // Reset form
+                                                                $('#agreementUploadForm' + agreementId)[0].reset();
+                                                            },
+                                                            error: function(xhr) {
+                                                                let errorMessage = 'Upload failed. Please try again.';
+                                                                
+                                                                if (xhr.status === 413) {
+                                                                    errorMessage = 'File is too large. Maximum allowed size is 1GB.';
+                                                                } else if (xhr.status === 408 || xhr.statusText === 'timeout') {
+                                                                    errorMessage = 'Upload timed out. Please try again with a smaller file or check your internet connection.';
+                                                                } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                                                                    const errors = xhr.responseJSON.errors;
+                                                                    errorMessage = Object.values(errors).flat().join('<br>');
+                                                                }
+                                                                
+                                                                uploadStatus.html(`
+                                                                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                                                        <i class="fas fa-exclamation-triangle me-2"></i>${errorMessage}
+                                                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                                                    </div>
+                                                                `);
+                                                            },
+                                                            complete: function() {
+                                                                uploadProgress.addClass('d-none');
+                                                                uploadBtn.prop('disabled', false).html('<i class="fas fa-upload me-1"></i>Upload');
+                                                            }
+                                                        });
+                                                    });
+                                                    
+                                                    // Delete agreement functionality
+                                                    $('#deleteAgreementBtn' + agreementId).on('click', function() {
+                                                        $('#deleteConfirmModal' + agreementId).modal('show');
+                                                    });
+                                                    
+                                                    $('#confirmDeleteBtn' + agreementId).on('click', function() {
+                                                        deleteAgreement(agreementId);
+                                                    });
+                                                    
+                                                    // File input validation
+                                                    $('#agreement_file' + agreementId).on('change', function() {
+                                                        const file = this.files[0];
+                                                        const uploadStatus = $('#uploadStatus' + agreementId);
+                                                        
+                                                        if (file) {
+                                                            if (file.type !== 'application/pdf') {
+                                                                uploadStatus.html(`
+                                                                    <div class="alert alert-warning">
+                                                                        <i class="fas fa-exclamation-triangle me-2"></i>Please select a PDF file only.
+                                                                    </div>
+                                                                `);
+                                                                this.value = '';
+                                                                return;
+                                                            }
+                                                            
+                                                            // Check for 1GB limit (1073741824 bytes)
+                                                            if (file.size > 1073741824) {
+                                                                const fileSize = (file.size / (1024 * 1024 * 1024)).toFixed(2);
+                                                                uploadStatus.html(`
+                                                                    <div class="alert alert-warning">
+                                                                        <i class="fas fa-exclamation-triangle me-2"></i>File size (${fileSize}GB) exceeds the maximum limit of 1GB.
+                                                                    </div>
+                                                                `);
+                                                                this.value = '';
+                                                                return;
+                                                            }
+                                                            
+                                                            // Show file size info for large files
+                                                            const fileSize = file.size / (1024 * 1024);
+                                                            if (fileSize > 100) { // Show size info for files larger than 100MB
+                                                                const sizeText = fileSize > 1024 ? 
+                                                                    `${(fileSize / 1024).toFixed(2)}GB` : 
+                                                                    `${fileSize.toFixed(2)}MB`;
+                                                                
+                                                                uploadStatus.html(`
+                                                                    <div class="alert alert-info">
+                                                                        <i class="fas fa-info-circle me-2"></i>Large file selected (${sizeText}). Upload may take several minutes.
+                                                                    </div>
+                                                                `);
+                                                            } else {
+                                                                uploadStatus.empty();
+                                                            }
+                                                        }
+                                                    });
+                                                });
 
-// Check if agreement already exists
-// Alternative fix - replace the checkExistingAgreement function:
-function checkExistingAgreement(agreementId) {
-    const agreementType = 'InCash';
-    
-    $.ajax({
-        url: '/agreements/' + agreementId + '/' + agreementType,
-        type: 'HEAD', // Use HEAD request to check if file exists without downloading
-        success: function(data, status, xhr) {
-            // If successful, the agreement exists
-            const pdfUrl = '/agreements/' + agreementId + '/' + agreementType;
-            currentPdfUrl = pdfUrl;
-            displayPDF(pdfUrl, agreementId);
-            showAgreementManagement(agreementId);
-        },
-        error: function(xhr) {
-            // If 404 or any error, assume no agreement exists
-            showUploadSection(agreementId);
-        }
-    });
-}
+                                                // Check if agreement already exists
+                                                // Alternative fix - replace the checkExistingAgreement function:
+                                                function checkExistingAgreement(agreementId) {
+                                                    const agreementType = 'InCash';
+                                                    
+                                                    $.ajax({
+                                                        url: '/agreements/' + agreementId + '/' + agreementType,
+                                                        type: 'HEAD', // Use HEAD request to check if file exists without downloading
+                                                        success: function(data, status, xhr) {
+                                                            // If successful, the agreement exists
+                                                            const pdfUrl = '/agreements/' + agreementId + '/' + agreementType;
+                                                            currentPdfUrl = pdfUrl;
+                                                            displayPDF(pdfUrl, agreementId);
+                                                            showAgreementManagement(agreementId);
+                                                        },
+                                                        error: function(xhr) {
+                                                            // If 404 or any error, assume no agreement exists
+                                                            showUploadSection(agreementId);
+                                                        }
+                                                    });
+                                                }
 
-// Display PDF with multiple fallback methods
-function displayPDF(pdfUrl, agreementId) {
-    $('#emptyState' + agreementId).hide();
-    
-    const content = `
-        <div class="text-center mb-3">
-            <h6 class="text-primary">
-                <i class="fas fa-file-pdf me-2"></i>Agreement Document
-            </h6>
-        </div>
-        <div class="pdf-viewer-container" id="pdfContainer${agreementId}">
-            <div class="pdf-loading-overlay" id="pdfLoading${agreementId}">
-                <div class="text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-2">Loading PDF...</p>
-                    <p class="small text-muted">Large files may take longer to load</p>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    $('#agreementContent' + agreementId).html(content);
-    
-    // Try different methods to display PDF
-    tryDisplayMethods(pdfUrl, agreementId);
-}
+                                                // Display PDF with multiple fallback methods
+                                                function displayPDF(pdfUrl, agreementId) {
+                                                    $('#emptyState' + agreementId).hide();
+                                                    
+                                                    const content = `
+                                                        <div class="text-center mb-3">
+                                                            <h6 class="text-primary">
+                                                                <i class="fas fa-file-pdf me-2"></i>Agreement Document
+                                                            </h6>
+                                                        </div>
+                                                        <div class="pdf-viewer-container" id="pdfContainer${agreementId}">
+                                                            <div class="pdf-loading-overlay" id="pdfLoading${agreementId}">
+                                                                <div class="text-center">
+                                                                    <div class="spinner-border text-primary" role="status">
+                                                                        <span class="visually-hidden">Loading...</span>
+                                                                    </div>
+                                                                    <p class="mt-2">Loading PDF...</p>
+                                                                    <p class="small text-muted">Large files may take longer to load</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    `;
+                                                    
+                                                    $('#agreementContent' + agreementId).html(content);
+                                                    
+                                                    // Try different methods to display PDF
+                                                    tryDisplayMethods(pdfUrl, agreementId);
+                                                }
 
-function tryDisplayMethods(pdfUrl, agreementId) {
-    const container = $('#pdfContainer' + agreementId);
-    const loading = $('#pdfLoading' + agreementId);
-    
-    // Method 1: Try direct embed
-    const embed = `<embed src="${pdfUrl}#view=FitH" type="application/pdf" class="pdf-embed" id="pdfEmbed${agreementId}">`;
-    container.append(embed);
-    
-    // Check if embed loaded after 5 seconds (longer for large files)
-    setTimeout(() => {
-        const embedElement = $('#pdfEmbed' + agreementId)[0];
-        
-        if (!embedElement || embedElement.clientHeight === 0) {
-            // Method 2: Try Google Docs Viewer
-            container.html(`
-                <iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true" 
-                        class="pdf-embed" 
-                        id="pdfIframe${agreementId}">
-                </iframe>
-            `);
-            
-            // Check if Google Docs Viewer loaded
-            setTimeout(() => {
-                const iframe = $('#pdfIframe' + agreementId)[0];
-                if (!iframe || iframe.clientHeight === 0) {
-                    // Method 3: Fallback with manual controls
-                    showPDFError(pdfUrl, agreementId);
-                } else {
-                    loading.hide();
-                }
-            }, 5000);
-        } else {
-            loading.hide();
-        }
-    }, 5000);
-}
+                                                function tryDisplayMethods(pdfUrl, agreementId) {
+                                                    const container = $('#pdfContainer' + agreementId);
+                                                    const loading = $('#pdfLoading' + agreementId);
+                                                    
+                                                    // Method 1: Try direct embed
+                                                    const embed = `<embed src="${pdfUrl}#view=FitH" type="application/pdf" class="pdf-embed" id="pdfEmbed${agreementId}">`;
+                                                    container.append(embed);
+                                                    
+                                                    // Check if embed loaded after 5 seconds (longer for large files)
+                                                    setTimeout(() => {
+                                                        const embedElement = $('#pdfEmbed' + agreementId)[0];
+                                                        
+                                                        if (!embedElement || embedElement.clientHeight === 0) {
+                                                            // Method 2: Try Google Docs Viewer
+                                                            container.html(`
+                                                                <iframe src="https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true" 
+                                                                        class="pdf-embed" 
+                                                                        id="pdfIframe${agreementId}">
+                                                                </iframe>
+                                                            `);
+                                                            
+                                                            // Check if Google Docs Viewer loaded
+                                                            setTimeout(() => {
+                                                                const iframe = $('#pdfIframe' + agreementId)[0];
+                                                                if (!iframe || iframe.clientHeight === 0) {
+                                                                    // Method 3: Fallback with manual controls
+                                                                    showPDFError(pdfUrl, agreementId);
+                                                                } else {
+                                                                    loading.hide();
+                                                                }
+                                                            }, 5000);
+                                                        } else {
+                                                            loading.hide();
+                                                        }
+                                                    }, 5000);
+                                                }
 
-function showPDFError(pdfUrl, agreementId) {
-    const container = $('#pdfContainer' + agreementId);
-    container.html(`
-        <div class="pdf-error-state">
-            <div class="text-center">
-                <i class="fas fa-file-pdf fa-4x text-muted mb-3"></i>
-                <h5>PDF Preview Not Available</h5>
-                <p class="text-muted mb-2">Your browser doesn't support embedded PDF viewing.</p>
-                <p class="text-muted mb-4 small">Large PDF files may not display properly in the browser.</p>
-                <div class="btn-group" role="group">
-                    <a href="${pdfUrl}" target="_blank" class="btn btn-primary">
-                        <i class="fas fa-external-link-alt me-1"></i>Open in New Tab
-                    </a>
-                    <a href="${pdfUrl}" download class="btn btn-success">
-                        <i class="fas fa-download me-1"></i>Download PDF
-                    </a>
-                </div>
-            </div>
-        </div>
-    `);
-}
+                                                function showPDFError(pdfUrl, agreementId) {
+                                                    const container = $('#pdfContainer' + agreementId);
+                                                    container.html(`
+                                                        <div class="pdf-error-state">
+                                                            <div class="text-center">
+                                                                <i class="fas fa-file-pdf fa-4x text-muted mb-3"></i>
+                                                                <h5>PDF Preview Not Available</h5>
+                                                                <p class="text-muted mb-2">Your browser doesn't support embedded PDF viewing.</p>
+                                                                <p class="text-muted mb-4 small">Large PDF files may not display properly in the browser.</p>
+                                                                <div class="btn-group" role="group">
+                                                                    <a href="${pdfUrl}" target="_blank" class="btn btn-primary">
+                                                                        <i class="fas fa-external-link-alt me-1"></i>Open in New Tab
+                                                                    </a>
+                                                                    <a href="${pdfUrl}" download class="btn btn-success">
+                                                                        <i class="fas fa-download me-1"></i>Download PDF
+                                                                    </a>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    `);
+                                                }
 
-// Show/hide sections
-function showAgreementManagement(agreementId) {
-    $('#uploadSection' + agreementId).slideUp();
-    $('#agreementManagement' + agreementId).slideDown();
-    $('#replaceBtn' + agreementId).show();
-}
+                                                // Show/hide sections
+                                                function showAgreementManagement(agreementId) {
+                                                    $('#uploadSection' + agreementId).slideUp();
+                                                    $('#agreementManagement' + agreementId).slideDown();
+                                                    $('#replaceBtn' + agreementId).show();
+                                                }
 
-function showUploadSection(agreementId) {
-    $('#agreementManagement' + agreementId).slideUp();
-    $('#uploadSection' + agreementId).slideDown();
-    $('#replaceBtn' + agreementId).hide();
-    $('#agreementContent' + agreementId).html(`
-        <div class="text-center py-5" id="emptyState${agreementId}">
-            <i class="fas fa-file-pdf fa-3x text-muted mb-3"></i>
-            <p class="text-muted">No agreement uploaded yet. Please upload a PDF file above.</p>
-        </div>
-    `);
-}
+                                                function showUploadSection(agreementId) {
+                                                    $('#agreementManagement' + agreementId).slideUp();
+                                                    $('#uploadSection' + agreementId).slideDown();
+                                                    $('#replaceBtn' + agreementId).hide();
+                                                    $('#agreementContent' + agreementId).html(`
+                                                        <div class="text-center py-5" id="emptyState${agreementId}">
+                                                            <i class="fas fa-file-pdf fa-3x text-muted mb-3"></i>
+                                                            <p class="text-muted">No agreement uploaded yet. Please upload a PDF file above.</p>
+                                                        </div>
+                                                    `);
+                                                }
 
-// Delete agreement
-function deleteAgreement(agreementId) {
-    const deleteBtn = $('#confirmDeleteBtn' + agreementId);
-    deleteBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Deleting...');
-    
-    $.ajax({
-        url: '{{ url("/agreements") }}/' + agreementId,
-        type: 'DELETE',
-        data: {
-            '_token': '{{ csrf_token() }}'
-        },
-        success: function(response) {
-            $('#deleteConfirmModal' + agreementId).modal('hide');
-            showUploadSection(agreementId);
-            
-            // Show success message
-            $('#uploadStatus' + agreementId).html(`
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="fas fa-check-circle me-2"></i>Agreement deleted successfully!
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            `);
-        },
-        error: function(xhr) {
-            $('#deleteConfirmModal' + agreementId).modal('hide');
-            
-            $('#uploadStatus' + agreementId).html(`
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="fas fa-exclamation-triangle me-2"></i>Failed to delete agreement. Please try again.
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            `);
-        },
-        complete: function() {
-            deleteBtn.prop('disabled', false).html('<i class="fas fa-trash-alt me-1"></i>Delete Agreement');
-        }
-    });
-}
+                                                // Delete agreement
+                                                function deleteAgreement(agreementId) {
+                                                    const deleteBtn = $('#confirmDeleteBtn' + agreementId);
+                                                    deleteBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Deleting...');
+                                                    
+                                                    $.ajax({
+                                                        url: '{{ url("/agreements") }}/' + agreementId,
+                                                        type: 'DELETE',
+                                                        data: {
+                                                            '_token': '{{ csrf_token() }}'
+                                                        },
+                                                        success: function(response) {
+                                                            $('#deleteConfirmModal' + agreementId).modal('hide');
+                                                            showUploadSection(agreementId);
+                                                            
+                                                            // Show success message
+                                                            $('#uploadStatus' + agreementId).html(`
+                                                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                                                    <i class="fas fa-check-circle me-2"></i>Agreement deleted successfully!
+                                                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                                                </div>
+                                                            `);
+                                                        },
+                                                        error: function(xhr) {
+                                                            $('#deleteConfirmModal' + agreementId).modal('hide');
+                                                            
+                                                            $('#uploadStatus' + agreementId).html(`
+                                                                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                                                    <i class="fas fa-exclamation-triangle me-2"></i>Failed to delete agreement. Please try again.
+                                                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                                                </div>
+                                                            `);
+                                                        },
+                                                        complete: function() {
+                                                            deleteBtn.prop('disabled', false).html('<i class="fas fa-trash-alt me-1"></i>Delete Agreement');
+                                                        }
+                                                    });
+                                                }
 
-// PDF action functions
-window['openPDFNewTab' + {{ $cash->id }}] = function() {
-    if (currentPdfUrl) {
-        window.open(currentPdfUrl, '_blank');
-    }
-};
+                                                // PDF action functions
+                                                window['openPDFNewTab' + {{ $cash->id }}] = function() {
+                                                    if (currentPdfUrl) {
+                                                        window.open(currentPdfUrl, '_blank');
+                                                    }
+                                                };
 
-window['downloadPDF' + {{ $cash->id }}] = function() {
-    if (currentPdfUrl) {
-        const link = document.createElement('a');
-        link.href = currentPdfUrl;
-        link.download = 'agreement-{{ $cash->id }}.pdf';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-};
+                                                window['downloadPDF' + {{ $cash->id }}] = function() {
+                                                    if (currentPdfUrl) {
+                                                        const link = document.createElement('a');
+                                                        link.href = currentPdfUrl;
+                                                        link.download = 'agreement-{{ $cash->id }}.pdf';
+                                                        document.body.appendChild(link);
+                                                        link.click();
+                                                        document.body.removeChild(link);
+                                                    }
+                                                };
 
-window['printPDF' + {{ $cash->id }}] = function() {
-    if (currentPdfUrl) {
-        const printWindow = window.open(currentPdfUrl, '_blank');
-        printWindow.addEventListener('load', function() {
-            printWindow.print();
-        });
-    }
-};
+                                                window['printPDF' + {{ $cash->id }}] = function() {
+                                                    if (currentPdfUrl) {
+                                                        const printWindow = window.open(currentPdfUrl, '_blank');
+                                                        printWindow.addEventListener('load', function() {
+                                                            printWindow.print();
+                                                        });
+                                                    }
+                                                };
 
-window['showUploadSection' + {{ $cash->id }}] = function() {
-    showUploadSection({{ $cash->id }});
-};
-</script>
+                                                window['showUploadSection' + {{ $cash->id }}] = function() {
+                                                    showUploadSection({{ $cash->id }});
+                                                };
+                                                </script>
                                                 <br>
                                                  <button class="btn btn-outline-primary btn-sm"
                                                     onclick="openReceiptModal('deposit', 

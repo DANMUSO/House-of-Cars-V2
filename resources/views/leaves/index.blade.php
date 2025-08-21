@@ -86,96 +86,109 @@
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table id="leaveTable" class="table table-bordered table-hover nowrap w-100">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Employee</th>
-                                        <th>Leave Type</th>
-                                        <th>Start Date</th>
-                                        <th>End Date</th>
-                                        <th>Total Days</th>
-                                        <th>Handover Person</th>
-                                        <th>Status</th>
-                                        <th>Applied Date</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($leaveApplications as $application)
-                                    <tr data-status="{{ $application->status }}" id="application-row-{{ $application->id }}">
-                                        <td>{{ $application->id }}</td>
-                                        <td>
-                                            <div class="fw-semibold">{{ $application->user->name }}</div>
-                                            <small class="text-muted">{{ $application->user->email }}</small>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-info text-capitalize">
-                                                {{ str_replace('_', ' ', $application->leave_type) }}
-                                            </span>
-                                        </td>
-                                        <td>{{ \Carbon\Carbon::parse($application->start_date)->format('M d, Y') }}</td>
-                                        <td>{{ \Carbon\Carbon::parse($application->end_date)->format('M d, Y') }}</td>
-                                        <td>
-                                            <span class="fw-semibold">{{ $application->total_days }}</span> 
-                                            <small class="text-muted">working days</small>
-                                        </td>
-                                        <td>{{ $application->handover_person ?? 'N/A' }}</td>
-                                        <td>
-                                            <span id="status-badge-{{ $application->id }}">
-                                                @switch($application->status)
-                                                    @case('Pending')
-                                                        <span class="badge bg-warning">Pending</span>
-                                                        @break
-                                                    @case('Approved')
-                                                        <span class="badge bg-success">Approved</span>
-                                                        @break
-                                                    @case('Rejected')
-                                                        <span class="badge bg-danger">Rejected</span>
-                                                        @break
-                                                    @case('Cancelled')
-                                                        <span class="badge bg-secondary">Cancelled</span>
-                                                        @break
-                                                @endswitch
-                                            </span>
-                                        </td>
-                                        <td>{{ $application->applied_date->format('M d, Y') }}</td>
-                                        <td>
-                                            <div class="btn-group-vertical" id="actions-{{ $application->id }}">
-                                               
-                                                @if($application->status === 'Pending')
-                                                    @if(auth()->user()->hasRole('Managing-Director'))
-                                                        <button class="btn btn-sm btn-success mb-1" onclick="approveApplication({{ $application->id }})" id="approve-btn-{{ $application->id }}">
-                                                            <i class="fas fa-check me-1"></i> Approve
-                                                        </button>
-                                                        <button class="btn btn-sm btn-danger mb-1" onclick="rejectApplication({{ $application->id }})" id="reject-btn-{{ $application->id }}">
-                                                            <i class="fas fa-times me-1"></i> Reject
-                                                        </button>
-                                                    @endif
-                                                    @if($application->user_id === auth()->id())
-                                                        <button class="btn btn-sm btn-warning" onclick="cancelApplication({{ $application->id }})" id="cancel-btn-{{ $application->id }}">
-                                                            <i class="fas fa-ban me-1"></i> Cancel
-                                                        </button>
-                                                    @endif
-                                                @endif
-                                                @if($application->status === 'Approved' && $application->user_id === auth()->id())
-                                                    <button class="btn btn-sm btn-warning" onclick="cancelApplication({{ $application->id }})" id="cancel-btn-{{ $application->id }}">
-                                                        <i class="fas fa-ban me-1"></i> Cancel
-                                                    </button>
-                                                @endif
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    @empty
-                                    <tr>
-                                        <td colspan="10" class="text-center text-muted py-4">
-                                            <i class="fas fa-inbox fa-2x mb-2"></i>
-                                            <br>No leave applications found
-                                        </td>
-                                    </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
+                           <table id="leaveTable" class="table table-bordered table-hover nowrap w-100">
+    <thead class="table-light">
+        <tr>
+            <th>ID</th>
+            <th>Employee</th>
+            <th>Leave Type</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Total Days</th>
+            <th>Handover Person</th>
+            <th>Status</th>
+            <th>Applied Date</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @forelse($leaveApplications as $application)
+        <tr data-status="{{ $application->status }}" id="application-row-{{ $application->id }}">
+            <td>{{ $application->id }}</td>
+            <td>
+                <div class="fw-semibold">{{ $application->user->name }}</div>
+                <small class="text-muted">{{ $application->user->email }}</small>
+            </td>
+            <td>
+                <span class="badge bg-info text-capitalize">
+                    {{ str_replace('_', ' ', $application->leave_type) }}
+                </span>
+            </td>
+            <td>{{ \Carbon\Carbon::parse($application->start_date)->format('M d, Y') }}</td>
+            <td>{{ \Carbon\Carbon::parse($application->end_date)->format('M d, Y') }}</td>
+            <td>
+                <span class="fw-semibold">{{ $application->total_days }}</span> 
+                <small class="text-muted">working days</small>
+            </td>
+            <td>{{ $application->handover_person ?? 'N/A' }}</td>
+            <td>
+                <span id="status-badge-{{ $application->id }}">
+                    @switch($application->status)
+                        @case('Pending')
+                            <span class="badge bg-warning">Pending</span>
+                            @break
+                        @case('Approved')
+                            <span class="badge bg-success">Approved</span>
+                            @break
+                        @case('Rejected')
+                            <span class="badge bg-danger">Rejected</span>
+                            @break
+                        @case('Cancelled')
+                            <span class="badge bg-secondary">Cancelled</span>
+                            @break
+                    @endswitch
+                </span>
+            </td>
+            <td>{{ $application->applied_date->format('M d, Y') }}</td>
+            
+            {{-- Actions column for all users --}}
+            <td>
+                <div class="btn-group-vertical" id="actions-{{ $application->id }}">
+                    @if($application->status === 'Pending')
+                        {{-- Approve/Reject buttons only for Managing Director and HR, but not for their own applications --}}
+                        @if(in_array(Auth::user()->role, ['Managing-Director', 'HR']) && $application->user_id !== auth()->id())
+                            <button class="btn btn-sm btn-success mb-1" onclick="approveApplication({{ $application->id }})" id="approve-btn-{{ $application->id }}">
+                                <i class="fas fa-check me-1"></i> Approve
+                            </button>
+                            <button class="btn btn-sm btn-danger mb-1" onclick="rejectApplication({{ $application->id }})" id="reject-btn-{{ $application->id }}">
+                                <i class="fas fa-times me-1"></i> Reject
+                            </button>
+                        @endif
+                        
+                        {{-- Cancel button only for own PENDING applications --}}
+                        @if($application->user_id === auth()->id())
+                            <button class="btn btn-sm btn-warning" onclick="cancelApplication({{ $application->id }})" id="cancel-btn-{{ $application->id }}">
+                                <i class="fas fa-ban me-1"></i> Cancel
+                            </button>
+                        @endif
+                        
+                        {{-- Show "No actions" if not their application and not Managing Director/HR, OR if it's HR/MD's own application --}}
+                        @if(($application->user_id !== auth()->id() && !in_array(Auth::user()->role, ['Managing-Director', 'HR'])) || 
+                            (in_array(Auth::user()->role, ['Managing-Director', 'HR']) && $application->user_id === auth()->id()))
+                            <span class="text-muted">
+                                <i class="fas fa-ban me-1"></i>@if($application->user_id === auth()->id() && in_array(Auth::user()->role, ['Managing-Director', 'HR']))Cannot approve own request @else No actions available @endif
+                            </span>
+                        @endif
+                    @else
+                        {{-- No actions for approved, rejected, or cancelled applications --}}
+                        <span class="text-muted">
+                            <i class="fas fa-ban me-1"></i>No actions needed
+                        </span>
+                    @endif
+                </div>
+            </td>
+        </tr>
+        @empty
+        <tr>
+            <td colspan="10" class="text-center text-muted py-4">
+                <i class="fas fa-inbox fa-2x mb-2"></i>
+                <br>No leave applications found
+            </td>
+        </tr>
+        @endforelse
+    </tbody>
+</table>
+                        
                         </div>
                     </div>
                 </div>
@@ -823,7 +836,7 @@
                             const actionsContainer = document.getElementById(`actions-${applicationId}`);
                             actionsContainer.innerHTML = `
                                 <button class="btn btn-sm btn-outline-primary" onclick="viewApplication(${applicationId})">
-                                    <i class="fas fa-eye me-1"></i> View
+                                    <i class="fas fa-ban me-1"></i>No actions needed
                                 </button>
                             `;
                             
