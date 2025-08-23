@@ -911,10 +911,10 @@
                                                                 <tr>
                                                                     <td>Customer Name | Chasis No</td>
                                                                     <td colspan="2">
-                                                                        <select class="form-select" id="customer_id_update{{ $inspection->id }}" name="customer_id" required>
+                                                                         <select class="form-select" id="customer_id_update{{ $inspection->id }}" name="customer_id" required>
                                                                             <option disabled value="">Choose</option>
-                                                                            @foreach ($customers as $customer)
-                                                                                <option value="{{ $customer->id }}" {{ optional($inspection->customerVehicle)->id == $customer->id ? 'selected' : '' }}>
+                                                                            @foreach ($allCustomers as $customer)
+                                                                                <option value="{{ $customer->id }}" {{ $inspection->customer_id == $customer->id ? 'selected' : '' }}>
                                                                                     {{ $customer->customer_name }} - {{ $customer->number_plate }}
                                                                                 </option>
                                                                             @endforeach

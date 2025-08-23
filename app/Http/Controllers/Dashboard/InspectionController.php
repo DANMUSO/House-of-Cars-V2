@@ -200,15 +200,20 @@ class InspectionController extends Controller
     }
     
     public function tradeincars()
-    {
-        // Get IDs of customers that already exist in VehicleInspection
-        $inspectedCustomerIds = VehicleInspection::pluck('customer_id');
+{
+    // Get IDs of customers that already exist in VehicleInspection
+    $inspectedCustomerIds = VehicleInspection::pluck('customer_id');
 
-        // Fetch customers not already in VehicleInspection
-        $customers = CustomerVehicle::whereNotIn('id', $inspectedCustomerIds)->latest()->get();
-        $inspections = VehicleInspection::with('customerVehicle')->where('customer_id','!=', 0)->get();
-        return view('inspection.tradein', compact('inspections','customers'));
-    }
+    // For CREATE modal - only uninspected customers (existing behavior)
+    $customers = CustomerVehicle::whereNotIn('id', $inspectedCustomerIds)->latest()->get();
+    
+    // For UPDATE modals - ALL customers (including already inspected ones)
+    $allCustomers = CustomerVehicle::latest()->get();
+    
+    $inspections = VehicleInspection::with('customerVehicle')->where('customer_id','!=', 0)->get();
+    
+    return view('inspection.tradein', compact('inspections', 'customers', 'allCustomers'));
+}
 
     public function inspectedimported()
     {

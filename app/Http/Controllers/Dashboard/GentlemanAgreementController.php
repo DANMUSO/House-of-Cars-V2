@@ -81,7 +81,7 @@ class GentlemanAgreementController extends Controller
                 'vehicle_price' => 'required|numeric|min:1',
                 'deposit_amount' => 'required|numeric|min:1',
                 'duration_months' => 'required|integer|min:1|max:60',
-                'first_due_date' => 'required|date|after:today',
+                'first_due_date' => 'required|date',
             ], [
                 'client_name.required' => 'Client name is required.',
                 'phone_number.required' => 'Phone number is required.',
