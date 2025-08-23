@@ -1397,7 +1397,7 @@ window.testLumpSumModal = function() {
                         <div style="flex: 1; padding-right: 20px;">
                             <h2 style="font-size: 18px; font-weight: bold; margin: 0 0 8px 0; color: #2c3e50;">Kelmer's House of Cars LTD</h2>
                             <div style="font-size: 12px; line-height: 1.4; color: #555;">
-                                <div style="margin-bottom: 2px;">Jabavu Lane, Huringham</div>
+                                <div style="margin-bottom: 2px;">Jabavu Lane, Hurlingham</div>
                                 <div style="margin-bottom: 2px;">P.O Box 9215 - 00100, Nairobi - Kenya</div>
                                 <div style="margin: 4px 0 2px 0;"><strong>Email:</strong> info@kelmercars.co.ke</div>
                                 <div><strong>Phone:</strong> +254 700 000 000</div>

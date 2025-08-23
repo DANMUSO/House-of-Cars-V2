@@ -3802,7 +3802,7 @@ public function store(Request $request)
             'deposit_amount' => 'required|numeric|min:1',
             'tracking_fees' => 'required|numeric|min:0',
             'duration_months' => 'required|integer|min:6|max:72',
-            'first_due_date' => 'required|date|after:today',
+            'first_due_date' => 'required|date',
         ], [
             'client_name.required' => 'Client name is required.',
             'phone_number.required' => 'Phone number is required.',

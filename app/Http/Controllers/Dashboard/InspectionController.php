@@ -62,9 +62,17 @@ class InspectionController extends Controller
             'rubber_mats' => 'required|in:present,absent',
             'cigar_lighter' => 'required|in:present,absent',
             'boot_mats' => 'required|in:present,absent',
+
+             // Interior Accessories Numbers - NEW
+            'head_rest_number' => 'nullable|integer|min:0|max:10',
+            'floor_carpets_number' => 'nullable|integer|min:0|max:10',
+            'rubber_mats_number' => 'nullable|integer|min:0|max:10',
+            'cigar_lighter_number' => 'nullable|integer|min:0|max:50',
+            'boot_mats_number' => 'nullable|integer|min:0|max:50',
             
             // Tools
             'jack' => 'required|in:present,absent',
+            'handle' => 'required|in:present,absent',
             'spare_wheel' => 'required|in:present,absent',
             'compressor' => 'required|in:present,absent',
             'wheel_spanner' => 'required|in:present,absent',
@@ -113,6 +121,16 @@ class InspectionController extends Controller
             'interior_func_percent' => 'required|integer|min:0|max:100',
             'interior_acc_percent' => 'required|integer|min:0|max:100',
             'tools_percent' => 'required|integer|min:0|max:100',
+
+            // Interior Accessories Numbers
+            'head_rest_number' => 'nullable|integer|min:0|max:10',
+            'floor_carpets_number' => 'nullable|integer|min:0|max:10',
+            'rubber_mats_number' => 'nullable|integer|min:0|max:10',
+            'cigar_lighter_number' => 'nullable|integer|min:0|max:50',
+            'boot_mats_number' => 'nullable|integer|min:0|max:50',
+            
+            // Handle field (new)
+            'handle' => 'nullable|in:present,absent',
         ]);
 
         // Additional validation to ensure at least one ID is provided
@@ -151,7 +169,7 @@ class InspectionController extends Controller
             'front_bumper', 'rear_bumper', 'head_lights', 'bumper_lights', 'corner_lights', 'rear_lights',
             'radio_speakers', 'seat_belt', 'door_handles',
             'head_rest', 'floor_carpets', 'rubber_mats', 'cigar_lighter', 'boot_mats',
-            'jack', 'spare_wheel', 'compressor', 'wheel_spanner'
+            'jack','handle','spare_wheel', 'compressor', 'wheel_spanner'
         ];
 
         // Loop through each and update if present in the request
@@ -160,7 +178,20 @@ class InspectionController extends Controller
                 $inspection->$field = $request->input($field);
             }
         }
+            // Handle number fields for interior accessories
+        $numberFields = [
+            'head_rest_number', 
+            'floor_carpets_number', 
+            'rubber_mats_number', 
+            'cigar_lighter_number', 
+            'boot_mats_number'
+        ];
 
+        foreach ($numberFields as $field) {
+            if ($request->has($field)) {
+                $inspection->$field = $request->input($field) ?: 0; // Default to 0 if empty
+            }
+        }
         $inspection->save();
 
         return response()->json([

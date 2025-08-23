@@ -223,16 +223,15 @@
                                                             <tr><td>Door Handles</td><td><input type="radio" name="door_handles" value="ok"></td><td><input type="radio" name="door_handles" value="damaged"></td></tr>
                                                         </table>
 
-                                                        <div class="section-title">Interior Accessories: <span id="interiorAccPercent">0%</span></div>
+                                                         <div class="section-title">Interior Accessories: <span id="interiorAccPercent">0%</span></div>
                                                         <input type="hidden" name="interior_acc_percent" id="interior_acc_percent_input">
                                                         <table border="1">
-                                                            <tr><th>Item</th><th>Present</th><th>Absent</th></tr>
-                                                            <tr><td>Head Rest</td><td><input type="radio" name="head_rest" value="present"></td><td><input type="radio" name="head_rest" value="absent"></td></tr>
-                                                            <tr><td>Floor Carpets</td><td><input type="radio" name="floor_carpets" value="present"></td><td><input type="radio" name="floor_carpets" value="absent"></td></tr>
-                                                            <tr><td>Rubber Mats</td><td><input type="radio" name="rubber_mats" value="present"></td><td><input type="radio" name="rubber_mats" value="absent"></td></tr>
-                                                            <tr><td>Cigar Lighter</td><td><input type="radio" name="cigar_lighter" value="present"></td><td><input type="radio" name="cigar_lighter" value="absent"></td></tr>
-                                                            <tr><td>Boot Mats</td><td><input type="radio" name="boot_mats" value="present"></td><td><input type="radio" name="boot_mats" value="absent"></td></tr>
-                                                            
+                                                            <tr><th>Item</th><th>Present</th><th>Absent</th><th>Number</th></tr>
+                                                            <tr><td>Head Rest</td><td><input type="radio" name="head_rest" value="present"></td><td><input type="radio" name="head_rest" value="absent"></td><td><input type="number" name="head_rest_number" min="0" max="10" placeholder="0"></td></tr>
+                                                            <tr><td>Floor Carpets</td><td><input type="radio" name="floor_carpets" value="present"></td><td><input type="radio" name="floor_carpets" value="absent"></td><td><input type="number" name="floor_carpets_number" min="0" max="10" placeholder="0"></td></tr>
+                                                            <tr><td>Rubber Mats</td><td><input type="radio" name="rubber_mats" value="present"></td><td><input type="radio" name="rubber_mats" value="absent"></td><td><input type="number" name="rubber_mats_number" min="0" max="10" placeholder="0"></td></tr>
+                                                            <tr><td>Cigar Lighter</td><td><input type="radio" name="cigar_lighter" value="present"></td><td><input type="radio" name="cigar_lighter" value="absent"></td><td><input type="number" name="cigar_lighter_number" min="0" max="5" placeholder="0"></td></tr>
+                                                            <tr><td>Boot Mats</td><td><input type="radio" name="boot_mats" value="present"></td><td><input type="radio" name="boot_mats" value="absent"></td><td><input type="number" name="boot_mats_number" min="0" max="5" placeholder="0"></td></tr>
                                                         </table>
 
                                                         <!-- Tools and Accessories -->
@@ -240,24 +239,22 @@
                                                         <input type="hidden" name="tools_percent" id="tools_percent_input">
                                                         <table border="1">
                                                             <tr><th>Item</th><th>Present</th><th>Absent</th></tr>
-                                                            <tr><td>Jack/Handle</td><td><input type="radio" name="jack" value="present"></td><td><input type="radio" name="jack" value="absent"></td></tr>
+                                                            <tr><td>Jack</td><td><input type="radio" name="jack" value="present"></td><td><input type="radio" name="jack" value="absent"></td></tr>
+                                                            <tr><td>Handle</td><td><input type="radio" name="handle" value="present"></td><td><input type="radio" name="handle" value="absent"></td></tr>
                                                             <tr><td>Spare Wheel</td><td><input type="radio" name="spare_wheel" value="present"></td><td><input type="radio" name="spare_wheel" value="absent"></td></tr>
                                                             <tr><td>Compressor Kit</td><td><input type="radio" name="compressor" value="present"></td><td><input type="radio" name="compressor" value="absent"></td></tr>
                                                             <tr><td>Wheel Spanner</td><td><input type="radio" name="wheel_spanner" value="present"></td><td><input type="radio" name="wheel_spanner" value="absent"></td></tr>
-                                                            <tr><td>Current Mileage</td>
-                                                            <td colspan="2"><input type="text" name="current_mileage" placeholder="Enter current mileage"></td></tr>
-                                                            <tr><td>Notes</td>
-                                                            <td colspan="2"><textarea name="inspection_notes" > </textarea></td></tr>
+                                                            <tr><td>Current Mileage</td><td colspan="2"><input type="text" name="current_mileage" placeholder="Enter current mileage"></td></tr>
+                                                            <tr><td>Notes</td><td colspan="2"><textarea name="inspection_notes"></textarea></td></tr>
                                                         </table>
 
                                                         <script>
                                                         document.addEventListener('DOMContentLoaded', function () {
-
-                                                            function calculate() {
+                                                        function calculate() {
                                                                 const exteriorItems = ['rh_front_wing','rh_right_wing','lh_front_wing','lh_right_wing','bonnet','rh_front_door','rh_rear_door','lh_front_door','lh_rear_door','front_bumper','rear_bumper','head_lights','bumper_lights','corner_lights','rear_lights'];
                                                                 const interiorFunctional = ['radio_speakers','seat_belt','door_handles'];
                                                                 const interiorAccessories = ['head_rest','floor_carpets','rubber_mats','cigar_lighter','boot_mats'];
-                                                                const toolsAccessories = ['jack','spare_wheel','compressor','wheel_spanner'];
+                                                                const toolsAccessories = ['jack','handle','spare_wheel','compressor','wheel_spanner']; // Updated to include 'handle'
 
                                                                 let extOk = exteriorItems.filter(name => document.querySelector(`input[name="${name}"][value="ok"]`)?.checked).length;
                                                                 let intFuncOk = interiorFunctional.filter(name => document.querySelector(`input[name="${name}"][value="ok"]`)?.checked).length;
@@ -272,11 +269,13 @@
                                                                 let intAccPercent = Math.round((intAccOk / interiorAccessories.length) * 100);
                                                                 let toolsPercent = Math.round((toolsOk / toolsAccessories.length) * 100);
                                                                 let overallPercent = Math.round((totalOk / totalItems) * 100);
+                                                                
                                                                 document.getElementById('exterior_percent_input').value = extPercent;
                                                                 document.getElementById('interior_func_percent_input').value = intFuncPercent;
                                                                 document.getElementById('interior_acc_percent_input').value = intAccPercent;
                                                                 document.getElementById('tools_percent_input').value = toolsPercent;
                                                                 document.getElementById('overall_percent_input').value = overallPercent;
+                                                                
                                                                 document.getElementById('exteriorPercent').innerText = extPercent + '%';
                                                                 document.getElementById('interiorFuncPercent').innerText = intFuncPercent + '%';
                                                                 document.getElementById('interiorAccPercent').innerText = intAccPercent + '%';
@@ -740,6 +739,19 @@
                                                 #uploadProgress .progress-bar {
                                                     transition: width 0.3s ease;
                                                 }
+                                                .quantity-header {
+                                                    background-color: #f8f9fa;
+                                                    font-weight: bold;
+                                                    padding: 8px;
+                                                    text-align: center;
+                                                    width: 60px;
+                                                }
+
+                                                .item-quantity {
+                                                    text-align: center;
+                                                    padding: 8px;
+                                                    font-weight: 500;
+                                                }
                                                 </style>
 
                                             
@@ -936,21 +948,23 @@
                                                             <div class="section-title">Interior Accessories: <span id="interiorAccPercent_update{{ $inspection->id }}">{{ $inspection->interior_acc_percent }}%</span></div>
                                                             <input type="hidden" name="interior_acc_percent" id="interior_acc_percent_input_update{{ $inspection->id }}" value="{{ $inspection->interior_acc_percent }}">
                                                             <table border="1">
-                                                                <tr><th>Item</th><th>Present</th><th>Absent</th></tr>
+                                                                <tr><th>Item</th><th>Present</th><th>Absent</th><th>Number</th></tr>
                                                                 @foreach (['head_rest', 'floor_carpets', 'rubber_mats', 'cigar_lighter', 'boot_mats'] as $item)
                                                                     <tr>
                                                                         <td>{{ ucwords(str_replace('_', ' ', $item)) }}</td>
                                                                         <td><input type="radio" name="{{ $item }}" value="present" {{ $inspection->$item == 'present' ? 'checked' : '' }}></td>
                                                                         <td><input type="radio" name="{{ $item }}" value="absent" {{ $inspection->$item == 'absent' ? 'checked' : '' }}></td>
+                                                                        <td><input type="number" name="{{ $item }}_number" min="0" max="10" value="{{ $inspection->{$item.'_number'} ?? 0 }}" placeholder="0"></td>
                                                                     </tr>
                                                                 @endforeach
                                                             </table>
 
+                                                            <!-- Update the Tools & Accessories section in update modal: -->
                                                             <div class="section-title">Tools & Accessories: <span id="toolsPercent_update{{ $inspection->id }}">{{ $inspection->tools_percent }}%</span></div>
                                                             <input type="hidden" name="tools_percent" id="tools_percent_input_update{{ $inspection->id }}" value="{{ $inspection->tools_percent }}">
                                                             <table border="1">
                                                                 <tr><th>Item</th><th>Present</th><th>Absent</th></tr>
-                                                                @foreach (['jack', 'spare_wheel', 'compressor', 'wheel_spanner'] as $item)
+                                                                @foreach (['jack', 'handle', 'spare_wheel', 'compressor', 'wheel_spanner'] as $item)
                                                                     <tr>
                                                                         <td>{{ ucwords(str_replace('_', ' ', $item)) }}</td>
                                                                         <td><input type="radio" name="{{ $item }}" value="present" {{ $inspection->$item == 'present' ? 'checked' : '' }}></td>
@@ -961,9 +975,10 @@
                                                                     <td>Current Mileage</td>
                                                                     <td colspan="2"><input type="text" name="current_mileage" value="{{ $inspection->current_mileage }}"></td>
                                                                 </tr>
-                                                                <tr><td>Notes</td>
-                                                                <td colspan="2"><textarea name="inspection_notes"> {{ $inspection->inspection_notes }}</textarea></td>
-                                                            </tr>
+                                                                <tr>
+                                                                    <td>Notes</td>
+                                                                    <td colspan="2"><textarea name="inspection_notes">{{ $inspection->inspection_notes }}</textarea></td>
+                                                                </tr>
                                                             </table>
 
                                                             <button type="submit" class="btn btn-success">Update Inspection</button>
@@ -975,7 +990,7 @@
                                                                 const exteriorItems = ['rh_front_wing','rh_right_wing','lh_front_wing','lh_right_wing','bonnet','rh_front_door','rh_rear_door','lh_front_door','lh_rear_door','front_bumper','rear_bumper','head_lights','bumper_lights','corner_lights','rear_lights'];
                                                                 const interiorFunctional = ['radio_speakers','seat_belt','door_handles'];
                                                                 const interiorAccessories = ['head_rest','floor_carpets','rubber_mats','cigar_lighter','boot_mats'];
-                                                                const toolsAccessories = ['jack','spare_wheel','compressor','wheel_spanner'];
+                                                                const toolsAccessories = ['jack','handle','spare_wheel','compressor','wheel_spanner'];
 
                                                                 let extOk = exteriorItems.filter(name => document.querySelector(`#VehicleInspectionFormupdate{{ $inspection->id }} input[name="${name}"][value="ok"]`)?.checked).length;
                                                                 let intFuncOk = interiorFunctional.filter(name => document.querySelector(`#VehicleInspectionFormupdate{{ $inspection->id }} input[name="${name}"][value="ok"]`)?.checked).length;
@@ -1229,10 +1244,10 @@
                                                 <div class="company-info">
                                                     <div class="company-details">
                                                         <h4>House of Cars </h4>
-                                                        <h6 style="color:white">Jabavu Lane, Baridhara,<br>
-                                                        P.O Box: 55230 (00100), Nairobi-Kenya<br>
-                                                        Tel No: 0713400703<br>
-                                                        Email: houseofcars@gmail.com</h6>
+                                                        <h6 style="color:white">Jabavu Lane, Hurlingham<br>
+                                                       P.O Box 9215 - 00100, Nairobi - Kenya<br>
+                                                        Tel No: +254 700 000 000<br>
+                                                        Email: info@kelmercars.co.ke</h6>
                                                     </div>
                                                     <div class="company-logo">
                                                         <div class="logo-placeholder">
@@ -1307,46 +1322,48 @@
                                                     <div class="conditions-grid">
                                                         <!-- Left Column -->
                                                         <div class="conditions-column">
-                                                            <table class="inspection-table">
+                                                             <table class="inspection-table">
                                                                 <thead>
                                                                     <tr>
                                                                         <th class="item-header">COMPONENT</th>
                                                                         <th class="status-header">STATUS</th>
+                                                                        <th class="quantity-header">QTY</th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
                                                                     <!-- Exterior Components -->
                                                                     <tr class="category-row">
-                                                                        <td class="category-header" colspan="2">EXTERIOR COMPONENTS | Score:  <span class="status-badge status-ok"> {{ $inspection->exterior_percent }}% </span> </td>
+                                                                         <td class="category-header" colspan="3">EXTERIOR COMPONENTS | Score: <span class="status-badge status-ok">{{ $inspection->exterior_percent }}%</span></td>
                                                                     </tr>
                                                                     @foreach ([
-                                                                        'rh_front_wing' => 'RH Front Wing',
-                                                                        'rh_right_wing' => 'RH Right Wing',
-                                                                        'lh_front_wing' => 'LH Front Wing',
-                                                                        'lh_right_wing' => 'LH Right Wing',
-                                                                        'bonnet' => 'Bonnet',
-                                                                        'rh_front_door' => 'RH Front Door',
-                                                                        'rh_rear_door' => 'RH Rear Door',
-                                                                        'lh_front_door' => 'LH Front Door',
-                                                                        'lh_rear_door' => 'LH Rear Door',
-                                                                        'front_bumper' => 'Front Bumper',
-                                                                        'rear_bumper' => 'Rear Bumper',
-                                                                        'head_lights' => 'Head Lights',
-                                                                        'bumper_lights' => 'Bumper Lights',
-                                                                        'corner_lights' => 'Corner Lights',
-                                                                        'rear_lights' => 'Rear Lights'
-                                                                    ] as $field => $label)
-                                                                        <tr>
-                                                                            <td class="item-name">{{ $label }}</td>
-                                                                            <td class="item-status">
-                                                                                @if ($inspection->$field == 'ok')
-                                                                                    <span class="status-badge status-ok">OK</span>
-                                                                                @else
-                                                                                    <span class="status-badge status-damaged">Damaged</span>
-                                                                                @endif
-                                                                            </td>
-                                                                        </tr>
-                                                                    @endforeach
+                                                                    'rh_front_wing' => 'RH Front Wing',
+                                                                    'rh_right_wing' => 'RH Right Wing',
+                                                                    'lh_front_wing' => 'LH Front Wing',
+                                                                    'lh_right_wing' => 'LH Right Wing',
+                                                                    'bonnet' => 'Bonnet',
+                                                                    'rh_front_door' => 'RH Front Door',
+                                                                    'rh_rear_door' => 'RH Rear Door',
+                                                                    'lh_front_door' => 'LH Front Door',
+                                                                    'lh_rear_door' => 'LH Rear Door',
+                                                                    'front_bumper' => 'Front Bumper',
+                                                                    'rear_bumper' => 'Rear Bumper',
+                                                                    'head_lights' => 'Head Lights',
+                                                                    'bumper_lights' => 'Bumper Lights',
+                                                                    'corner_lights' => 'Corner Lights',
+                                                                    'rear_lights' => 'Rear Lights'
+                                                                ] as $field => $label)
+                                                                    <tr>
+                                                                        <td class="item-name">{{ $label }}</td>
+                                                                        <td class="item-status">
+                                                                            @if ($inspection->$field == 'ok')
+                                                                                <span class="status-badge status-ok">OK</span>
+                                                                            @else
+                                                                                <span class="status-badge status-damaged">Damaged</span>
+                                                                            @endif
+                                                                        </td>
+                                                                        <td class="item-quantity">-</td>  <!-- ADD THIS LINE -->
+                                                                    </tr>
+                                                                @endforeach
 
                                                                     
                                                                 </tbody>
@@ -1365,29 +1382,30 @@
                                                                 <tbody>
                                                                     <!-- Functional Items -->
                                                                     <tr class="category-row">
-                                                                        <td class="category-header" colspan="2">FUNCTIONAL ITEMS | Score:  <span class="status-badge status-ok">  {{ $inspection->interior_func_percent }}% </span> </td>
+                                                                        <td class="category-header" colspan="3">FUNCTIONAL ITEMS | Score: <span class="status-badge status-ok">{{ $inspection->interior_func_percent }}%</span></td>
                                                                     </tr>
-                                                                    @foreach ([
-                                                                        'radio_speakers' => 'Radio Speakers',
-                                                                        'seat_belt' => 'Seat Belt',
-                                                                        'door_handles' => 'Door Handles'
-                                                                    ] as $field => $label)
-                                                                        <tr>
-                                                                            <td class="item-name">{{ $label }}</td>
-                                                                            <td class="item-status">
-                                                                                @if ($inspection->$field == 'ok')
-                                                                                    <span class="status-badge status-ok">OK</span>
-                                                                                @else
-                                                                                    <span class="status-badge status-damaged">Damaged</span>
-                                                                                @endif
-                                                                            </td>
-                                                                        </tr>
-                                                                    @endforeach
+                                                                     @foreach ([
+                                                                            'radio_speakers' => 'Radio Speakers',
+                                                                            'seat_belt' => 'Seat Belt',
+                                                                            'door_handles' => 'Door Handles'
+                                                                        ] as $field => $label)
+                                                                            <tr>
+                                                                                <td class="item-name">{{ $label }}</td>
+                                                                                <td class="item-status">
+                                                                                    @if ($inspection->$field == 'ok')
+                                                                                        <span class="status-badge status-ok">OK</span>
+                                                                                    @else
+                                                                                        <span class="status-badge status-damaged">Damaged</span>
+                                                                                    @endif
+                                                                                </td>
+                                                                                <td class="item-quantity">-</td>
+                                                                            </tr>
+                                                                        @endforeach
                                                                     <!-- Interior Accessories -->
                                                                     <tr class="category-row">
-                                                                        <td class="category-header" colspan="2">INTERIOR ACCESSORIES | Score:  <span class="status-badge status-ok"> {{ $inspection->interior_acc_percent }}%</span></td>
+                                                                         <td class="category-header" colspan="3">INTERIOR ACCESSORIES | Score: <span class="status-badge status-ok">{{ $inspection->interior_acc_percent }}%</span></td>
                                                                     </tr>
-                                                                    @foreach ([
+                                                                     @foreach ([
                                                                         'head_rest' => 'Head Rest',
                                                                         'floor_carpets' => 'Floor Carpets',
                                                                         'rubber_mats' => 'Rubber Mats',
@@ -1403,30 +1421,39 @@
                                                                                     <span class="status-badge status-absent">Absent</span>
                                                                                 @endif
                                                                             </td>
+                                                                            <td class="item-quantity">
+                                                                                @if ($inspection->$field == 'present')
+                                                                                    <strong>{{ $inspection->{$field.'_number'} ?? 0 }}</strong>
+                                                                                @else
+                                                                                    <span class="text-muted">0</span>
+                                                                                @endif
+                                                                            </td>
                                                                         </tr>
                                                                     @endforeach
 
                                                                     <!-- Tools & Accessories -->
                                                                     <tr class="category-row">
-                                                                        <td class="category-header" colspan="2">TOOLS & ACCESSORIES | Score:  <span class="status-badge status-ok"> {{ $inspection->tools_percent }}% </span></td>
+                                                                        <td class="category-header" colspan="3">TOOLS & ACCESSORIES | Score: <span class="status-badge status-ok">{{ $inspection->tools_percent }}%</span></td>
                                                                     </tr>
                                                                     @foreach ([
-                                                                        'jack' => 'Jack',
-                                                                        'spare_wheel' => 'Spare Wheel',
-                                                                        'compressor' => 'Compressor',
-                                                                        'wheel_spanner' => 'Wheel Spanner'
-                                                                    ] as $field => $label)
-                                                                        <tr>
-                                                                            <td class="item-name">{{ $label }}</td>
-                                                                            <td class="item-status">
-                                                                                @if ($inspection->$field == 'present')
-                                                                                    <span class="status-badge status-present">Present</span>
-                                                                                @else
-                                                                                    <span class="status-badge status-absent">Absent</span>
-                                                                                @endif
-                                                                            </td>
-                                                                        </tr>
-                                                                    @endforeach
+                                                                    'jack' => 'Jack',
+                                                                    'handle' => 'Handle',
+                                                                    'spare_wheel' => 'Spare Wheel',
+                                                                    'compressor' => 'Compressor',
+                                                                    'wheel_spanner' => 'Wheel Spanner'
+                                                                ] as $field => $label)
+                                                                    <tr>
+                                                                        <td class="item-name">{{ $label }}</td>
+                                                                        <td class="item-status">
+                                                                            @if ($inspection->$field == 'present')
+                                                                                <span class="status-badge status-present">Present</span>
+                                                                            @else
+                                                                                <span class="status-badge status-absent">Absent</span>
+                                                                            @endif
+                                                                        </td>
+                                                                        <td class="item-quantity">-</td>
+                                                                    </tr>
+                                                                @endforeach
                                                                 </tbody>
                                                             </table>
                                                             

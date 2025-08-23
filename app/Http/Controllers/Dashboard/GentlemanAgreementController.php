@@ -80,7 +80,7 @@ class GentlemanAgreementController extends Controller
                 'vehicle_id' => 'required|string',
                 'vehicle_price' => 'required|numeric|min:1',
                 'deposit_amount' => 'required|numeric|min:1',
-                'duration_months' => 'required|integer|min:3|max:60',
+                'duration_months' => 'required|integer|min:1|max:60',
                 'first_due_date' => 'required|date|after:today',
             ], [
                 'client_name.required' => 'Client name is required.',
@@ -94,7 +94,7 @@ class GentlemanAgreementController extends Controller
                 'deposit_amount.required' => 'Deposit amount is required.',
                 'deposit_amount.min' => 'Deposit amount must be greater than 0.',
                 'duration_months.required' => 'Payment duration is required.',
-                'duration_months.min' => 'Minimum payment duration is 3 months.',
+                'duration_months.min' => 'Minimum payment duration is 1 months.',
                 'duration_months.max' => 'Maximum payment duration is 60 months.',
                 'first_due_date.required' => 'First payment due date is required.',
                 'first_due_date.after' => 'First payment due date must be after today.',

@@ -312,7 +312,7 @@
                         
                         <div class="col-md-6">
                             <label class="form-label">First Payment Due Date *</label>
-                            <input type="date" class="form-control" name="first_due_date" required min="{{ date('Y-m-d', strtotime('+1 day')) }}">
+                            <input type="date" class="form-control" name="first_due_date" required>
                         </div>
 
                         <!-- Agreement Summary -->

@@ -24,7 +24,13 @@ class VehicleInspection extends Model
         'imported_id',
         'current_mileage',
         'inspection_notes',
-         'photos',
+        'photos',
+        'head_rest_number',
+        'floor_carpets_number',
+        'rubber_mats_number',
+        'cigar_lighter_number', 
+        'boot_mats_number',
+        'handle',
         'status'
     ];
     // Cast photos as array
