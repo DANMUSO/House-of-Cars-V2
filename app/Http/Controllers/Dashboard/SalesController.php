@@ -247,6 +247,8 @@ class SalesController extends Controller
             'Phone_No'      => $request->input('Phone_No'),
             'email'         => $request->input('email'),
             'KRA'           => $request->input('KRA'),
+            'phone_numberalt'           => $request->input('phone_numberalt'),
+            'emailalt'           => $request->input('emailalt'),
             'National_ID'   => $request->input('National_ID'),
             'Amount'        => $request->input('Amount'),
             'paid_amount'        => $request->input('PaidAmount'),
