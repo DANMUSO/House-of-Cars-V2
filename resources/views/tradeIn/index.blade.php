@@ -274,6 +274,10 @@
                             <input type="text" class="form-control" id="Vehicle_Make" name="Vehicle_Make" required>
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label">Model</label>
+                            <input type="text" class="form-control" id="model" name="model" required>
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label">Chasis No:</label>
                             <input type="text" class="form-control" id="Chasis_No" name="Chasis_No" required>
                         </div>

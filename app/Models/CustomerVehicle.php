@@ -13,6 +13,7 @@ class CustomerVehicle extends Model
         'phone_no',
         'email',
         'vehicle_make',
+        'model',
         'chasis_no',
         'status',
         'number_plate',
