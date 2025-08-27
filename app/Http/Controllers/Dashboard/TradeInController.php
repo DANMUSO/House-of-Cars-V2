@@ -151,6 +151,7 @@ public function update(Request $request)
         'chasis_nov1'       => 'required|string|max:255',
         'number_platev1'    => 'required|string|max:255',
         'minimum_pricev1'   => 'required|numeric|min:0',
+        'modelv1'   => 'required|string|max:255',
         'photosv1.*'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
     ]);
 
@@ -173,6 +174,7 @@ public function update(Request $request)
             'customer_name'  => $validatedData['customer_namev1'],
             'phone_no'       => $validatedData['phone_nov1'],
             'email'          => $validatedData['emailv1'],
+            'model'          => $validatedData['modelv1'],
             'vehicle_make'   => $validatedData['vehicle_makev1'],
             'chasis_no'      => $validatedData['chasis_nov1'],
             'number_plate'   => $validatedData['number_platev1'],

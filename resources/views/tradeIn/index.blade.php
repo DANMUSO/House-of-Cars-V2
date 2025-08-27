@@ -347,6 +347,7 @@
                                     <th>Phone Number</th>
                                     <th>Email</th>
                                     <th>Vehicle Make</th>
+                                    <th>Model</th>
                                     <th>Chasis No</th>
                                     <th>Number Plate</th>
                                     <th>Minimum Price</th>
@@ -362,6 +363,7 @@
                                     <td>{{ $vehicle->phone_no }}</td>
                                     <td>{{ $vehicle->email }}</td>
                                     <td>{{ $vehicle->vehicle_make }}</td>
+                                    <td>{{ $vehicle->model }}</td>
                                     <td>{{ $vehicle->chasis_no }}</td>
                                     <td>{{ $vehicle->number_plate }}</td>
                                     <td>{{ number_format($vehicle->minimum_price, 2) }}</td>
@@ -483,6 +485,10 @@
                                                         <div class="col">
                                                             <label class="form-label">Vehicle Make</label>
                                                             <input type="text" class="form-control" name="vehicle_makev1" value="{{ $vehicle->vehicle_make }}" required>
+                                                        </div>
+                                                         <div class="col">
+                                                            <label class="form-label">Model</label>
+                                                            <input type="text" class="form-control" name="modelv1" value="{{ $vehicle->model }}" required>
                                                         </div>
                                                         <div class="col">
                                                             <label class="form-label">Chasis No</label>

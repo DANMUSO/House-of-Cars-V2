@@ -1246,9 +1246,6 @@
                                             <a class='tp-link' href="{{url('leads')}}">Leads</a>
                                         </li>
                                         <li>
-                                            <a class='tp-link' href="{{url('sales')}}">Sales</a>
-                                        </li>
-                                        <li>
                                             <a class='tp-link' href="{{url('gatepasscard')}}">Gate Pass Card</a>
                                         </li>
 
