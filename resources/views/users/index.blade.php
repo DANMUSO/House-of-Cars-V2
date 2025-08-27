@@ -211,6 +211,7 @@
                                         <option disabled selected value="">Choose Role</option>
                                         <option value="Managing-Director">Managing Director</option>
                                         <option value="Accountant">Accountant</option>
+                                        <option value="General-Manager">General Manager</option>
                                         <option value="Showroom-Manager">Showroom Manager</option>
                                         <option value="Salesperson">Salesperson</option>
                                         <option value="Support-Staff">Support Staff</option>
@@ -283,14 +284,24 @@
                                     <td>{{ $user->phone }}</td>
                                     <td>{{ $user->national_id }}</td>
                                     <td>
-                                        <span class="badge bg-{{ 
-                                            $user->role == 'Managing-Director' ? 'primary' : 
-                                            ($user->role == 'Accountant' ? 'success' : 
-                                            ($user->role == 'Showroom-Manager' ? 'warning' : 
-                                            (in_array($user->role, ['client', 'Client']) ? 'purple' : 'info'))) 
-                                        }}" style="{{ in_array($user->role, ['client', 'Client']) ? 'background-color: #6610f2 !important;' : '' }}">
-                                            {{ str_replace('-', ' ', $user->role) }}
-                                        </span>
+                                      @php
+    $badgeClass = match($user->role) {
+        'Managing-Director' => 'primary',
+        'Accountant' => 'info',
+        'General-Manager' => 'success',
+        'Showroom-Manager' => 'warning',
+        'client', 'Client' => 'purple',
+        default => 'info'
+    };
+    
+    $customStyle = in_array($user->role, ['client', 'Client']) 
+        ? 'background-color: #6610f2 !important;' 
+        : '';
+@endphp
+
+<span class="badge bg-{{ $badgeClass }}" style="{{ $customStyle }}">
+    {{ str_replace('-', ' ', $user->role) }}
+</span>
                                     </td>
                                     <td>
                                         @if($user->deleted_at)
@@ -356,8 +367,9 @@
                                                             <div class="col-md-6">
                                                                 <label class="form-label">Role</label>
                                                                 <select class="form-select" name="editrole" required>
-                                                                    <option disabled value="">Choose Role</option>
+                                                                    <option disabled value="">Choose Role</option> General-Manager
                                                                     <option value="Managing-Director" {{ $user->role == 'Managing-Director' ? 'selected' : '' }}>Managing Director</option>
+                                                                    <option value="General-Manager" {{ $user->role == 'General-Manager' ? 'selected' : '' }}>General-Manager</option>
                                                                     <option value="Accountant" {{ $user->role == 'Accountant' ? 'selected' : '' }}>Accountant</option>
                                                                     <option value="Showroom-Manager" {{ $user->role == 'Showroom-Manager' ? 'selected' : '' }}>Showroom Manager</option>
                                                                     <option value="Salesperson" {{ $user->role == 'Salesperson' ? 'selected' : '' }}>Salesperson</option>

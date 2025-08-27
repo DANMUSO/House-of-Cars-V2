@@ -188,10 +188,18 @@
                             <label class="form-label">Phone Number *</label>
                             <input type="tel" class="form-control" name="phone_number" required>
                         </div>
+                         <div class="col-md-6">
+                            <label class="form-label">Alternative Phone Number (Optional)</label>
+                            <input type="tel" class="form-control" name="phone_numberalt">
+                        </div>
                         
                         <div class="col-md-6">
                             <label class="form-label">Email Address *</label>
                             <input type="email" class="form-control" name="email" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Alternative Email Address (Optional)</label>
+                            <input type="email" class="form-control" name="emailalt">
                         </div>
                         
                         <div class="col-md-6">
@@ -411,6 +419,10 @@
                                                     <small class="text-muted">
                                                         <i class="fas fa-phone"></i> {{ $agreement->phone_number }}<br>
                                                         <i class="fas fa-envelope"></i> {{ $agreement->email }}
+                                                    </small><br>
+                                                     <small class="text-muted">
+                                                       {{ $agreement->phone_numberalt }}<br>
+                                                      {{ $agreement->emailalt }}
                                                     </small>
                                                 </div>
                                             </div>
@@ -1212,27 +1224,11 @@ function validateForm(formData) {
         errors.push('Deposit cannot be equal to or greater than vehicle price');
     }
     
-    // Duration validation (min:3, max:60 in controller)
-    if (duration < 3) {
-        errors.push('Minimum payment duration is 3 months');
-    } else if (duration > 60) {
-        errors.push('Maximum payment duration is 60 months');
-    }
     
     // Deposit percentage check (matches controller's 5% minimum recommendation)
     const depositPercentage = vehiclePrice > 0 ? (deposit / vehiclePrice) * 100 : 0;
     if (depositPercentage < 1 && vehiclePrice > 0 && deposit > 0) {
         errors.push('Minimum recommended deposit is 5% of vehicle price');
-    }
-    
-    // Date validation (first_due_date must be after today - matches controller)
-    const firstDueDate = formData.get('first_due_date');
-    if (firstDueDate) {
-        const today = new Date();
-        const dueDate = new Date(firstDueDate);
-        if (dueDate <= today) {
-            errors.push('First payment due date must be after today');
-        }
     }
     
     // Email format validation (matches controller's email validation)

@@ -104,7 +104,7 @@ Route::get('/proxy-image', function(Request $request) {
         abort(404);
     }
 })->name('proxy.image');
-Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Suppport-Staff,HR'])->group(function () {
+Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Suppport-Staff,HR,General-Manager'])->group(function () {
          // Leave Applications Routes
     Route::prefix('leave-applications')->name('leave-applications.')->group(function () {
         

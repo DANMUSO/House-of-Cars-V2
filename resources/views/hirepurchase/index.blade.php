@@ -243,12 +243,19 @@
                             <label class="form-label">Phone Number *</label>
                             <input type="tel" class="form-control" name="phone_number" required>
                         </div>
+                         <div class="col-md-6">
+                            <label class="form-label">Alternatice Phone Number (Optional)</label>
+                            <input type="tel" class="form-control" name="phone_numberalt">
+                        </div>
                         
                         <div class="col-md-6">
                             <label class="form-label">Email Address *</label>
                             <input type="email" class="form-control" name="email" required>
                         </div>
-                        
+                        <div class="col-md-6">
+                            <label class="form-label">Alternative Email Address (Optional)</label>
+                            <input type="email" class="form-control" name="emailalt">
+                        </div>
                         <div class="col-md-6">
                             <label class="form-label">National ID *</label>
                             <input type="text" class="form-control" name="national_id" required>
@@ -482,6 +489,10 @@
                                                     <small class="text-muted">
                                                         <i class="fas fa-phone"></i> {{ $agreement->phone_number }}<br>
                                                         <i class="fas fa-envelope"></i> {{ $agreement->email }}
+                                                    </small><br>
+                                                      <small class="text-muted">
+                                                         {{ $agreement->phone_numberalt }}<br>
+                                                        {{ $agreement->emailalt }}
                                                     </small>
                                                 </div>
                                             </div>

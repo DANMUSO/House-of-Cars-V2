@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('national_id')->nullable();
             $table->text('address')->nullable();
             $table->string('profile_picture')->nullable(); // Can store URL or path 
-            $table->enum('role', ['Managing-Director', 'Accountant', 'Showroom-Manager', 'Salesperson', 'Support-Staff', 'HR'])->default('HR');
+            $table->enum('role', ['Managing-Director', 'Accountant', 'Showroom-Manager', 'Salesperson', 'Support-Staff', 'HR','General-Manager'])->default('HR');
             $table->timestamp('email_verified_at')->nullable();
             $table->rememberToken();
             $table->timestamps();

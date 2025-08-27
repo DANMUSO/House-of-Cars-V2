@@ -1130,7 +1130,7 @@
                                     <span> Dashboard </span>
                                 </a>
                             </li>
-                            @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director', 'Accountant']))
+                            @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director', 'Accountant','General-Manager']))
                             <li>
                                 <a href="#sidebarAuth" data-bs-toggle="collapse">
                                 <i class="fa-solid fa-car"></i> 
@@ -1172,7 +1172,7 @@
                             </li>
                              @endif
                              {{-- Fleet Acquisition only for Showroom-Manager + Salesperson --}}
-                             @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director', 'Accountant']))
+                             @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director', 'Accountant','General-Manager']))
                             <li>
                                 <a href="#sidebarAdvancedUI" data-bs-toggle="collapse">
                                 <i class="fa-solid fa-truck-field"></i>
@@ -1188,7 +1188,7 @@
                                 </div>
                             </li>
                             @endif
-                            @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director']))
+                            @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director','General-Manager']))
                             <li>
                                 <a href="#sidebarError" data-bs-toggle="collapse">
                                 <i class="fa-solid fa-exchange-alt"></i>
@@ -1204,7 +1204,7 @@
                                 </div>
                             </li>
                             @endif
-                            @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director', 'Salesperson']))
+                            @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director', 'Salesperson','General-Manager']))
                             <li>
                                 <a href="#sidebarExpages" data-bs-toggle="collapse">
                                 <i class="fa-solid fa-clipboard-check"></i>
@@ -1223,7 +1223,7 @@
                                 </div>
                             </li>
                             @endif
-                            @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director',  'Accountant' ]))
+                            @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director',  'Accountant','General-Manager' ]))
                             <li>
                                 <a href="#sidebarBaseui" data-bs-toggle="collapse">
                                 <i class="fa-solid fa-tag"></i>
@@ -1284,7 +1284,7 @@
                                     </ul>
                                 </div>
                             </li>
-                            @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director']))
+                            @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director','General-Manager']))
                             <li>
                                 <a href="#sidebarForms" data-bs-toggle="collapse">
                                 <i class="fa-solid fa-chart-column"></i>
