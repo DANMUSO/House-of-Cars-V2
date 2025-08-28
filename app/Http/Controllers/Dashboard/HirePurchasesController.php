@@ -3124,7 +3124,7 @@ public function show($id)
         'paymentSchedule', 
         'approvedBy'
     ])->findOrFail($id);
-    
+     $this->updateOverdueStatus($id);
     // Load rescheduling history directly without user join
     $reschedulingHistory = DB::table('loan_rescheduling_history')
         ->where('agreement_id', $id)

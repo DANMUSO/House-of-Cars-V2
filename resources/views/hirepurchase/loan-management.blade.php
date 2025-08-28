@@ -1282,6 +1282,226 @@ window.testLumpSumModal = function() {
                     <small class="text-muted">{{ $agreement->payments_made }} of {{ $agreement->duration_months }} payments made  | Interest Rate  {{ $agreement->interest_rate }}%</small>
                     <small class="text-muted">KSh {{ number_format($agreement->monthly_payment, 0) }} monthly</small>
                 </div>
+                @php
+    // Find the next payment due chronologically (not by status)
+    $nextDueInstallment = null;
+    $today = \Carbon\Carbon::today();
+    
+    if($agreement->paymentSchedule && $agreement->paymentSchedule->count() > 0) {
+        // Method 1: Get the next payment due by date (including today and future dates)
+        $nextDueInstallment = $agreement->paymentSchedule
+            ->filter(function($schedule) use ($today) {
+                // Parse the due date and check if it's today or in the future
+                try {
+                    $dueDate = \Carbon\Carbon::parse($schedule->due_date);
+                    $remainingAmount = ($schedule->total_amount ?? 0) - ($schedule->amount_paid ?? 0);
+                    
+                    // Include this payment if:
+                    // 1. It has a remaining balance OR
+                    // 2. It's not marked as 'paid' or 'completed'
+                    return $remainingAmount > 0 || !in_array($schedule->status ?? '', ['paid', 'completed']);
+                } catch (Exception $e) {
+                    return false;
+                }
+            })
+            ->sortBy('due_date')
+            ->first();
+            
+        // Method 2: If no unpaid found, get the very next payment by date regardless of status
+        if (!$nextDueInstallment) {
+            $nextDueInstallment = $agreement->paymentSchedule
+                ->sortBy('due_date')
+                ->first();
+        }
+    }
+@endphp
+
+<!-- Next Payment Due Alert -->
+@if($nextDueInstallment)
+    @php
+        // Parse the due date
+        try {
+            $dueDate = \Carbon\Carbon::parse($nextDueInstallment->due_date);
+        } catch (Exception $e) {
+            $dueDate = \Carbon\Carbon::now()->addMonth();
+        }
+        
+        $today = \Carbon\Carbon::today();
+        $daysUntilDue = $today->diffInDays($dueDate, false);
+        
+        // Calculate remaining amount
+        $totalAmount = $nextDueInstallment->total_amount ?? $agreement->monthly_payment;
+        $amountPaid = $nextDueInstallment->amount_paid ?? 0;
+        $remainingAmount = max($totalAmount - $amountPaid, 0);
+        
+        // If fully paid, show total amount instead
+        if ($remainingAmount == 0) {
+            $remainingAmount = $totalAmount;
+        }
+        
+        // Determine alert styling
+        if ($daysUntilDue < 0) {
+            $alertType = 'danger';
+            $badgeType = 'danger';
+            $icon = 'exclamation-triangle';
+            $statusText = abs($daysUntilDue) . ' days overdue';
+        } elseif ($daysUntilDue == 0) {
+            $alertType = 'warning';
+            $badgeType = 'warning';
+            $icon = 'clock';
+            $statusText = 'Due today';
+        } elseif ($daysUntilDue <= 7) {
+            $alertType = 'warning';
+            $badgeType = 'warning';
+            $icon = 'clock';
+            $statusText = 'Due in ' . $daysUntilDue . ' day' . ($daysUntilDue == 1 ? '' : 's');
+        } else {
+            $alertType = 'info';
+            $badgeType = 'info';
+            $icon = 'calendar-alt';
+            $statusText = 'Due in ' . $daysUntilDue . ' days';
+        }
+    @endphp
+    
+    <div class="alert alert-{{ $alertType }} mt-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h6 class="alert-heading mb-1">
+                    <i class="fas fa-{{ $icon }}"></i>
+                    Next Payment Due
+                </h6>
+                <p class="mb-0">
+                    <strong>Amount:</strong> KSh {{ number_format($remainingAmount, 2) }} | 
+                    <strong>Due:</strong> {{ $dueDate->format('M d, Y') }}
+                    <span class="badge bg-{{ $badgeType }} ms-2">{{ $statusText }}</span>
+                </p>
+                
+                @if($amountPaid > 0)
+                    <small class="">
+                        <i class="fas fa-info-circle"></i>
+                        Partial payment: KSh {{ number_format($amountPaid, 2) }} already paid
+                    </small>
+                @endif
+            </div>
+            @if($agreement->status !== 'completed' && in_array(Auth::user()->role ?? 'Guest', ['Accountant','Managing-Director']))
+                <button class="btn btn-{{ $daysUntilDue < 0 ? 'danger' : 'primary' }}" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#recordPaymentModal"
+                        onclick="prefillPaymentAmount({{ $remainingAmount }})">
+                    <i class="fas fa-credit-card"></i> Pay Now
+                </button>
+            @endif
+        </div>
+    </div>
+@elseif($agreement->status === 'completed')
+    <div class="alert alert-success mt-3">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-check-circle fa-2x me-3"></i>
+            <div>
+                <h6 class="alert-heading mb-1">Loan Completed!</h6>
+                <p class="mb-0">All payments have been successfully completed.</p>
+            </div>
+        </div>
+    </div>
+@else
+    <!-- Show debug info if no payments found -->
+    <div class="alert alert-warning mt-3">
+        <h6 class="alert-heading mb-1">
+            <i class="fas fa-exclamation-triangle"></i>
+            No Payment Schedule Found
+        </h6>
+        <p class="mb-0">
+            Payment schedule needs to be generated for this agreement.
+            @if($agreement->paymentSchedule)
+                <br><small class="text-muted">Found {{ $agreement->paymentSchedule->count() }} schedule entries, but none qualify as next payment.</small>
+            @endif
+        </p>
+    </div>
+@endif
+
+<script>
+function prefillPaymentAmount(amount) {
+    const paymentInput = document.querySelector('input[name="payment_amount"]');
+    if (paymentInput) {
+        paymentInput.value = amount;
+        paymentInput.dispatchEvent(new Event('input'));
+    }
+}
+
+// Debug function to see what's in the payment schedule
+function debugNextPayment() {
+    console.log('=== Next Payment Debug ===');
+    @if($agreement->paymentSchedule && $agreement->paymentSchedule->count() > 0)
+        console.log('Total payment schedules: {{ $agreement->paymentSchedule->count() }}');
+        
+        // Show first few payments by date order
+        @php
+            $debugPayments = $agreement->paymentSchedule->sortBy('due_date')->take(5);
+        @endphp
+        
+        console.log('First 5 payments by due date:');
+        @foreach($debugPayments as $index => $payment)
+            console.log('{{ $index + 1 }}. Due: {{ $payment->due_date }}, Amount: {{ $payment->total_amount }}, Paid: {{ $payment->amount_paid ?? 0 }}, Status: {{ $payment->status ?? "N/A" }}');
+        @endforeach
+        
+        @if($nextDueInstallment)
+            console.log('Selected next payment: Due {{ $nextDueInstallment->due_date }}, Amount: {{ $nextDueInstallment->total_amount }}');
+        @else
+            console.log('No next payment found');
+        @endif
+    @else
+        console.log('No payment schedule exists');
+    @endif
+    console.log('========================');
+}
+
+// Uncomment to debug:
+// debugNextPayment();
+</script>
+
+<style>
+.alert {
+    border-radius: 10px;
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.alert-danger {
+    background: linear-gradient(135deg, #ffe6e6 0%, #ffebee 100%);
+    color: #c62828;
+    border-left: 4px solid #d32f2f;
+}
+
+.alert-warning {
+    background: linear-gradient(135deg, #fff3cd 0%, #fef7e0 100%);
+    color: #856404;
+    border-left: 4px solid #ffc107;
+}
+
+.alert-info {
+    background: linear-gradient(135deg, #e3f2fd 0%, #f0f8ff 100%);
+    color: #0277bd;
+    border-left: 4px solid #2196f3;
+}
+
+.alert-success {
+    background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%);
+    color: #2e7d32;
+    border-left: 4px solid #4caf50;
+}
+
+.badge {
+    font-weight: 500;
+    padding: 0.4em 0.6em;
+    border-radius: 0.375rem;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: all 0.2s ease;
+}
+</style>
             </div>
         </div>
     </div>
@@ -1714,7 +1934,7 @@ window.testLumpSumModal = function() {
                                         <td>KSh {{ number_format($totalPrincipal + $totalInterest, 2) }}</td>
                                         <td>-</td>
                                         <td colspan="2">
-                                            <span class="text-success">Paid: KSh {{ number_format($totalPaid, 2) }}</span><br>
+                                            <span class="text-success">Paid: KSh {{ number_format($agreement->amount_paid, 2) }}</span><br>
                                             <span class="text-danger">Pending: KSh {{ number_format($totalPending, 2) }}</span>
                                         </td>
                                         <td>-</td>
