@@ -120,7 +120,7 @@
                                         <label class="form-label">Loan Duration (Months) *</label>
                                         <select class="form-select" name="loan_duration_months" required>
                                             <option value="">Choose Duration</option>
-                                            @for ($i = 6; $i <= 120; $i += 6)
+                                            @for ($i = 1; $i <= 120; $i += 1)
                                                 <option value="{{ $i }}">{{ $i }} Months</option>
                                             @endfor
                                         </select>
@@ -567,7 +567,7 @@
                             <div class="col-md-4">
                                 <label for="editLoanDuration" class="form-label">Loan Duration (Months)</label>
                                 <select class="form-select" name="loan_duration_months" id="editLoanDuration" required>
-                                    @for ($i = 6; $i <= 120; $i += 6)
+                                    @for ($i = 1; $i <= 120; $i += 1)
                                         <option value="{{ $i }}">{{ $i }} Months</option>
                                     @endfor
                                 </select>

@@ -1279,7 +1279,7 @@ window.testLumpSumModal = function() {
                     </div>
                 </div>
                 <div class="d-flex justify-content-between mt-2">
-                    <small class="text-muted">{{ $agreement->payments_made }} of {{ $agreement->duration_months }} payments made</small>
+                    <small class="text-muted">{{ $agreement->payments_made }} of {{ $agreement->duration_months }} payments made  | Interest Rate  {{ $agreement->interest_rate }}%</small>
                     <small class="text-muted">KSh {{ number_format($agreement->monthly_payment, 0) }} monthly</small>
                 </div>
             </div>

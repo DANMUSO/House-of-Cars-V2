@@ -3514,14 +3514,21 @@ private function rescheduleLoanReduceInstallmentEnhanced($agreement, $newPrincip
     /**
      * Get interest rate based on deposit percentage (updated to match frontend)
      */
-    private function getInterestRateByDeposit($depositPercentage)
-    {
-        if ($depositPercentage >= 50) {
-            return 4.29; // 50%+ deposit gets 4.29% monthly
-        } else {
-            return 4.50; // Below 50% deposit gets 4.50% monthly
-        }
+     private function getInterestRateByDeposit($depositPercentage, $manualRate = null)
+{
+    // If manual rate is provided and valid, use it
+    if ($manualRate !== null && $manualRate > 0) {
+        Log::info('Using manual interest rate:', ['rate' => $manualRate]);
+        return $manualRate;
     }
+    
+    // Default rates (fallback)
+    if ($depositPercentage >= 50) {
+        return 4.29; // 50%+ deposit gets 4.29% monthly
+    } else {
+        return 4.50; // Below 50% deposit gets 4.50% monthly
+    }
+}
 
 
 /**
@@ -3803,6 +3810,7 @@ public function store(Request $request)
             'vehicle_price' => 'required|numeric|min:1',
             'deposit_amount' => 'required|numeric|min:1',
             'tracking_fees' => 'required|numeric|min:0',
+            'interest_rate' => 'required|numeric|min:0.1|max:20', 
             'duration_months' => 'required|integer|min:6|max:72',
             'first_due_date' => 'required|date',
         ], [
@@ -3847,14 +3855,15 @@ public function store(Request $request)
         $totalLoanAmount = $baseLoanAmount + $trackingFee;
         $durationMonths = $validated['duration_months'];
         
-        // Get monthly interest rate based on deposit percentage
-        $monthlyInterestRate = $this->getInterestRateByDeposit($depositPercentage);
+         // Get interest rate from form input or calculate based on deposit
+        $manualInterestRate = $validated['interest_rate'] ?? null;
+        $monthlyInterestRate = $this->getInterestRateByDeposit($depositPercentage, $manualInterestRate);
         $monthlyInterestDecimal = $monthlyInterestRate / 100;
-        
-        Log::info('Interest Rate Calculation:', [
+
+        Log::info('Dynamic Interest Rate Selection:', [
             'deposit_percentage' => $depositPercentage,
-            'monthly_interest_rate' => $monthlyInterestRate,
-            'monthly_interest_decimal' => $monthlyInterestDecimal
+            'manual_rate_from_form' => $manualInterestRate,
+            'final_monthly_interest_rate' => $monthlyInterestRate
         ]);
         
         // Calculate monthly payment using the PMT formula
@@ -3916,6 +3925,7 @@ public function store(Request $request)
             // 🔥 KEY CHANGE: Store monthly interest rate instead of annual
             'interest_rate' => $monthlyInterestRate, // This will be 4.29 or 4.5, not 51.48
             'monthly_interest_rate' => $monthlyInterestRate, // Keep this field consistent
+            'is_manual_rate' => $manualInterestRate !== null, // NEW: Track if manual rate was used
             'duration_months' => $durationMonths,
             'monthly_payment' => $monthlyPayment,
             'total_interest' => $totalInterest,
@@ -4366,6 +4376,7 @@ private function performReschedulingFlexible($agreement, $newPrincipalBalance, $
         $depositAmount = $request->get('deposit_amount');
         $trackingFee = $request->get('tracking_fee', 0); // NEW: Get tracking fee from request
         $duration = $request->get('duration');
+        $manualInterestRate = $request->get('interest_rate'); // NEW: Get manual interest rate
 
         if (!$vehiclePrice || !$depositAmount || !$duration) {
             return response()->json(['error' => 'Missing required parameters']);
@@ -4376,7 +4387,7 @@ private function performReschedulingFlexible($agreement, $newPrincipalBalance, $
         $totalLoanAmount = $baseLoanAmount + $trackingFee; // Use dynamic tracking fee
         
         // Use dynamic interest rate based on deposit percentage
-        $monthlyInterestRate = $this->getInterestRateByDeposit($depositPercentage);
+        $monthlyInterestRate = $this->getInterestRateByDeposit($depositPercentage, $manualInterestRate);
         $monthlyInterestDecimal = $monthlyInterestRate / 100;
         $monthlyPayment = $this->calculatePMT($totalLoanAmount, $monthlyInterestDecimal, $duration);
         
@@ -4395,7 +4406,29 @@ private function performReschedulingFlexible($agreement, $newPrincipalBalance, $
             'deposit_percentage' => round($depositPercentage, 2)
         ]);
     }
-
+    /**
+     * Get suggested interest rate based on deposit percentage (for frontend auto-fill)
+     */
+    public function getSuggestedInterestRate(Request $request)
+        {
+            $vehiclePrice = $request->get('vehicle_price');
+            $depositAmount = $request->get('deposit_amount');
+            
+            if (!$vehiclePrice || !$depositAmount || $vehiclePrice <= 0 || $depositAmount <= 0) {
+                return response()->json(['error' => 'Invalid vehicle price or deposit amount'], 400);
+            }
+            
+            $depositPercentage = ($depositAmount / $vehiclePrice) * 100;
+            
+            // Get suggested rate (without manual override)
+            $suggestedRate = $this->getInterestRateByDeposit($depositPercentage);
+            
+            return response()->json([
+                'deposit_percentage' => round($depositPercentage, 2),
+                'suggested_interest_rate' => $suggestedRate,
+                'rate_category' => $depositPercentage >= 50 ? 'standard' : 'higher'
+            ]);
+        }
     /**
      * Get vehicle information
      */

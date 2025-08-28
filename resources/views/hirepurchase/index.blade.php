@@ -126,10 +126,15 @@
                                             <input type="number" class="form-control" id="std_deposit" placeholder="Minimum 50% of vehicle price">
                                         </div>
                                         <div class="mb-3">
+                                            <label class="form-label">Interest Rate (% per month)</label>
+                                            <input type="number" class="form-control" id="std_interest_rate" step="0.01" placeholder="e.g., 4.29" required>
+                                            <small class="form-text text-muted">Current standard rate: 4.29%</small>
+                                        </div>
+                                        <div class="mb-3">
                                             <label class="form-label">Duration (Months)</label>
                                             <select class="form-select" id="std_duration">
                                                 <option value="">Select Duration</option>
-                                                @for ($i = 6; $i <= 60; $i += 6)
+                                                @for ($i = 1; $i <= 60; $i += 1)
                                                     <option value="{{ $i }}">{{ $i }} Months</option>
                                                 @endfor
                                             </select>
@@ -144,7 +149,6 @@
                                             <div class="row">
                                                 <div class="col-6">
                                                     <p><strong>Loan Amount:</strong><br>KSh <span id="std_loan_amount"></span></p>
-                                                    <p><strong>Interest Rate:</strong><br><span id="std_interest_rate"></span>% per month</p>
                                                 </div>
                                                 <div class="col-6">
                                                     <p><strong>Monthly Payment:</strong><br>KSh <span id="std_monthly_payment"></span></p>
@@ -175,12 +179,16 @@
                                             <label class="form-label">Deposit Amount (KSh)</label>
                                             <input type="number" class="form-control" id="below_deposit" placeholder="Minimum 30% of vehicle price">
                                         </div>
-                                        
+                                        <div class="mb-3">
+                                            <label class="form-label">Interest Rate (% per month)</label>
+                                            <input type="number" class="form-control" id="below_interest_rate" step="0.01" placeholder="e.g., 4.50" required>
+                                            <small class="form-text text-muted">Current higher rate: 4.50%</small>
+                                        </div>
                                         <div class="mb-3">
                                             <label class="form-label">Duration (Months)</label>
                                             <select class="form-select" id="below_duration">
                                                 <option value="">Select Duration</option>
-                                                @for ($i = 6; $i <= 90; $i += 6)
+                                                @for ($i = 1; $i <= 90; $i += 1)
                                                     <option value="{{ $i }}">{{ $i }} Months</option>
                                                 @endfor
                                             </select>
@@ -195,7 +203,6 @@
                                             <div class="row">
                                                 <div class="col-6">
                                                     <p><strong>Loan Amount:</strong><br>KSh <span id="below_loan_amount"></span></p>
-                                                    <p><strong>Interest Rate:</strong><br><span id="below_interest_rate"></span>% per month</p>
                                                 </div>
                                                 <div class="col-6">
                                                     <p><strong>Monthly Payment:</strong><br>KSh <span id="below_monthly_payment"></span></p>
@@ -368,7 +375,7 @@
                             <label class="form-label">Loan Duration *</label>
                             <select name="duration_months" id="duration_months" class="form-select" required>
                                 <option value="">Choose Duration</option>
-                                @for ($i = 6; $i <= 72; $i += 6)
+                                @for ($i = 1; $i <= 72; $i += 1)
                                     <option value="{{ $i }}">{{ $i }} Months</option>
                                 @endfor
                             </select>
@@ -381,8 +388,8 @@
                         
                         <div class="col-md-6">
                             <label class="form-label">Interest Rate (% per month)</label>
-                            <input type="number" class="form-control" id="interest_rate" name="interest_rate" step="0.01" readonly>
-                            <small class="form-text text-muted">Auto-calculated based on deposit percentage</small>
+                            <input type="number" class="form-control" id="interest_rate" name="interest_rate" step="0.01" placeholder="e.g., 4.29">
+                            <small class="form-text text-muted">Enter custom rate or leave blank for auto-calculation based on deposit</small>
                         </div>
                         
                         <div class="col-md-6">
@@ -519,6 +526,10 @@
                                                 <div>
                                                     <span class="text-muted">Duration:</span> 
                                                     <span class="fw-semibold">{{ $agreement->duration_months }}m</span>
+                                                </div>
+                                                 <div>
+                                                    <span class="text-muted">Duration:</span> 
+                                                    <span class="fw-semibold">{{ $agreement->interest_rate }}%</span>
                                                 </div>
                                             </div>
                                         </td>
@@ -711,15 +722,22 @@ const COMMISSION_HOC = 10000; // KES 10,000
 const COMMISSION_SALES = 15000; // KES 15,000
 
 // CORRECTED: Interest rate calculations based on Excel
-function getInterestRateByDeposit(depositPercentage) {
+function getInterestRateByDeposit(depositPercentage, manualRate = null) {
     console.log(`Getting interest rate for deposit percentage: ${depositPercentage.toFixed(2)}%`);
     
+    // If manual rate is provided and valid, use it
+    if (manualRate !== null && manualRate > 0) {
+        console.log(`Using manual rate: ${manualRate}%`);
+        return manualRate;
+    }
+    
+    // Default rates (fallback)
     if (depositPercentage >= 50) {
         console.log('Using standard rate: 4.29%');
-        return 4.29; // 50%+ deposit gets 4.29% (matches Excel image 3)
+        return 4.29;
     } else {
         console.log('Using higher rate: 4.50%');
-        return 4.50; // Below 50% deposit gets 4.50% (matches Excel image 2)
+        return 4.50;
     }
 }
 
@@ -767,8 +785,9 @@ function calculateAgreementSummary() {
     const vehiclePrice = parseFloat(document.getElementById('vehicle_price').value) || 0;
     const deposit = parseFloat(document.getElementById('deposit_amount').value) || 0;
     const duration = parseInt(document.getElementById('duration_months').value) || 0;
+    const manualInterestRate = parseFloat(document.getElementById('interest_rate').value) || 0;
     
-    console.log('Calculating agreement summary:', { vehiclePrice, deposit, duration });
+    console.log('Calculating agreement summary:', { vehiclePrice, deposit, duration, manualInterestRate });
     
     if (vehiclePrice > 0 && deposit > 0 && duration > 0) {
         const depositPercentage = (deposit / vehiclePrice) * 100;
@@ -782,8 +801,8 @@ function calculateAgreementSummary() {
         // Total loan amount includes auto-calculated tracking fee
         const totalLoanAmount = baseLoanAmount + trackingFee;
         
-        // CORRECTED: Use proper interest rate based on deposit percentage
-        const interestRate = getInterestRateByDeposit(depositPercentage);
+        // UPDATED: Use manual rate if provided, otherwise use default based on deposit
+        const interestRate = manualInterestRate > 0 ? manualInterestRate : getInterestRateByDeposit(depositPercentage);
         
         // Calculate using Excel's reducing balance formula
         const monthlyRateDecimal = interestRate / 100;
@@ -806,12 +825,13 @@ function calculateAgreementSummary() {
         
         const totalPayable = vehiclePrice + trackingFee + totalInterest;
         
-        console.log('Calculation results with auto-calculated tracking fee:', {
+        console.log('Calculation results with dynamic interest rate:', {
             baseLoanAmount,
             totalLoanAmount,
             trackingFee,
             trackingFeeRate: depositPercentage >= 50 ? '5%' : '4%',
             interestRate,
+            manualInterestRate,
             monthlyRateDecimal,
             monthlyPayment: monthlyPayment.toFixed(2),
             totalInterest: totalInterest.toFixed(2),
@@ -823,7 +843,10 @@ function calculateAgreementSummary() {
         const interestRateInput = document.getElementById('interest_rate');
         const monthlyPaymentInput = document.getElementById('monthly_payment_display');
         
-        if (interestRateInput) interestRateInput.value = interestRate.toFixed(2);
+        // Only auto-fill interest rate if user hasn't entered a manual rate
+        if (interestRateInput && manualInterestRate === 0) {
+            interestRateInput.value = interestRate.toFixed(2);
+        }
         if (monthlyPaymentInput) monthlyPaymentInput.value = monthlyPayment.toFixed(2);
         
         // Update summary
@@ -842,8 +865,9 @@ function calculateStandard() {
     const vehiclePrice = parseFloat(document.getElementById('std_vehicle_price').value) || 0;
     const deposit = parseFloat(document.getElementById('std_deposit').value) || 0;
     const duration = parseInt(document.getElementById('std_duration').value) || 0;
+    const manualInterestRate = parseFloat(document.getElementById('std_interest_rate').value) || 0;
     
-    if (vehiclePrice <= 0 || deposit <= 0 || duration <= 0) {
+    if (vehiclePrice <= 0 || deposit <= 0 || duration <= 0 || manualInterestRate <= 0) {
         showAlert('error', 'Please fill in all fields with valid values');
         return;
     }
@@ -858,15 +882,9 @@ function calculateStandard() {
     const baseLoanAmount = vehiclePrice - deposit;
     const trackingFee = calculateTrackingFee(baseLoanAmount, depositPercentage);
     const totalLoanAmount = baseLoanAmount + trackingFee;
-    const interestRate = 4.29; // Standard rate for 50%+ deposit
+    const interestRate = manualInterestRate;
     
-    // Update tracking fee input in modal
-    const stdTrackingInput = document.getElementById('std_tracking_fees');
-    if (stdTrackingInput) {
-        stdTrackingInput.value = trackingFee.toFixed(2);
-    }
-    
-    // Calculate using Excel's reducing balance method
+    // Rest of the calculation remains the same...
     const monthlyRateDecimal = interestRate / 100;
     const numerator = totalLoanAmount * (monthlyRateDecimal * Math.pow(1 + monthlyRateDecimal, duration));
     const denominator = Math.pow(1 + monthlyRateDecimal, duration) - 1;
@@ -876,16 +894,16 @@ function calculateStandard() {
     const totalInterest = totalPayment - totalLoanAmount;
     const totalAmount = vehiclePrice + trackingFee + totalInterest;
     
-    console.log('Standard calculation (50%+) with auto-calculated tracking fee:', {
+    console.log('Standard calculation with dynamic interest rate:', {
         vehiclePrice, deposit, depositPercentage: depositPercentage.toFixed(1) + '%',
         baseLoanAmount, totalLoanAmount, trackingFee, 
-        trackingFeeRate: '5%', interestRate,
+        trackingFeeRate: '5%', interestRate: manualInterestRate, // UPDATED LOG
         monthlyPayment: monthlyPayment.toFixed(2),
         totalInterest: totalInterest.toFixed(2),
         totalAmount: totalAmount.toFixed(2)
     });
     
-    // Display results
+    // Display results (same as before)
     document.getElementById('std_loan_amount').innerHTML = 
         `${totalLoanAmount.toLocaleString()}<br><small class="text-muted">(Vehicle: ${baseLoanAmount.toLocaleString()} + Tracking: ${trackingFee.toLocaleString()} @5%)</small>`;
     document.getElementById('std_interest_rate').textContent = interestRate.toFixed(2);
@@ -895,12 +913,14 @@ function calculateStandard() {
     document.getElementById('standardResults').style.display = 'block';
 }
 
+
 function calculateBelow() {
     const vehiclePrice = parseFloat(document.getElementById('below_vehicle_price').value) || 0;
     const deposit = parseFloat(document.getElementById('below_deposit').value) || 0;
     const duration = parseInt(document.getElementById('below_duration').value) || 0;
+    const manualInterestRate = parseFloat(document.getElementById('below_interest_rate').value) || 0;
     
-    if (vehiclePrice <= 0 || deposit <= 0 || duration <= 0) {
+    if (vehiclePrice <= 0 || deposit <= 0 || duration <= 0 || manualInterestRate <= 0) {
         showAlert('error', 'Please fill in all fields with valid values');
         return;
     }
@@ -920,13 +940,7 @@ function calculateBelow() {
     const baseLoanAmount = vehiclePrice - deposit;
     const trackingFee = calculateTrackingFee(baseLoanAmount, depositPercentage);
     const totalLoanAmount = baseLoanAmount + trackingFee;
-    const interestRate = 4.50; // Higher rate for deposits below 50%
-    
-    // Update tracking fee input in modal
-    const belowTrackingInput = document.getElementById('below_tracking_fees');
-    if (belowTrackingInput) {
-        belowTrackingInput.value = trackingFee.toFixed(2);
-    }
+    const interestRate = manualInterestRate; // Use the manual input directly
     
     // Calculate using Excel's reducing balance method
     const monthlyRateDecimal = interestRate / 100;
@@ -937,15 +951,6 @@ function calculateBelow() {
     const totalPayment = monthlyPayment * duration;
     const totalInterest = totalPayment - totalLoanAmount;
     const totalAmount = vehiclePrice + trackingFee + totalInterest;
-    
-    console.log('Below 50% calculation with auto-calculated tracking fee:', {
-        vehiclePrice, deposit, depositPercentage: depositPercentage.toFixed(1) + '%',
-        baseLoanAmount, totalLoanAmount, trackingFee,
-        trackingFeeRate: '4%', interestRate,
-        monthlyPayment: monthlyPayment.toFixed(2),
-        totalInterest: totalInterest.toFixed(2),
-        totalAmount: totalAmount.toFixed(2)
-    });
     
     // Display results
     document.getElementById('below_loan_amount').innerHTML = 
@@ -993,6 +998,28 @@ function initializeFormCalculations() {
     const vehiclePriceInput = document.getElementById('vehicle_price');
     const trackingFeesInput = document.getElementById('tracking_fees');
     const autoCalculateToggle = document.getElementById('auto_calculate_tracking');
+    // NEW: Interest rate input listener
+    const interestRateInput = document.getElementById('interest_rate');
+    if (interestRateInput) {
+        interestRateInput.addEventListener('input', function() {
+            console.log('Interest rate manually changed:', this.value);
+            calculateAgreementSummary();
+        });
+    }
+    const stdInterestInput = document.getElementById('std_interest_rate');
+    const belowInterestInput = document.getElementById('below_interest_rate');
+    
+    if (stdInterestInput) {
+        stdInterestInput.addEventListener('input', function() {
+            document.getElementById('standardResults').style.display = 'none';
+        });
+    }
+    
+    if (belowInterestInput) {
+        belowInterestInput.addEventListener('input', function() {
+            document.getElementById('belowResults').style.display = 'none';
+        });
+    }
     
     if (depositInput) {
         depositInput.addEventListener('input', function() {
