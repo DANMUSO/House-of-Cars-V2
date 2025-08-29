@@ -3523,6 +3523,127 @@ public function show($id)
         'penaltySummary' 
     ));
 }
+// Add these methods to your HirePurchasesController class
+
+/**
+ * Get penalties with cumulative calculation
+ */
+public function getPenalties($agreementId)
+{
+    try {
+        $penaltyService = app(PenaltyService::class);
+        
+        // Calculate cumulative penalties
+        $result = $penaltyService->calculatePenaltiesForAgreement('hire_purchase', $agreementId);
+        
+        // Get penalties ordered by sequence
+        $penalties = Penalty::forAgreement('hire_purchase', $agreementId)
+            ->with('paymentSchedule')
+            ->orderBy('penalty_sequence', 'asc')
+            ->get();
+            
+        // Get summary
+        $summary = $penaltyService->getPenaltySummary('hire_purchase', $agreementId);
+        
+        return response()->json([
+            'success' => true,
+            'penalties' => $penalties,
+            'summary' => $summary,
+            'calculation_result' => $result
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Error fetching cumulative penalties: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch penalties: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Calculate cumulative penalties
+ */
+public function calculatePenalties(Request $request, $agreementId)
+{
+    try {
+        $penaltyService = app(PenaltyService::class);
+        $result = $penaltyService->calculatePenaltiesForAgreement('hire_purchase', $agreementId);
+        
+        return response()->json([
+            'success' => true,
+            'message' => "Cumulative penalties calculated. Created: {$result['penalties_created']}, Updated: {$result['penalties_updated']}",
+            'data' => $result
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Error calculating penalties: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to calculate penalties: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Get penalty calculation breakdown
+ */
+public function getPenaltyBreakdown($agreementId)
+{
+    try {
+        $overdueSchedules = PaymentSchedule::where('agreement_id', $agreementId)
+            ->where('status', 'overdue')
+            ->orderBy('due_date', 'asc')
+            ->get();
+
+        if ($overdueSchedules->isEmpty()) {
+            return response()->json([
+                'message' => 'No overdue schedules found',
+                'breakdown' => []
+            ]);
+        }
+
+        $breakdown = [];
+        $cumulativeUnpaid = 0;
+        $penaltyRate = 10;
+
+        foreach ($overdueSchedules as $index => $schedule) {
+            $unpaidAmount = $schedule->total_amount - ($schedule->amount_paid ?? 0);
+            $cumulativeUnpaid += $unpaidAmount;
+            $penaltyAmount = $cumulativeUnpaid * ($penaltyRate / 100);
+
+            $breakdown[] = [
+                'sequence' => $index + 1,
+                'installment_number' => $schedule->installment_number,
+                'due_date' => $schedule->due_date->format('M d, Y'),
+                'days_overdue' => now()->diffInDays($schedule->due_date),
+                'unpaid_amount' => $unpaidAmount,
+                'cumulative_unpaid' => $cumulativeUnpaid,
+                'penalty_rate' => $penaltyRate,
+                'penalty_amount' => $penaltyAmount,
+                'calculation' => "KSh " . number_format($cumulativeUnpaid, 2) . " × {$penaltyRate}% = KSh " . number_format($penaltyAmount, 2)
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'breakdown' => $breakdown,
+            'total_penalties' => array_sum(array_column($breakdown, 'penalty_amount')),
+            'explanation' => 'Each penalty is calculated on the cumulative sum of all unpaid installments up to that point'
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('Error generating penalty breakdown: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to generate breakdown: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Pay penalty (updated for cumulative system)
+ */
 public function payPenalty(Request $request, $penaltyId)
 {
     $validated = $request->validate([
@@ -3538,7 +3659,6 @@ public function payPenalty(Request $request, $penaltyId)
 
         $penalty = Penalty::findOrFail($penaltyId);
         
-        // Check if penalty is payable
         if ($penalty->status !== 'pending') {
             return response()->json([
                 'success' => false,
@@ -3548,27 +3668,26 @@ public function payPenalty(Request $request, $penaltyId)
 
         $outstanding = $penalty->penalty_amount - $penalty->amount_paid;
         
-        // Check payment amount
         if ($validated['payment_amount'] > $outstanding) {
             return response()->json([
                 'success' => false,
-                'message' => 'Payment amount cannot exceed outstanding penalty amount.'
+                'message' => 'Payment exceeds outstanding penalty amount of KSh ' . number_format($outstanding, 2)
             ], 422);
         }
 
-        // Record the payment
-        $newAmountPaid = $penalty->amount_paid + $validated['payment_amount'];
-        $newStatus = ($newAmountPaid >= $penalty->penalty_amount) ? 'paid' : 'pending';
+        // Record payment
+        $penalty->recordPayment(
+            $validated['payment_amount'],
+            $validated['payment_date'],
+            $validated['payment_reference']
+        );
 
-        $penalty->update([
-            'amount_paid' => $newAmountPaid,
-            'status' => $newStatus,
-            'date_paid' => $newStatus === 'paid' ? $validated['payment_date'] : $penalty->date_paid,
-            'payment_reference' => $validated['payment_reference'],
-            'notes' => $validated['notes'],
-        ]);
+        // Update notes if provided
+        if (!empty($validated['notes'])) {
+            $penalty->update(['notes' => $validated['notes']]);
+        }
 
-        // Create penalty payment record for audit trail
+        // Create audit trail
         DB::table('penalty_payments')->insert([
             'penalty_id' => $penalty->id,
             'amount' => $validated['payment_amount'],
@@ -3583,16 +3702,11 @@ public function payPenalty(Request $request, $penaltyId)
 
         DB::commit();
 
-        Log::info("Penalty payment recorded", [
-            'penalty_id' => $penalty->id,
-            'amount' => $validated['payment_amount'],
-            'new_status' => $newStatus
-        ]);
-
         return response()->json([
             'success' => true,
             'message' => 'Penalty payment recorded successfully!',
-            'penalty' => $penalty->fresh()
+            'penalty' => $penalty->fresh(),
+            'calculation_info' => $penalty->fresh()->calculation_explanation
         ]);
 
     } catch (\Exception $e) {
@@ -5432,64 +5546,9 @@ private function applyOverpaymentToFutureInstallments($agreementId, $remainingAm
             return response()->json(['success' => false, 'message' => 'Error recording payment: ' . $e->getMessage()]);
         }
     }
-    /**
- * Get penalties for an agreement
- */
-public function getPenalties($agreementId)
-{
-    try {
-        $penaltyService = app(PenaltyService::class);
-        
-        // Calculate/update penalties first
-        $penaltyService->calculatePenaltiesForAgreement('hire_purchase', $agreementId);
-        
-        // Get penalties
-        $penalties = Penalty::forAgreement('hire_purchase', $agreementId)
-            ->with('paymentSchedule')
-            ->orderBy('due_date', 'asc')
-            ->get();
-            
-        // Get summary
-        $summary = $penaltyService->getPenaltySummary('hire_purchase', $agreementId);
-        
-        return response()->json([
-            'success' => true,
-            'penalties' => $penalties,
-            'summary' => $summary
-        ]);
-        
-    } catch (\Exception $e) {
-        Log::error('Error fetching penalties: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to fetch penalties: ' . $e->getMessage()
-        ], 500);
-    }
-}
 
-/**
- * Calculate penalties for an agreement
- */
-public function calculatePenalties(Request $request, $agreementId)
-{
-    try {
-        $penaltyService = app(PenaltyService::class);
-        $result = $penaltyService->calculatePenaltiesForAgreement('hire_purchase', $agreementId);
-        
-        return response()->json([
-            'success' => true,
-            'message' => "Penalties calculated successfully. Created: {$result['penalties_created']}, Updated: {$result['penalties_updated']}",
-            'data' => $result
-        ]);
-        
-    } catch (\Exception $e) {
-        Log::error('Error calculating penalties: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to calculate penalties: ' . $e->getMessage()
-        ], 500);
-    }
-}
+
+
 /**
  * Waive a penalty
  */

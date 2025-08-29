@@ -1583,9 +1583,6 @@ function debugNextPayment() {
                     <button class="nav-link" id="penalties-tab" data-bs-toggle="tab" 
                             data-bs-target="#penalties" type="button" role="tab">
                         <i class="fas fa-exclamation-triangle"></i> Penalties
-                        @if(isset($penaltySummary) && $penaltySummary->pending_count > 0)
-                            <span class="badge bg-danger ms-1">{{ $penaltySummary->pending_count }}</span>
-                        @endif
                     </button>
                 </li>
             </ul>
@@ -2189,7 +2186,10 @@ function displayPenalties() {
 function updatePenaltySummary() {
     if (!penaltySummary) return;
     
-    document.getElementById('totalPenalties').textContent = penaltySummary.total_penalties || 0;
+    document.getElementById('totalPenalties').textContent = (penaltySummary.total_penalties || 0).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+    });
     document.getElementById('pendingPenalties').textContent = penaltySummary.pending_count || 0;
     document.getElementById('paidPenalties').textContent = penaltySummary.paid_count || 0;
     document.getElementById('waivedPenalties').textContent = penaltySummary.waived_count || 0;
