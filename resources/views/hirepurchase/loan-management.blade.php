@@ -1781,7 +1781,10 @@ function debugNextPayment() {
                                 <!-- Deposit Payment -->
                                 <tr class="table-success">
                                     <td>{{ \Carbon\Carbon::parse($agreement->agreement_date)->format('M d, Y') }}</td>
-                                    <td><strong>KSh {{ number_format($agreement->deposit_amount, 2) }}</strong></td>
+                                    <td><strong>KSh {{ number_format($agreement->deposit_amount, 2) }}
+                                        <br>
+                                        TradeInn({{ number_format($agreement->tradeinnamount, 2) }}) + Deposit({{ number_format($agreement->deposit_amount-$agreement->tradeinnamount, 2) }})
+                                    </strong></td>
                                     <td><span class="badge bg-success">Initial Deposit</span></td>
                                     <td>-</td>
                                     <td><span class="badge bg-success">Cleared</span></td>

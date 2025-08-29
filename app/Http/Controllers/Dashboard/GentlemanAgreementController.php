@@ -81,6 +81,8 @@ class GentlemanAgreementController extends Controller
                 'emailalt' => 'nullable|string|max:20',
                 'vehicle_id' => 'required|string',
                 'vehicle_price' => 'required|numeric|min:1',
+                'PaidAmount' => 'required|numeric|min:1',
+                'TradeInnAmount' => 'nullable|numeric|min:1',
                 'deposit_amount' => 'required|numeric|min:1',
                 'duration_months' => 'required|integer',
                 'first_due_date' => 'required|date',
@@ -172,6 +174,8 @@ class GentlemanAgreementController extends Controller
                 'vehicle_year' => $vehicleInfo['year'] ?? null,
                 'vehicle_plate' => $vehicleInfo['plate'] ?? null,
                 'vehicle_price' => $vehiclePrice,
+                'tradeinnamount' =>$validated['TradeInnAmount'],
+                'totalpaidamount' => $depositAmount,
                 'deposit_amount' => $depositAmount,
                 'loan_amount' => $loanAmount,
                 'duration_months' => $durationMonths,
@@ -609,7 +613,7 @@ public function storePayment(Request $request)
             'paymentSchedule', 
             'approvedBy'
         ])->findOrFail($id);
-        
+         $this->updateOverdueStatus($id);
         // Calculate accurate outstanding balance from payment schedule
         $totalScheduledAmount = $agreement->paymentSchedule ? $agreement->paymentSchedule->sum('total_amount') : 0;
         $totalPaidFromSchedule = $agreement->paymentSchedule ? $agreement->paymentSchedule->sum('amount_paid') : 0;

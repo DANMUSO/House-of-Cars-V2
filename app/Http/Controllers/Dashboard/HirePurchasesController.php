@@ -12,6 +12,8 @@ use App\Models\PaymentSchedule;
 use App\Models\VehicleInspection;
 use App\Models\CarImport;
 use App\Models\CustomerVehicle;
+use App\Services\PenaltyService;
+use App\Models\Penalty; // ADD THIS LINE
 use App\Models\InCash;
 use App\Models\AppSetting;
 use Illuminate\Support\Facades\Log;
@@ -62,126 +64,252 @@ class HirePurchasesController extends Controller
 
         return view('hirepurchase.index', compact('cars', 'hirePurchases', 'importCars', 'customerCars'));
     }
-    public function storeLumpSumPayment(Request $request)
-    {
-        try {
-            Log::info('=== CORRECTED LUMP SUM PAYMENT START ===', $request->all());
+    /**
+ * CORRECTED: Apply lump sum with proper priority order
+ * Priority: ALL overdue → ALL partial → ONE next installment → Principal reduction
+ */
+private function applyLumpSumWithCorrectPriority($agreementId, $paymentAmount, $paymentDate)
+{
+    $remainingAmount = $paymentAmount;
+    
+    Log::info('=== LUMP SUM WITH CORRECT PRIORITY ORDER ===', [
+        'agreement_id' => $agreementId,
+        'payment_amount' => $paymentAmount
+    ]);
+    
+    $appliedBreakdown = [];
+    $totalAppliedToSchedule = 0;
+    
+    // PRIORITY 1: Pay ALL overdue payments first (complete all overdue)
+    $overduePayments = PaymentSchedule::where('agreement_id', $agreementId)
+        ->where('status', 'overdue')
+        ->orderBy('due_date', 'asc')
+        ->get();
+    
+    Log::info('Processing ALL overdue payments first:', [
+        'overdue_count' => $overduePayments->count(),
+        'remaining_amount' => $remainingAmount
+    ]);
+    
+    foreach ($overduePayments as $overduePayment) {
+        if ($remainingAmount <= 0) break;
+        
+        $result = $this->applyPaymentToSingleInstallment($overduePayment, $remainingAmount, $paymentDate);
+        if ($result['applied'] > 0) {
+            $appliedBreakdown[] = $result['breakdown'];
+            $remainingAmount -= $result['applied'];
+            $totalAppliedToSchedule += $result['applied'];
             
-            $validated = $request->validate([
-                'agreement_id' => 'required|integer|exists:hire_purchase_agreements,id',
-                'payment_amount' => 'required|numeric|min:1',
-                'payment_date' => 'required|date',
-                'payment_method' => 'required|string|in:cash,bank_transfer,mpesa,cheque,card',
-                'payment_reference' => 'nullable|string|max:100',
-                'payment_notes' => 'nullable|string',
-                'reschedule_option' => 'required|string|in:reduce_duration,reduce_installment',
+            Log::info("Cleared overdue installment {$overduePayment->installment_number}:", [
+                'due_date' => $overduePayment->due_date,
+                'applied' => $result['applied'],
+                'new_status' => $result['breakdown']['status_after'],
+                'remaining_amount' => $remainingAmount
             ]);
-    
-            DB::beginTransaction();
-    
-            $agreement = HirePurchaseAgreement::with('paymentSchedule')->findOrFail($request->agreement_id);
-            
-            if ($agreement->status === 'completed') {
-                throw new \Exception('Cannot make payment on a completed agreement');
-            }
-    
-            $currentOutstanding = $this->calculateCurrentOutstandingFromSchedule($agreement);
-            
-            if ($request->payment_amount > $currentOutstanding) {
-                throw new \Exception('Payment amount exceeds outstanding balance of KSh ' . number_format($currentOutstanding, 2));
-            }
-    
-            // Store original terms
-            $originalTerms = $this->captureOriginalTerms($agreement);
-    
-            // Create payment record
-            $paymentData = $this->createLumpSumPaymentRecord($agreement, $request, $currentOutstanding);
-            Log::info('✅ Payment record created', ['payment_id' => $paymentData['payment_id']]);
-    
-            // Apply lump sum with PRIORITY SYSTEM
-            $applicationResult = $this->applyLumpSumToFirstDueOnly($agreement->id, $request->payment_amount, $request->payment_date);
-            Log::info('✅ Payment applied to first due payment only', $applicationResult);
-    
-            // Calculate new principal balance correctly
-            $newPrincipalBalance = $this->calculateCorrectNewPrincipalBalance($agreement, $applicationResult);
-            Log::info('✅ New principal balance calculated correctly', ['balance' => $newPrincipalBalance]);
-    
-            // Check if loan is completed
-            if ($newPrincipalBalance <= 0) {
-                $reschedulingResult = [
-                    'reschedule_type' => 'loan_completed',
-                    'new_outstanding_balance' => 0,
-                    'savings_message' => 'Loan completed successfully!',
-                    'completion' => true
-                ];
-                
-                $agreement->update([
-                    'status' => 'completed',
-                    'amount_paid' => $agreement->amount_paid + $request->payment_amount,
-                    'outstanding_balance' => 0,
-                    'last_payment_date' => $request->payment_date
-                ]);
-                
-                Log::info('✅ Loan completed');
-            } else {
-                // Perform CORRECTED rescheduling
-                $reschedulingResult = $this->performCorrectRescheduling(
-                    $agreement,
-                    $newPrincipalBalance,
-                    $request->reschedule_option,
-                    $applicationResult
-                );
-                Log::info('✅ Rescheduling completed correctly', $reschedulingResult);
-    
-                // Update agreement
-                $this->updateAgreementAfterRescheduling($agreement, $reschedulingResult, $request->payment_amount);
-                Log::info('✅ Agreement updated');
-            }
-    
-            // Create history record
-            $reschedulingId = $this->createDetailedReschedulingHistory(
-                $agreement,
-                $paymentData['payment_id'],
-                $request,
-                $originalTerms,
-                $reschedulingResult,
-                $applicationResult
-            );
-            Log::info('✅ History created', ['rescheduling_id' => $reschedulingId]);
-    
-            DB::commit();
-            Log::info('✅ Transaction completed successfully');
-    
-            return response()->json([
-                'success' => true,
-                'message' => $reschedulingResult['completion'] ?? false ? 
-                            'Lump sum payment recorded and loan completed!' :
-                            'Lump sum payment recorded and loan rescheduled successfully!',
-                'payment_breakdown' => [
-                    'first_payment_covered' => $applicationResult['total_applied_to_schedule'],
-                    'principal_reduction' => $applicationResult['remaining_for_principal_reduction'],
-                    'affected_payment' => $applicationResult['affected_installment'] ?? 'none'
-                ],
-                'rescheduling_details' => $reschedulingResult,
-                'new_balance' => $reschedulingResult['new_outstanding_balance'] ?? 0,
-                'payment_id' => $paymentData['payment_id'],
-                'completion' => $reschedulingResult['completion'] ?? false
-            ]);
-    
-        } catch (\Exception $e) {
-            DB::rollback();
-            Log::error('❌ Error in corrected lump sum payment', [
-                'message' => $e->getMessage(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile()
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
         }
     }
+    
+    // PRIORITY 2: Complete ALL partial payments
+    $partialPayments = PaymentSchedule::where('agreement_id', $agreementId)
+        ->where('status', 'partial')
+        ->orderBy('due_date', 'asc')
+        ->get();
+    
+    Log::info('Processing ALL partial payments:', [
+        'partial_count' => $partialPayments->count(),
+        'remaining_amount' => $remainingAmount
+    ]);
+    
+    foreach ($partialPayments as $partialPayment) {
+        if ($remainingAmount <= 0) break;
+        
+        $result = $this->applyPaymentToSingleInstallment($partialPayment, $remainingAmount, $paymentDate);
+        if ($result['applied'] > 0) {
+            $appliedBreakdown[] = $result['breakdown'];
+            $remainingAmount -= $result['applied'];
+            $totalAppliedToSchedule += $result['applied'];
+            
+            Log::info("Completed partial installment {$partialPayment->installment_number}:", [
+                'previous_paid' => $partialPayment->amount_paid,
+                'applied' => $result['applied'],
+                'new_status' => $result['breakdown']['status_after'],
+                'remaining_amount' => $remainingAmount
+            ]);
+        }
+    }
+    
+    // PRIORITY 3: Pay ONLY ONE next pending payment
+    if ($remainingAmount > 0) {
+        $nextPendingPayment = PaymentSchedule::where('agreement_id', $agreementId)
+            ->where('status', 'pending')
+            ->orderBy('due_date', 'asc')
+            ->first(); // ONLY the next one
+        
+        if ($nextPendingPayment) {
+            Log::info('Processing ONE next pending payment:', [
+                'installment' => $nextPendingPayment->installment_number,
+                'due_date' => $nextPendingPayment->due_date,
+                'remaining_amount' => $remainingAmount
+            ]);
+            
+            $result = $this->applyPaymentToSingleInstallment($nextPendingPayment, $remainingAmount, $paymentDate);
+            if ($result['applied'] > 0) {
+                $appliedBreakdown[] = $result['breakdown'];
+                $remainingAmount -= $result['applied'];
+                $totalAppliedToSchedule += $result['applied'];
+                
+                Log::info("Paid next pending installment {$nextPendingPayment->installment_number}:", [
+                    'principal_amount' => $nextPendingPayment->principal_amount,
+                    'interest_amount' => $nextPendingPayment->interest_amount,
+                    'applied' => $result['applied'],
+                    'new_status' => $result['breakdown']['status_after'],
+                    'remaining_for_principal' => $remainingAmount
+                ]);
+            }
+        }
+    }
+    
+    Log::info('CORRECTED lump sum application result:', [
+        'total_applied_to_schedule' => $totalAppliedToSchedule,
+        'remaining_for_principal_reduction' => $remainingAmount,
+        'overdue_payments_cleared' => $overduePayments->count(),
+        'partial_payments_completed' => $partialPayments->count(),
+        'next_payment_processed' => isset($nextPendingPayment) ? 1 : 0,
+        'total_installments_affected' => count($appliedBreakdown)
+    ]);
+    
+    return [
+        'total_applied_to_schedule' => $totalAppliedToSchedule,
+        'remaining_for_principal_reduction' => $remainingAmount,
+        'breakdown' => $appliedBreakdown,
+        'summary' => [
+            'overdue_cleared' => $overduePayments->count(),
+            'partial_completed' => $partialPayments->count(),
+            'next_payment_processed' => isset($nextPendingPayment) ? 1 : 0
+        ]
+    ];
+}
+    public function storeLumpSumPayment(Request $request)
+{
+    try {
+        Log::info('=== CORRECTED LUMP SUM PAYMENT START ===', $request->all());
+        
+        $validated = $request->validate([
+            'agreement_id' => 'required|integer|exists:hire_purchase_agreements,id',
+            'payment_amount' => 'required|numeric|min:1',
+            'payment_date' => 'required|date',
+            'payment_method' => 'required|string|in:cash,bank_transfer,mpesa,cheque,card',
+            'payment_reference' => 'nullable|string|max:100',
+            'payment_notes' => 'nullable|string',
+            'reschedule_option' => 'required|string|in:reduce_duration,reduce_installment',
+        ]);
+
+        DB::beginTransaction();
+
+        $agreement = HirePurchaseAgreement::with('paymentSchedule')->findOrFail($request->agreement_id);
+        
+        if ($agreement->status === 'completed') {
+            throw new \Exception('Cannot make payment on a completed agreement');
+        }
+
+        $currentOutstanding = $this->calculateCurrentOutstandingFromSchedule($agreement);
+        
+        if ($request->payment_amount > $currentOutstanding) {
+            throw new \Exception('Payment amount exceeds outstanding balance of KSh ' . number_format($currentOutstanding, 2));
+        }
+
+        // Store original terms
+        $originalTerms = $this->captureOriginalTerms($agreement);
+
+        // Create payment record
+        $paymentData = $this->createLumpSumPaymentRecord($agreement, $request, $currentOutstanding);
+        Log::info('✅ Payment record created', ['payment_id' => $paymentData['payment_id']]);
+
+        // Apply lump sum with CORRECTED PRIORITY
+        $applicationResult = $this->applyLumpSumWithCorrectPriority($agreement->id, $request->payment_amount, $request->payment_date);
+        Log::info('✅ Payment applied with correct priority', $applicationResult);
+
+        // Calculate new principal balance
+        $newPrincipalBalance = $this->calculateCorrectNewPrincipalBalance($agreement, $applicationResult);
+        Log::info('✅ New principal balance calculated', ['balance' => $newPrincipalBalance]);
+
+        // Check if loan is completed
+        if ($newPrincipalBalance <= 0) {
+            $reschedulingResult = [
+                'reschedule_type' => 'loan_completed',
+                'new_outstanding_balance' => 0,
+                'savings_message' => 'Loan completed successfully!',
+                'completion' => true
+            ];
+            
+            $agreement->update([
+                'status' => 'completed',
+                'amount_paid' => $agreement->amount_paid + $request->payment_amount,
+                'outstanding_balance' => 0,
+                'last_payment_date' => $request->payment_date
+            ]);
+            
+            Log::info('✅ Loan completed');
+        } else {
+            // Perform rescheduling
+            $reschedulingResult = $this->performCorrectRescheduling(
+                $agreement,
+                $newPrincipalBalance,
+                $request->reschedule_option,
+                $applicationResult
+            );
+            Log::info('✅ Rescheduling completed', $reschedulingResult);
+
+            // Update agreement
+            $this->updateAgreementAfterRescheduling($agreement, $reschedulingResult, $request->payment_amount);
+            Log::info('✅ Agreement updated');
+        }
+
+        // Create history record
+        $reschedulingId = $this->createDetailedReschedulingHistory(
+            $agreement,
+            $paymentData['payment_id'],
+            $request,
+            $originalTerms,
+            $reschedulingResult,
+            $applicationResult
+        );
+        Log::info('✅ History created', ['rescheduling_id' => $reschedulingId]);
+
+        DB::commit();
+        Log::info('✅ Transaction completed successfully');
+
+        return response()->json([
+            'success' => true,
+            'message' => $reschedulingResult['completion'] ?? false ? 
+                        'Lump sum payment recorded and loan completed!' :
+                        'Lump sum payment recorded and loan rescheduled successfully!',
+            'payment_breakdown' => [
+                'overdue_payments_cleared' => $applicationResult['summary']['overdue_cleared'],
+                'partial_payments_completed' => $applicationResult['summary']['partial_completed'],
+                'next_payment_processed' => $applicationResult['summary']['next_payment_processed'],
+                'principal_reduction' => $applicationResult['remaining_for_principal_reduction']
+            ],
+            'rescheduling_details' => $reschedulingResult,
+            'new_balance' => $reschedulingResult['new_outstanding_balance'] ?? 0,
+            'payment_id' => $paymentData['payment_id'],
+            'completion' => $reschedulingResult['completion'] ?? false
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollback();
+        Log::error('❌ Error in corrected lump sum payment', [
+            'message' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage()
+        ], 500);
+    }
+}
     /**
  * CORRECTED: Apply lump sum to ONLY first due payment + principal reduction
  */
@@ -737,7 +865,7 @@ private function calculatePMTSafe($loanAmount, $monthlyRate, $termMonths)
 }
 
 /**
- * CORRECTED: getReschedulingOptions with proper calculations
+ * CORRECTED: getReschedulingOptions with existing simulation method
  */
 public function getReschedulingOptions(Request $request)
 {
@@ -767,14 +895,15 @@ public function getReschedulingOptions(Request $request)
             ]);
         }
         
-        // Simulate first payment only application
-        $simulationResult = $this->simulateFirstPaymentOnlyApplication($agreement, $lumpSumAmount);
+        // Use the EXISTING simulation method from your controller
+        $simulationResult = $this->simulateLumpSumWithProperPriority($agreement, $lumpSumAmount);
         
         // Get current terms with original interest rate
         $currentMonthlyPayment = $agreement->monthly_payment;
         $originalMonthlyRate = $this->getOriginalMonthlyInterestRate($agreement);
         $monthlyInterestDecimal = $originalMonthlyRate / 100;
         $remainingMonths = $this->getRemainingMonths($agreement);
+        
         // CRITICAL: Additional validation for options calculation
         if ($remainingMonths <= 0) {
             Log::warning('No remaining months for rescheduling options');
@@ -784,6 +913,7 @@ public function getReschedulingOptions(Request $request)
                 'current_outstanding' => $currentOutstanding
             ]);
         }
+        
         Log::info('Current terms for calculation:', [
             'current_monthly_payment' => $currentMonthlyPayment,
             'original_monthly_rate' => $originalMonthlyRate,
@@ -849,6 +979,206 @@ public function getReschedulingOptions(Request $request)
             'error' => 'Failed to calculate rescheduling options: ' . $e->getMessage()
         ], 500);
     }
+}
+/**
+ * CORRECTED: Simulate lump sum with proper priority order
+ * Priority: ALL overdue → ALL partial → ONE next installment → Principal reduction
+ */
+private function simulateLumpSumWithProperPriority($agreement, $paymentAmount)
+{
+    $remainingAmount = $paymentAmount;
+    $breakdown = [];
+    $totalAppliedToSchedule = 0;
+    
+    Log::info('=== SIMULATING WITH PROPER PRIORITY ORDER ===', [
+        'agreement_id' => $agreement->id,
+        'payment_amount' => $paymentAmount
+    ]);
+    
+    // PRIORITY 1: Clear ALL overdue payments completely
+    $overduePayments = $agreement->paymentSchedule()
+        ->where('status', 'overdue')
+        ->orderBy('due_date', 'asc')
+        ->get();
+    
+    Log::info('Priority 1 - ALL Overdue Payments:', [
+        'count' => $overduePayments->count(),
+        'remaining_amount' => $remainingAmount
+    ]);
+    
+    foreach ($overduePayments as $overduePayment) {
+        if ($remainingAmount <= 0) break;
+        
+        $currentPaid = $overduePayment->amount_paid ?? 0;
+        $amountDue = $overduePayment->total_amount - $currentPaid;
+        
+        if ($amountDue > 0) {
+            $appliedAmount = min($remainingAmount, $amountDue);
+            $newAmountPaid = $currentPaid + $appliedAmount;
+            $newStatus = ($newAmountPaid >= $overduePayment->total_amount) ? 'paid' : 'overdue';
+            
+            $breakdown[] = [
+                'installment_number' => $overduePayment->installment_number,
+                'due_date' => $overduePayment->due_date,
+                'amount_applied' => $appliedAmount,
+                'status_before' => 'overdue',
+                'status_after' => $newStatus,
+                'type' => 'overdue_cleared',
+                'priority' => 1
+            ];
+            
+            $remainingAmount -= $appliedAmount;
+            $totalAppliedToSchedule += $appliedAmount;
+            
+            Log::info("Cleared overdue installment {$overduePayment->installment_number}: Applied {$appliedAmount}, Status: {$newStatus}");
+        }
+    }
+    
+    // PRIORITY 2: Complete ALL partial payments
+    $partialPayments = $agreement->paymentSchedule()
+        ->where('status', 'partial')
+        ->orderBy('due_date', 'asc')
+        ->get();
+    
+    Log::info('Priority 2 - ALL Partial Payments:', [
+        'count' => $partialPayments->count(),
+        'remaining_amount' => $remainingAmount
+    ]);
+    
+    foreach ($partialPayments as $partialPayment) {
+        if ($remainingAmount <= 0) break;
+        
+        $currentPaid = $partialPayment->amount_paid ?? 0;
+        $amountDue = $partialPayment->total_amount - $currentPaid;
+        
+        if ($amountDue > 0) {
+            $appliedAmount = min($remainingAmount, $amountDue);
+            $newAmountPaid = $currentPaid + $appliedAmount;
+            $newStatus = ($newAmountPaid >= $partialPayment->total_amount) ? 'paid' : 'partial';
+            
+            $breakdown[] = [
+                'installment_number' => $partialPayment->installment_number,
+                'due_date' => $partialPayment->due_date,
+                'amount_applied' => $appliedAmount,
+                'status_before' => 'partial',
+                'status_after' => $newStatus,
+                'type' => 'partial_completed',
+                'priority' => 2
+            ];
+            
+            $remainingAmount -= $appliedAmount;
+            $totalAppliedToSchedule += $appliedAmount;
+            
+            Log::info("Completed partial installment {$partialPayment->installment_number}: Applied {$appliedAmount}, Status: {$newStatus}");
+        }
+    }
+    
+    // PRIORITY 3: Pay ONLY ONE next pending installment
+    $nextPendingPayment = null;
+    if ($remainingAmount > 0) {
+        $nextPendingPayment = $agreement->paymentSchedule()
+            ->where('status', 'pending')
+            ->orderBy('due_date', 'asc')
+            ->first(); // Only get the FIRST one
+        
+        Log::info('Priority 3 - ONE Next Pending Payment:', [
+            'installment' => $nextPendingPayment ? $nextPendingPayment->installment_number : 'none',
+            'remaining_amount' => $remainingAmount
+        ]);
+        
+        if ($nextPendingPayment) {
+            $currentPaid = $nextPendingPayment->amount_paid ?? 0;
+            $amountDue = $nextPendingPayment->total_amount - $currentPaid;
+            
+            if ($amountDue > 0) {
+                $appliedAmount = min($remainingAmount, $amountDue);
+                $newAmountPaid = $currentPaid + $appliedAmount;
+                $newStatus = ($newAmountPaid >= $nextPendingPayment->total_amount) ? 'paid' : 'partial';
+                
+                $breakdown[] = [
+                    'installment_number' => $nextPendingPayment->installment_number,
+                    'due_date' => $nextPendingPayment->due_date,
+                    'amount_applied' => $appliedAmount,
+                    'status_before' => 'pending',
+                    'status_after' => $newStatus,
+                    'type' => 'next_installment',
+                    'priority' => 3
+                ];
+                
+                $remainingAmount -= $appliedAmount;
+                $totalAppliedToSchedule += $appliedAmount;
+                
+                Log::info("Paid next installment {$nextPendingPayment->installment_number}: Applied {$appliedAmount}, Status: {$newStatus}");
+            }
+        }
+    }
+    
+    Log::info('Priority 4 - Principal Reduction:', [
+        'remaining_for_principal' => $remainingAmount
+    ]);
+
+    // Calculate remaining principal after all priority applications
+    $unpaidSchedules = $agreement->paymentSchedule()
+        ->whereIn('status', ['pending', 'partial', 'overdue'])
+        ->get();
+    
+    $totalRemainingPrincipal = 0;
+    foreach ($unpaidSchedules as $schedule) {
+        // Calculate what this schedule would look like after our simulated payments
+        $simulatedAmountPaid = $schedule->amount_paid ?? 0;
+        
+        // Apply any payments from our breakdown to this schedule
+        foreach ($breakdown as $application) {
+            if ($application['installment_number'] == $schedule->installment_number) {
+                $simulatedAmountPaid += $application['amount_applied'];
+                break;
+            }
+        }
+        
+        // Calculate remaining principal portion
+        $paidRatio = $schedule->total_amount > 0 ? 
+                    ($simulatedAmountPaid / $schedule->total_amount) : 0;
+        $unpaidPrincipal = $schedule->principal_amount * (1 - $paidRatio);
+        $totalRemainingPrincipal += $unpaidPrincipal;
+        
+        if ($schedule->installment_number <= 5) { // Log first few for verification
+            Log::info("Schedule {$schedule->installment_number} principal calculation:", [
+                'original_paid' => $schedule->amount_paid ?? 0,
+                'simulated_paid' => $simulatedAmountPaid,
+                'total_amount' => $schedule->total_amount,
+                'paid_ratio' => round($paidRatio, 4),
+                'principal_amount' => $schedule->principal_amount,
+                'unpaid_principal' => round($unpaidPrincipal, 2)
+            ]);
+        }
+    }
+    
+    // Apply remaining amount to principal reduction
+    $principalReduction = $remainingAmount;
+    $finalRemainingPrincipal = max(0, $totalRemainingPrincipal - $principalReduction);
+    
+    Log::info('Final simulation results:', [
+        'total_applied_to_schedule' => $totalAppliedToSchedule,
+        'principal_reduction' => $principalReduction,
+        'remaining_principal' => $finalRemainingPrincipal,
+        'overdue_cleared' => $overduePayments->count(),
+        'partial_completed' => $partialPayments->count(),
+        'next_payment_processed' => $nextPendingPayment ? 1 : 0,
+        'installments_affected' => count($breakdown)
+    ]);
+    
+    return [
+        'total_applied_to_schedule' => $totalAppliedToSchedule,
+        'remaining_for_principal_reduction' => $principalReduction,
+        'remaining_principal' => $finalRemainingPrincipal,
+        'breakdown' => $breakdown,
+        'summary' => [
+            'overdue_cleared' => $overduePayments->count(),
+            'partial_completed' => $partialPayments->count(),
+            'next_payment_processed' => $nextPendingPayment ? 1 : 0,
+            'total_installments_affected' => count($breakdown)
+        ]
+    ];
 }
 private function calculateReducePaymentOptionCorrected($principalBalance, $duration, $monthlyInterestDecimal, $currentPayment)
 {
@@ -3899,6 +4229,8 @@ public function store(Request $request)
             'kra_pin' => 'nullable|string|max:20',
             'vehicle_id' => 'required|string',
             'vehicle_price' => 'required|numeric|min:1',
+            'PaidAmount' => 'required|numeric|min:1',
+            'TradeInnAmount' => 'nullable|numeric|min:1',
             'deposit_amount' => 'required|numeric|min:1',
             'tracking_fees' => 'required|numeric|min:0',
             'interest_rate' => 'required|numeric|min:0.1|max:20', 
@@ -4009,6 +4341,8 @@ public function store(Request $request)
             'vehicle_year' => $vehicleInfo['year'] ?? null,
             'vehicle_plate' => $vehicleInfo['plate'] ?? null,
             'vehicle_price' => $vehiclePrice,
+            'tradeinnamount' =>$validated['TradeInnAmount'],
+            'totalpaidamount' => $depositAmount,
             'deposit_amount' => $depositAmount,
             'loan_amount' => $totalLoanAmount,
             'base_loan_amount' => $baseLoanAmount,
@@ -5098,7 +5432,110 @@ private function applyOverpaymentToFutureInstallments($agreementId, $remainingAm
             return response()->json(['success' => false, 'message' => 'Error recording payment: ' . $e->getMessage()]);
         }
     }
+    /**
+ * Get penalties for an agreement
+ */
+public function getPenalties($agreementId)
+{
+    try {
+        $penaltyService = app(PenaltyService::class);
+        
+        // Calculate/update penalties first
+        $penaltyService->calculatePenaltiesForAgreement('hire_purchase', $agreementId);
+        
+        // Get penalties
+        $penalties = Penalty::forAgreement('hire_purchase', $agreementId)
+            ->with('paymentSchedule')
+            ->orderBy('due_date', 'asc')
+            ->get();
+            
+        // Get summary
+        $summary = $penaltyService->getPenaltySummary('hire_purchase', $agreementId);
+        
+        return response()->json([
+            'success' => true,
+            'penalties' => $penalties,
+            'summary' => $summary
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Error fetching penalties: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch penalties: ' . $e->getMessage()
+        ], 500);
+    }
+}
 
+/**
+ * Calculate penalties for an agreement
+ */
+public function calculatePenalties(Request $request, $agreementId)
+{
+    try {
+        $penaltyService = app(PenaltyService::class);
+        $result = $penaltyService->calculatePenaltiesForAgreement('hire_purchase', $agreementId);
+        
+        return response()->json([
+            'success' => true,
+            'message' => "Penalties calculated successfully. Created: {$result['penalties_created']}, Updated: {$result['penalties_updated']}",
+            'data' => $result
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Error calculating penalties: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to calculate penalties: ' . $e->getMessage()
+        ], 500);
+    }
+}
+/**
+ * Waive a penalty
+ */
+public function waivePenalty(Request $request, $penaltyId)
+{
+    $validated = $request->validate([
+        'reason' => 'required|string|max:500'
+    ]);
+
+    try {
+        DB::beginTransaction();
+
+        $penalty = Penalty::findOrFail($penaltyId);
+        
+        if ($penalty->status !== 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only pending penalties can be waived.'
+            ], 422);
+        }
+
+        $penalty->waive($validated['reason'], auth()->id());
+
+        DB::commit();
+
+        Log::info("Penalty {$penaltyId} waived", [
+            'reason' => $validated['reason'],
+            'waived_by' => auth()->id()
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Penalty waived successfully!',
+            'penalty' => $penalty->fresh()
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollback();
+        Log::error('Penalty waiver failed: ' . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to waive penalty: ' . $e->getMessage()
+        ], 500);
+    }
+}
     public function export()
     {
         // Implementation for Excel export

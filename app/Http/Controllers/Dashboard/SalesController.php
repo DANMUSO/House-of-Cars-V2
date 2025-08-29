@@ -234,6 +234,7 @@ class SalesController extends Controller
             'National_ID' => 'required|string|max:255',
             'Amount' => 'required|numeric',
             'PaidAmount'  => 'required|numeric',
+            'TradeInnAmount'  => 'nullable|numeric',
             'car_id' => 'required|string',
         ]);
         
@@ -252,6 +253,8 @@ class SalesController extends Controller
             'National_ID'   => $request->input('National_ID'),
             'Amount'        => $request->input('Amount'),
             'paid_amount'        => $request->input('PaidAmount'),
+            'totalpaidamount'        => $request->input('PaidAmount') + $request->input('TradeInnAmount'),
+            'tradeinnamount'        => $request->input('TradeInnAmount'),
             'car_type'      => $car_type,
             'car_id'        => $car_id,
             'imported_id'   => $car_type === 'import' ? $car_id : 0,
@@ -352,6 +355,7 @@ class SalesController extends Controller
             'KRA' => 'required|string|max:255',
             'National_ID' => 'required|string|max:255',
             'Amount' => 'required|numeric',
+            'TradeInn_Amount'  => 'nullable|numeric',
             'PaidAmount' => 'required|numeric',
         ]);
 
@@ -369,6 +373,8 @@ class SalesController extends Controller
             'National_ID'   => $request->input('National_ID'),
             'Amount'        => $request->input('Amount'),
             'paid_amount' => $request->input('PaidAmount'),
+            'totalpaidamount'        => $request->input('PaidAmount') + $request->input('TradeInn_Amount'),
+            'tradeinnamount'        => $request->input('TradeInn_Amount'),
         ];
 
         $id =$request->input('id');

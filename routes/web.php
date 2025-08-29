@@ -105,13 +105,7 @@ Route::get('/proxy-image', function(Request $request) {
     }
 })->name('proxy.image');
 Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Suppport-Staff,HR,General-Manager'])->group(function () {
-       //Penalties
-       Route::prefix('hire-purchase')->group(function () {
-            Route::get('{id}/penalties', [HirePurchasesController::class, 'getPenalties'])->name('hire-purchase.penalties');
-            Route::post('{id}/penalties/calculate', [HirePurchasesController::class, 'calculatePenalties'])->name('hire-purchase.penalties.calculate');
-            Route::put('penalties/{penaltyId}/waive', [HirePurchasesController::class, 'waivePenalty'])->name('penalties.waive');
-            Route::post('penalties/{penaltyId}/pay', [HirePurchasesController::class, 'payPenalty'])->name('penalties.pay');
-        });  
+      
     
     // Leave Applications Routes
     Route::prefix('leave-applications')->name('leave-applications.')->group(function () {
@@ -220,6 +214,11 @@ Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Sa
         Route::post('/{id}/approve', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'approveAgreement'])->name('approve');
     });
 
+    // Add these to your hire-purchase Penalty routes group
+    Route::get('/hire-purchase/{agreementId}/penalties', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'getPenalties']);
+    Route::post('/hire-purchase/{agreementId}/penalties/calculate', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'calculatePenalties']);
+    Route::post('/penalties/{penaltyId}/pay', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'payPenalty']);
+    Route::put('/penalties/{penaltyId}/waive', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'waivePenalty']);
     // Fleet Payment Routes
     Route::post('/fleet-payments/{id}/confirm', [App\Http\Controllers\Dashboard\FleetPaymentController::class, 'confirm'])->name('fleet_payments.confirm');
     Route::get('/fleet-payments/{id}', [App\Http\Controllers\Dashboard\FleetPaymentController::class, 'show'])->name('fleet_payments.show');

@@ -19,7 +19,8 @@ class HirePurchaseAgreement extends Model
         'payments_remaining',
         'agreement_date', 'first_due_date', 'last_payment_date', 'expected_completion_date',
         'status', 'is_overdue', 'overdue_days', 'notes',
-        'approved_by', 'approved_at','phone_numberalt','emailalt'
+        'approved_by', 'approved_at','phone_numberalt','emailalt','tradeinnamount',
+        'totalpaidamount'
     ];
 
     protected $casts = [

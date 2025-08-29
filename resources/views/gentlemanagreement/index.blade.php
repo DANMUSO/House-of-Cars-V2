@@ -295,9 +295,22 @@
                             <input type="number" class="form-control" name="vehicle_price" id="vehicle_price" required>
                             <small class="text-muted">Price will auto-fill when you select a vehicle</small>
                         </div>
-                        
                         <div class="col-md-6">
-                            <label class="form-label">Deposit Amount (KSh) *</label>
+                                <label class="form-label">Deposit Amount <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">KES</span>
+                                    <input type="number" class="form-control" id="PaidAmount" name="PaidAmount" placeholder="0.00" required>
+                                </div>
+                            </div>
+                             <div class="col-md-6">
+                                <label class="form-label">Trade Inn Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">KES</span>
+                                    <input type="number" class="form-control" id="TradeInnAmount" name="TradeInnAmount" placeholder="0.00">
+                                </div>
+                            </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Total Paid Amount (KSh) *</label>
                             <input type="number" class="form-control" name="deposit_amount" id="deposit_amount" required>
                             <small class="form-text text-muted">Any amount (recommended minimum 20%)</small>
                         </div>
@@ -948,7 +961,54 @@ document.getElementById('gentlemanAgreementForm').addEventListener('submit', fun
         });
     });
 });
+// Auto-calculate Total Paid Amount and make it readonly
+function initializeTotalPaidCalculation() {
+    const depositInput = document.getElementById('PaidAmount');
+    const tradeInnInput = document.getElementById('TradeInnAmount');
+    const totalPaidInput = document.getElementById('deposit_amount');
+    
+    // Make total paid amount readonly
+    if (totalPaidInput) {
+        totalPaidInput.readOnly = true;
+        totalPaidInput.classList.add('bg-light');
+    }
+    
+    // Calculate total paid amount
+    function calculateTotalPaid() {
+        const deposit = parseFloat(depositInput?.value) || 0;
+        const tradeInn = parseFloat(tradeInnInput?.value) || 0;
+        const total = deposit + tradeInn;
+        
+        if (totalPaidInput) {
+            totalPaidInput.value = total.toFixed(2);
+        }
+        
+        // Trigger the existing agreement summary calculation
+        if (typeof calculateAgreementSummary === 'function') {
+            calculateAgreementSummary();
+        }
+        
+        console.log('Total Paid Amount calculated:', { deposit, tradeInn, total });
+    }
+    
+    // Add event listeners
+    if (depositInput) {
+        depositInput.addEventListener('input', calculateTotalPaid);
+    }
+    
+    if (tradeInnInput) {
+        tradeInnInput.addEventListener('input', calculateTotalPaid);
+    }
+    
+    // Initial calculation
+    calculateTotalPaid();
+}
 
+// Add this to your existing DOMContentLoaded event listener
+document.addEventListener('DOMContentLoaded', function() {
+    // ... your existing code ...
+    initializeTotalPaidCalculation();
+});
 // Enhanced error handling function that works with your controller's validation responses
 function handleFormErrors(data) {
     let errorTitle = 'Error Creating Agreement';

@@ -22,7 +22,9 @@ class InCash extends Model
         'customer_id',
         'paid_amount',
         'phone_numberalt',
-        'emailalt'
+        'emailalt',
+        'tradeinnamount',
+        'totalpaidamount'
     ];
     public function carImport()
     {

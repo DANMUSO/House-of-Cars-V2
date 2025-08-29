@@ -287,7 +287,21 @@
                                     <input type="number" class="form-control" id="PaidAmount" name="PaidAmount" placeholder="0.00" required>
                                 </div>
                             </div>
-                            <div class="col-md-12">
+                             <div class="col-md-6">
+                                <label class="form-label">Trade Inn Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">KES</span>
+                                    <input type="number" class="form-control" id="TradeInnAmount" name="TradeInnAmount" placeholder="0.00">
+                                </div>
+                            </div>
+                             <div class="col-md-6">
+                                <label class="form-label">Total Paid Amount <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">KES</span>
+                                    <input type="number" class="form-control" id="TotalPaidAmount" name="TotalPaidAmount" placeholder="0.00">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
                                 <label class="form-label">Select Vehicle <span class="text-danger">*</span></label>
                                 <select class="form-select" id="car_id" name="car_id" required>
                                     <option disabled selected value="">Choose Vehicle</option>
@@ -374,6 +388,8 @@
                                         <th><i class="fas fa-id-badge me-1"></i>National ID</th>
                                         <th><i class="fas fa-money-bill me-1"></i>Total Amount (Ksh)</th>
                                         <th><i class="fas fa-money-bill me-1"></i>Paid Amount (Ksh)</th>
+                                        <th><i class="fas fa-money-bill me-1"></i>Trade Inn Amount (Ksh)</th>
+                                        <th><i class="fas fa-money-bill me-1"></i>Total Paid Amount (Ksh)</th>
                                         <th><i class="fas fa-calendar me-1"></i>Date</th>
                                         <th><i class="fas fa-cog me-1"></i>Action</th>
                                     </tr>
@@ -859,6 +875,8 @@
                                             <td>{{ $cash->National_ID }}</td>
                                             <td><strong class="text-success">Ksh {{ number_format($cash->Amount, 2) }}</strong></td>
                                             <td><strong class="text-success">Ksh {{ number_format($cash->paid_amount, 2) }}</strong></td>
+                                             <td><strong class="text-success">Ksh {{ number_format($cash->tradeinnamount, 2) }}</strong></td>
+                                              <td><strong class="text-success">Ksh {{ number_format($cash->totalpaidamount, 2) }}</strong></td>
                                             <td>
                                                 <strong>{{ $cash->created_at->format('Y-m-d') }}</strong>
                                                 <br><small class="text-muted">{{ $cash->created_at->diffForHumans() }}</small>
@@ -1578,17 +1596,19 @@
     </div>
 </div><br> 
 @if(in_array(Auth::user()->role, ['Managing-Director', 'Accountant']))
-<br>  <button class="btn btn-warning btn-sm editBtn mb-1"
-                                                            data-id="{{ $cash->id }}"
-                                                            data-client="{{ $cash->Client_Name }}"
-                                                            data-phone="{{ $cash->Phone_No }}"
-                                                            data-email="{{ $cash->email }}"
-                                                            data-kra="{{ $cash->KRA }}"
-                                                            data-national="{{ $cash->National_ID }}"
-                                                            data-amount="{{ $cash->Amount }}"
-                                                            data-paid_amount="{{ $cash->paid_amount }}">
-                                                            <i class="fas fa-edit me-1"></i> Edit
-                                                        </button>
+<br>   <button class="btn btn-warning btn-sm editBtn mb-1"
+    data-id="{{ $cash->id }}"
+    data-client="{{ $cash->Client_Name }}"
+    data-phone="{{ $cash->Phone_No }}"
+    data-email="{{ $cash->email }}"
+    data-kra="{{ $cash->KRA }}"
+    data-national="{{ $cash->National_ID }}"
+    data-amount="{{ $cash->Amount }}"
+    data-paid_amount="{{ $cash->paid_amount }}"
+    data-trade_inn="{{ $cash->tradeinnamount }}"
+    data-total_paid="{{ $cash->totalpaidamount }}">
+    <i class="fas fa-edit me-1"></i> Edit
+</button>
                                                          @endif
                                             </td>
                                         </tr>
@@ -1627,44 +1647,58 @@
                         <div class="modal-body">
                             <input type="hidden" name="id" id="recordId">
                             <div class="row mb-3">
-                                <div class="col">
+                                <div class="col-md-6">
                                     <label for="clientName" class="form-label">Client Name</label>
                                     <input type="text" class="form-control" name="Client_Name" id="clientName" required>
                                 </div>
-                                <div class="col">
+                                <div class="col-md-6">
                                     <label for="phoneNo" class="form-label">Phone Number</label>
                                     <input type="text" class="form-control" name="Phone_No" id="phoneNo" required>
                                 </div>
                             </div>
                             <div class="row mb-3">
-                                <div class="col">
+                                <div class="col-md-6">
                                     <label for="emailAddress" class="form-label">Email</label>
                                     <input type="email" class="form-control" name="email" id="emailAddress">
                                 </div>
-                                <div class="col">
+                                <div class="col-md-6">
                                     <label for="kra" class="form-label">KRA</label>
                                     <input type="text" class="form-control" name="KRA" id="kra">
                                 </div>
                             </div>
                             <div class="row mb-3">
-                                <div class="col">
+                                <div class="col-md-6">
                                     <label for="nationalId" class="form-label">National ID</label>
                                     <input type="number" class="form-control" name="National_ID" id="nationalId">
                                 </div>
-                                <div class="col">
+                                <div class="col-md-6">
                                     <label for="amount" class="form-label">Total Amount (Ksh)</label>
                                     <div class="input-group">
                                         <span class="input-group-text">KES</span>
                                         <input type="number" class="form-control" name="Amount" id="amount" required>
                                     </div>
                                 </div>
-                                <div class="col">
+                                <div class="col-md-6">
                                     <label for="amount" class="form-label">Paid Amount (Ksh)</label>
                                     <div class="input-group">
                                         <span class="input-group-text">KES</span>
                                         <input type="number" class="form-control" name="PaidAmount" id="paid_amount" required>
                                     </div>
                                 </div>
+                             <div class="col-md-6">
+                                <label class="form-label">Trade Inn Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">KES</span>
+                                    <input type="number" class="form-control" id="TradeInn_Amount" name="TradeInn_Amount" placeholder="0.00">
+                                </div>
+                            </div>
+                             <div class="col-md-6">
+                                <label class="form-label">Total Paid Amount <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">KES</span>
+                                    <input type="number" class="form-control" id="TotalPaid_Amount" name="TotalPaid_Amount" placeholder="0.00">
+                                </div>
+                            </div>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -2666,17 +2700,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const national = this.getAttribute('data-national');
                 const amount = this.getAttribute('data-amount');
                 const paid_amount = this.getAttribute('data-paid_amount');
-
-                // Debug: Log all values to console
-                console.log('Debug values:');
-                console.log('ID:', id);
-                console.log('Client:', client);
-                console.log('Phone:', phone);
-                console.log('Email:', email);
-                console.log('KRA:', kra);
-                console.log('National:', national);
-                console.log('Amount:', amount);
-                console.log('Paid Amount:', paid_amount);
+                const trade_inn = this.getAttribute('data-trade_inn');
+                const total_paid = this.getAttribute('data-total_paid');
+                console.log('Trade Inn:', trade_inn);
+                console.log('Total Paid:', total_paid);
 
                 // Check if paid_amount field exists
                 const paidAmountField = document.getElementById('paid_amount');
@@ -2690,6 +2717,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('kra').value = kra || '';
                 document.getElementById('nationalId').value = national || '';
                 document.getElementById('amount').value = amount || '';
+                document.getElementById('paid_amount').value = paid_amount || '';
+                document.getElementById('TradeInn_Amount').value = trade_inn || '';
+                document.getElementById('TotalPaid_Amount').value = total_paid || '';
                 
                 // Set paid amount with extra debugging
                 if (paidAmountField) {
