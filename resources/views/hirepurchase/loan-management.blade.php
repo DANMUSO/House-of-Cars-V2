@@ -1579,6 +1579,15 @@ function debugNextPayment() {
                         <i class="fas fa-file-alt"></i> Agreement Document
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="penalties-tab" data-bs-toggle="tab" 
+                            data-bs-target="#penalties" type="button" role="tab">
+                        <i class="fas fa-exclamation-triangle"></i> Penalties
+                        @if(isset($penaltySummary) && $penaltySummary->pending_count > 0)
+                            <span class="badge bg-danger ms-1">{{ $penaltySummary->pending_count }}</span>
+                        @endif
+                    </button>
+                </li>
             </ul>
         </div>
         
@@ -1834,7 +1843,901 @@ function debugNextPayment() {
                         </table>
                     </div>
                 </div>
+                <!-- 3. PENALTIES TAB CONTENT -->
+<div class="tab-pane fade" id="penalties" role="tabpanel">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5>Penalties Management</h5>
+        <div class="btn-group">
+            <button class="btn btn-outline-warning btn-sm" onclick="calculatePenalties({{ $agreement->id }})">
+                <i class="fas fa-calculator"></i> Calculate Penalties
+            </button>
+            <button class="btn btn-outline-info btn-sm" onclick="refreshPenalties()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
 
+    <!-- Penalties Summary Card -->
+    <div class="card border-warning mb-4" id="penaltySummaryCard">
+        <div class="card-header bg-warning bg-opacity-10">
+            <h6 class="card-title mb-0 text-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>Penalties Summary
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="row" id="penaltySummaryContent">
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h4 class="text-danger" id="totalPenalties">-</h4>
+                        <small class="text-muted">Total Penalties</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h4 class="text-warning" id="pendingPenalties">-</h4>
+                        <small class="text-muted">Pending</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h4 class="text-success" id="paidPenalties">-</h4>
+                        <small class="text-muted">Paid</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <h4 class="text-info" id="waivedPenalties">-</h4>
+                        <small class="text-muted">Waived</small>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-between">
+                        <span>Total Penalty Amount:</span>
+                        <strong id="totalPenaltyAmount">KSh 0.00</strong>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-between">
+                        <span>Outstanding Amount:</span>
+                        <strong class="text-danger" id="outstandingPenaltyAmount">KSh 0.00</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Penalties Table -->
+    <div class="card">
+        <div class="card-header">
+            <h6 class="card-title mb-0">Penalty Details</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped" id="penaltiesTable">
+                    <thead>
+                        <tr>
+                            <th>Due Date</th>
+                            <th>Days Overdue</th>
+                            <th>Expected Amount</th>
+                            <th>Penalty Rate</th>
+                            <th>Penalty Amount</th>
+                            <th>Amount Paid</th>
+                            <th>Outstanding</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="penaltiesTableBody">
+                        <tr>
+                            <td colspan="9" class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading penalties...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Loading penalties...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 4. PENALTY PAYMENT MODAL -->
+<div class="modal fade" id="penaltyPaymentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="fas fa-credit-card me-2"></i>Pay Penalty
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="penaltyPaymentForm">
+                    <input type="hidden" id="penaltyId" name="penalty_id">
+                    
+                    <div class="alert alert-info" id="penaltyInfo">
+                        <!-- Penalty details will be populated here -->
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Payment Amount (KSh) *</label>
+                        <input type="number" class="form-control" name="payment_amount" 
+                               id="penaltyPaymentAmount" required min="0" step="0.01">
+                        <small class="text-muted">Outstanding: <span id="penaltyOutstanding">KSh 0.00</span></small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Payment Date *</label>
+                        <input type="date" class="form-control" name="payment_date" 
+                               value="{{ date('Y-m-d') }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Payment Method *</label>
+                        <select class="form-select" name="payment_method" required>
+                            <option value="">Select Method</option>
+                            <option value="cash">Cash</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="mpesa">M-Pesa</option>
+                            <option value="cheque">Cheque</option>
+                            <option value="card">Card Payment</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Reference Number</label>
+                        <input type="text" class="form-control" name="payment_reference" 
+                               placeholder="Transaction/Receipt Number">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" name="notes" rows="2" 
+                                  placeholder="Payment notes..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" onclick="processPenaltyPayment()">
+                    <i class="fas fa-credit-card me-1"></i>Process Payment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 5. PENALTY WAIVER MODAL -->
+<div class="modal fade" id="penaltyWaiverModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-hand-paper me-2"></i>Waive Penalty
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="penaltyWaiverForm">
+                    <input type="hidden" id="waiverPenaltyId" name="penalty_id">
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> This action will waive the selected penalty and cannot be undone.
+                    </div>
+                    
+                    <div id="waiverPenaltyInfo" class="mb-3">
+                        <!-- Penalty details will be populated here -->
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Waiver Reason *</label>
+                        <textarea class="form-control" name="reason" rows="3" required
+                                  placeholder="Please provide a reason for waiving this penalty..."></textarea>
+                        <small class="text-muted">This reason will be recorded for audit purposes.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-info" onclick="processPenaltyWaiver()">
+                    <i class="fas fa-hand-paper me-1"></i>Waive Penalty
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 6. JAVASCRIPT FOR PENALTIES MANAGEMENT -->
+<script>
+// Global variables for penalties
+let currentPenalties = [];
+let penaltySummary = {};
+
+// Initialize penalties when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Load penalties when penalties tab is shown
+    const penaltiesTab = document.getElementById('penalties-tab');
+    if (penaltiesTab) {
+        penaltiesTab.addEventListener('shown.bs.tab', function() {
+            loadPenalties();
+        });
+    }
+});
+
+/**
+ * Load penalties for the agreement
+ */
+function loadPenalties() {
+    const agreementId = {{ $agreement->id }};
+    
+    showPenaltiesLoading();
+    
+    fetch(`/hire-purchase/${agreementId}/penalties`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                currentPenalties = data.penalties;
+                penaltySummary = data.summary;
+                displayPenalties();
+                updatePenaltySummary();
+            } else {
+                showPenaltiesError('Failed to load penalties');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading penalties:', error);
+            showPenaltiesError('Network error loading penalties');
+        });
+}
+
+/**
+ * Show loading state for penalties
+ */
+function showPenaltiesLoading() {
+    document.getElementById('penaltiesTableBody').innerHTML = `
+        <tr>
+            <td colspan="9" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading penalties...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading penalties...</p>
+            </td>
+        </tr>
+    `;
+}
+
+/**
+ * Show error state for penalties
+ */
+function showPenaltiesError(message) {
+    document.getElementById('penaltiesTableBody').innerHTML = `
+        <tr>
+            <td colspan="9" class="text-center py-4">
+                <div class="alert alert-warning mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${message}
+                </div>
+                <button class="btn btn-outline-primary btn-sm mt-2" onclick="loadPenalties()">
+                    <i class="fas fa-sync-alt me-1"></i>Retry
+                </button>
+            </td>
+        </tr>
+    `;
+}
+
+/**
+ * Display penalties in table
+ */
+function displayPenalties() {
+    const tbody = document.getElementById('penaltiesTableBody');
+    
+    if (currentPenalties.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="text-center py-4">
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <h6 class="text-muted">No penalties found</h6>
+                    <p class="text-muted">All payments are up to date.</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    let html = '';
+    
+    currentPenalties.forEach(penalty => {
+        const outstanding = penalty.penalty_amount - penalty.amount_paid;
+        const statusBadge = getPenaltyStatusBadge(penalty.status);
+        const actionButtons = getPenaltyActionButtons(penalty);
+        
+        html += `
+            <tr class="${penalty.status === 'pending' ? 'table-warning' : ''}">
+                <td>${formatDate(penalty.due_date)}</td>
+                <td>
+                    <span class="badge bg-danger">${penalty.days_overdue} days</span>
+                </td>
+                <td>KSh ${formatNumber(penalty.expected_amount)}</td>
+                <td>${penalty.penalty_rate}%</td>
+                <td>KSh ${formatNumber(penalty.penalty_amount)}</td>
+                <td>KSh ${formatNumber(penalty.amount_paid)}</td>
+                <td>
+                    <strong class="${outstanding > 0 ? 'text-danger' : 'text-success'}">
+                        KSh ${formatNumber(outstanding)}
+                    </strong>
+                </td>
+                <td>${statusBadge}</td>
+                <td>${actionButtons}</td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+/**
+ * Update penalty summary display
+ */
+function updatePenaltySummary() {
+    if (!penaltySummary) return;
+    
+    document.getElementById('totalPenalties').textContent = penaltySummary.total_penalties || 0;
+    document.getElementById('pendingPenalties').textContent = penaltySummary.pending_count || 0;
+    document.getElementById('paidPenalties').textContent = penaltySummary.paid_count || 0;
+    document.getElementById('waivedPenalties').textContent = penaltySummary.waived_count || 0;
+    
+    document.getElementById('totalPenaltyAmount').textContent = 
+        `KSh ${formatNumber(penaltySummary.total_penalty_amount || 0)}`;
+    document.getElementById('outstandingPenaltyAmount').textContent = 
+        `KSh ${formatNumber(penaltySummary.total_outstanding || 0)}`;
+}
+
+/**
+ * Get penalty status badge HTML
+ */
+function getPenaltyStatusBadge(status) {
+    const badges = {
+        'pending': '<span class="badge bg-warning">Pending</span>',
+        'paid': '<span class="badge bg-success">Paid</span>',
+        'waived': '<span class="badge bg-info">Waived</span>'
+    };
+    
+    return badges[status] || '<span class="badge bg-secondary">Unknown</span>';
+}
+
+/**
+ * Get penalty action buttons HTML
+ */
+function getPenaltyActionButtons(penalty) {
+    let buttons = '';
+    
+    if (penalty.status === 'pending') {
+        const outstanding = penalty.penalty_amount - penalty.amount_paid;
+        
+        if (outstanding > 0) {
+            buttons += `
+                <button class="btn btn-outline-success btn-sm me-1" 
+                        onclick="openPenaltyPaymentModal(${penalty.id})"
+                        title="Pay Penalty">
+                    <i class="fas fa-credit-card"></i>
+                </button>
+            `;
+        }
+        
+        buttons += `
+            <button class="btn btn-outline-info btn-sm" 
+                    onclick="openPenaltyWaiverModal(${penalty.id})"
+                    title="Waive Penalty">
+                <i class="fas fa-hand-paper"></i>
+            </button>
+        `;
+    }
+    
+    // View details button for all statuses
+    buttons += `
+        <button class="btn btn-outline-primary btn-sm" 
+                onclick="viewPenaltyDetails(${penalty.id})"
+                title="View Details">
+            <i class="fas fa-eye"></i>
+        </button>
+    `;
+    
+    return buttons;
+}
+
+/**
+ * Calculate penalties for agreement
+ */
+function calculatePenalties(agreementId) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Calculate Penalties',
+            text: 'This will calculate penalties for all overdue payments. Continue?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#ffc107',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, calculate',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                performPenaltyCalculation(agreementId);
+            }
+        });
+    } else {
+        if (confirm('Calculate penalties for all overdue payments?')) {
+            performPenaltyCalculation(agreementId);
+        }
+    }
+}
+
+/**
+ * Perform penalty calculation
+ */
+function performPenaltyCalculation(agreementId) {
+    // Show loading
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Calculating Penalties...',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    }
+    
+    fetch(`/hire-purchase/${agreementId}/penalties/calculate`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Success!',
+                    text: data.message,
+                    icon: 'success',
+                    confirmButtonColor: '#28a745'
+                }).then(() => {
+                    loadPenalties(); // Reload penalties
+                });
+            } else {
+                alert(data.message);
+                loadPenalties();
+            }
+        } else {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Error!',
+                    text: data.message || 'Failed to calculate penalties',
+                    icon: 'error',
+                    confirmButtonColor: '#dc3545'
+                });
+            } else {
+                alert('Error: ' + (data.message || 'Failed to calculate penalties'));
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error calculating penalties:', error);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Network error calculating penalties',
+                icon: 'error',
+                confirmButtonColor: '#dc3545'
+            });
+        } else {
+            alert('Network error calculating penalties');
+        }
+    });
+}
+
+/**
+ * Open penalty payment modal
+ */
+function openPenaltyPaymentModal(penaltyId) {
+    const penalty = currentPenalties.find(p => p.id === penaltyId);
+    
+    if (!penalty) {
+        alert('Penalty not found');
+        return;
+    }
+    
+    const outstanding = penalty.penalty_amount - penalty.amount_paid;
+    
+    // Populate modal
+    document.getElementById('penaltyId').value = penaltyId;
+    document.getElementById('penaltyPaymentAmount').value = outstanding.toFixed(2);
+    document.getElementById('penaltyPaymentAmount').max = outstanding.toFixed(2);
+    document.getElementById('penaltyOutstanding').textContent = `KSh ${formatNumber(outstanding)}`;
+    
+    document.getElementById('penaltyInfo').innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <strong>Due Date:</strong> ${formatDate(penalty.due_date)}<br>
+                <strong>Days Overdue:</strong> ${penalty.days_overdue} days
+            </div>
+            <div class="col-md-6">
+                <strong>Expected Amount:</strong> KSh ${formatNumber(penalty.expected_amount)}<br>
+                <strong>Penalty Rate:</strong> ${penalty.penalty_rate}%
+            </div>
+        </div>
+        <div class="mt-2">
+            <strong>Total Penalty:</strong> KSh ${formatNumber(penalty.penalty_amount)}<br>
+            <strong>Outstanding:</strong> KSh ${formatNumber(outstanding)}
+        </div>
+    `;
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('penaltyPaymentModal'));
+    modal.show();
+}
+
+/**
+ * Process penalty payment
+ */
+function processPenaltyPayment() {
+    const form = document.getElementById('penaltyPaymentForm');
+    const formData = new FormData(form);
+    
+    // Validation
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    // Show loading
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Processing Payment...',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    }
+    
+    const penaltyId = formData.get('penalty_id');
+    
+    fetch(`/penalties/${penaltyId}/pay`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Hide modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('penaltyPaymentModal'));
+        modal.hide();
+        
+        if (data.success) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Success!',
+                    text: 'Penalty payment processed successfully',
+                    icon: 'success',
+                    confirmButtonColor: '#28a745'
+                }).then(() => {
+                    loadPenalties(); // Reload penalties
+                });
+            } else {
+                alert('Penalty payment processed successfully');
+                loadPenalties();
+            }
+        } else {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Error!',
+                    text: data.message || 'Failed to process payment',
+                    icon: 'error',
+                    confirmButtonColor: '#dc3545'
+                });
+            } else {
+                alert('Error: ' + (data.message || 'Failed to process payment'));
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error processing payment:', error);
+        // Hide modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('penaltyPaymentModal'));
+        modal.hide();
+        
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Network error processing payment',
+                icon: 'error',
+                confirmButtonColor: '#dc3545'
+            });
+        } else {
+            alert('Network error processing payment');
+        }
+    });
+}
+
+/**
+ * Open penalty waiver modal
+ */
+function openPenaltyWaiverModal(penaltyId) {
+    const penalty = currentPenalties.find(p => p.id === penaltyId);
+    
+    if (!penalty) {
+        alert('Penalty not found');
+        return;
+    }
+    
+    // Populate modal
+    document.getElementById('waiverPenaltyId').value = penaltyId;
+    
+    document.getElementById('waiverPenaltyInfo').innerHTML = `
+        <div class="card border-warning">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Due Date:</strong> ${formatDate(penalty.due_date)}<br>
+                        <strong>Days Overdue:</strong> ${penalty.days_overdue} days<br>
+                        <strong>Expected Amount:</strong> KSh ${formatNumber(penalty.expected_amount)}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Penalty Rate:</strong> ${penalty.penalty_rate}%<br>
+                        <strong>Penalty Amount:</strong> KSh ${formatNumber(penalty.penalty_amount)}<br>
+                        <strong>Outstanding:</strong> KSh ${formatNumber(penalty.penalty_amount - penalty.amount_paid)}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('penaltyWaiverModal'));
+    modal.show();
+}
+
+/**
+ * Process penalty waiver
+ */
+function processPenaltyWaiver() {
+    const form = document.getElementById('penaltyWaiverForm');
+    const formData = new FormData(form);
+    
+    // Validation
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    // Show loading
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Processing Waiver...',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    }
+    
+    const penaltyId = formData.get('penalty_id');
+    
+    fetch(`/penalties/${penaltyId}/waive`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({
+            reason: formData.get('reason')
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Hide modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('penaltyWaiverModal'));
+        modal.hide();
+        
+        if (data.success) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Success!',
+                    text: 'Penalty waived successfully',
+                    icon: 'success',
+                    confirmButtonColor: '#28a745'
+                }).then(() => {
+                    loadPenalties(); // Reload penalties
+                });
+            } else {
+                alert('Penalty waived successfully');
+                loadPenalties();
+            }
+        } else {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Error!',
+                    text: data.message || 'Failed to waive penalty',
+                    icon: 'error',
+                    confirmButtonColor: '#dc3545'
+                });
+            } else {
+                alert('Error: ' + (data.message || 'Failed to waive penalty'));
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error waiving penalty:', error);
+        // Hide modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('penaltyWaiverModal'));
+        modal.hide();
+        
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Network error waiving penalty',
+                icon: 'error',
+                confirmButtonColor: '#dc3545'
+            });
+        } else {
+            alert('Network error waiving penalty');
+        }
+    });
+}
+
+/**
+ * Refresh penalties
+ */
+function refreshPenalties() {
+    loadPenalties();
+}
+
+/**
+ * View penalty details
+ */
+function viewPenaltyDetails(penaltyId) {
+    const penalty = currentPenalties.find(p => p.id === penaltyId);
+    
+    if (!penalty) {
+        alert('Penalty not found');
+        return;
+    }
+    
+    const outstanding = penalty.penalty_amount - penalty.amount_paid;
+    
+    let detailsHtml = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Payment Schedule Details</h6>
+                <p><strong>Due Date:</strong> ${formatDate(penalty.due_date)}</p>
+                <p><strong>Days Overdue:</strong> ${penalty.days_overdue} days</p>
+                <p><strong>Expected Amount:</strong> KSh ${formatNumber(penalty.expected_amount)}</p>
+            </div>
+            <div class="col-md-6">
+                <h6>Penalty Details</h6>
+                <p><strong>Penalty Rate:</strong> ${penalty.penalty_rate}%</p>
+                <p><strong>Penalty Amount:</strong> KSh ${formatNumber(penalty.penalty_amount)}</p>
+                <p><strong>Amount Paid:</strong> KSh ${formatNumber(penalty.amount_paid)}</p>
+                <p><strong>Outstanding:</strong> <span class="${outstanding > 0 ? 'text-danger' : 'text-success'}">KSh ${formatNumber(outstanding)}</span></p>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-12">
+                <h6>Status Information</h6>
+                <p><strong>Status:</strong> ${getPenaltyStatusBadge(penalty.status)}</p>
+                <p><strong>Created:</strong> ${formatDateTime(penalty.created_at)}</p>
+                ${penalty.date_paid ? `<p><strong>Date Paid:</strong> ${formatDate(penalty.date_paid)}</p>` : ''}
+                ${penalty.waived_at ? `<p><strong>Date Waived:</strong> ${formatDateTime(penalty.waived_at)}</p>` : ''}
+                ${penalty.waiver_reason ? `<p><strong>Waiver Reason:</strong> ${penalty.waiver_reason}</p>` : ''}
+                ${penalty.notes ? `<p><strong>Notes:</strong> ${penalty.notes}</p>` : ''}
+            </div>
+        </div>
+    `;
+    
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Penalty Details',
+            html: detailsHtml,
+            icon: 'info',
+            width: 600,
+            confirmButtonColor: '#007bff'
+        });
+    } else {
+        // Fallback for browsers without SweetAlert
+        const detailsWindow = window.open('', '_blank', 'width=600,height=400');
+        detailsWindow.document.write(`
+            <html>
+                <head>
+                    <title>Penalty Details</title>
+                    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+                </head>
+                <body class="p-3">
+                    <h4>Penalty Details</h4>
+                    ${detailsHtml}
+                    <button onclick="window.close()" class="btn btn-secondary mt-3">Close</button>
+                </body>
+            </html>
+        `);
+    }
+}
+
+/**
+ * Helper functions for formatting
+ */
+function formatNumber(number) {
+    return new Intl.NumberFormat('en-KE').format(number || 0);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-GB');
+}
+
+function formatDateTime(dateTimeString) {
+    if (!dateTimeString) return '-';
+    return new Date(dateTimeString).toLocaleString('en-GB');
+}
+</script>
+
+<!-- 7. CSS STYLES FOR PENALTIES -->
+<style>
+.penalty-summary-card {
+    border-left: 4px solid #ffc107;
+}
+
+.penalty-status-pending {
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+.penalty-status-paid {
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+.penalty-status-waived {
+    background-color: rgba(23, 162, 184, 0.1);
+}
+
+.penalty-actions {
+    white-space: nowrap;
+}
+
+.penalty-amount {
+    font-weight: 600;
+}
+
+.penalty-overdue-badge {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .penalty-actions .btn {
+        margin-bottom: 2px;
+    }
+    
+    .penalty-summary-card .col-md-3 {
+        margin-bottom: 15px;
+    }
+}
+</style>
                 <!-- Payment Schedule Tab -->
                 <div class="tab-pane fade" id="payment-schedule" role="tabpanel">
                     <div class="d-flex justify-content-between align-items-center mb-3">

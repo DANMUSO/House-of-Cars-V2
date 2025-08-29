@@ -105,7 +105,15 @@ Route::get('/proxy-image', function(Request $request) {
     }
 })->name('proxy.image');
 Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Suppport-Staff,HR,General-Manager'])->group(function () {
-         // Leave Applications Routes
+       //Penalties
+       Route::prefix('hire-purchase')->group(function () {
+            Route::get('{id}/penalties', [HirePurchasesController::class, 'getPenalties'])->name('hire-purchase.penalties');
+            Route::post('{id}/penalties/calculate', [HirePurchasesController::class, 'calculatePenalties'])->name('hire-purchase.penalties.calculate');
+            Route::put('penalties/{penaltyId}/waive', [HirePurchasesController::class, 'waivePenalty'])->name('penalties.waive');
+            Route::post('penalties/{penaltyId}/pay', [HirePurchasesController::class, 'payPenalty'])->name('penalties.pay');
+        });  
+    
+    // Leave Applications Routes
     Route::prefix('leave-applications')->name('leave-applications.')->group(function () {
         
         // Store new leave application (AJAX)

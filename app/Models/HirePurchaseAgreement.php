@@ -243,4 +243,24 @@ public function getReschedulingCountAttribute()
 
         return $payment;
     }
+    public function penalties()
+{
+    return $this->hasMany(Penalty::class, 'agreement_id')
+                ->where('agreement_type', 'hire_purchase');
+}
+
+public function pendingPenalties()
+{
+    return $this->penalties()->pending();
+}
+
+public function getTotalPenaltiesAttribute()
+{
+    return $this->penalties()->sum('penalty_amount');
+}
+
+public function getOutstandingPenaltiesAttribute()
+{
+    return $this->penalties()->pending()->sum('penalty_amount');
+}
 }

@@ -243,4 +243,9 @@ public function getReschedulingCountAttribute()
 
         return $payment;
     }
+    public function penalties()
+{
+    return $this->hasMany(Penalty::class, 'agreement_id')
+                ->where('agreement_type', 'gentleman');
+}
 }
