@@ -1243,11 +1243,11 @@
                                             <div class="header">
                                                 <div class="company-info">
                                                     <div class="company-details">
-                                                        <h4>House of Cars </h4>
-                                                        <h6 style="color:white">Jabavu Lane, Hurlingham<br>
-                                                       P.O Box 9215 - 00100, Nairobi - Kenya<br>
-                                                        Tel No: +254 700 000 000<br>
-                                                        Email: info@kelmercars.co.ke</h6>
+                                                           <h4>Precision Auto Group</h4>
+                                                        <h6 style="color:white">Delta Corner Annex, Nairobi Garage Ring Rd Westlands Ln, Nairobi<br>
+                                                         P.O Box 1115 - 00100, Nairobi - Kenya<br>
+                                                        Tel No: +254 703 894 372<br>
+                                                        Email: info@qloudpointsolutions.com</h6>
                                                     </div>
                                                     <div class="company-logo">
                                                         <div class="logo-placeholder">
@@ -1470,31 +1470,31 @@
                                                             <div class="dealer-info">GENERAL CONDITIONS</div>
                                                         <div class="conditions">
                                                             <div class="condition-item">
-                                                                <span class="condition-number">1.</span> KELMER'S HOUSE OF CARS LTD will take precautionary security and safety measures to safeguard customers' property but KELMER'S HOUSE OF CARS LTD will not be responsible for damage or loss of any vehicle while in KELMER'S HOUSE OF CARS LTD premises.
+                                                                <span class="condition-number">1.</span> Precision Auto Group will take precautionary security and safety measures to safeguard customers' property but Precision Auto Group will not be responsible for damage or loss of any vehicle while in Precision Auto Group premises.
                                                             </div>
 
                                                             <div class="condition-item">
-                                                                <span class="condition-number">2.</span> KELMER'S HOUSE OF CARS LTD will receive all payments on behalf of customer and remit the same to customer.
+                                                                <span class="condition-number">2.</span> Precision Auto Group will receive all payments on behalf of customer and remit the same to customer.
                                                             </div>
 
                                                             <div class="condition-item">
-                                                                <span class="condition-number">3.</span> KELMER'S HOUSE OF CARS LTD will acknowledge receipt of all vehicle and any extra such as tinted.
+                                                                <span class="condition-number">3.</span> Precision Auto Group will acknowledge receipt of all vehicle and any extra such as tinted.
                                                             </div>
 
                                                             <div class="condition-item">
-                                                                <span class="condition-number">4.</span> The Owner/Agent of the car indemnifies KELMER'S HOUSE OF CARS LTD from any legal process for the receipt of the vehicles at the showroom & confirm that all taxes have been paid.
+                                                                <span class="condition-number">4.</span> The Owner/Agent of the car indemnifies Precision Auto Group from any legal process for the receipt of the vehicles at the showroom & confirm that all taxes have been paid.
                                                             </div>
 
                                                             <div class="condition-item">
-                                                                <span class="condition-number">5.</span> KELMER'S HOUSE OF CARS LTD will advertise the vehicle in the media of their choice.
+                                                                <span class="condition-number">5.</span> Precision Auto Group will advertise the vehicle in the media of their choice.
                                                             </div>
 
                                                             <div class="condition-item">
-                                                                <span class="condition-number">6.</span> In the customer's vehicle with less or minor defects and in our history and if made difficult to avail vehicle, KELMER'S HOUSE OF CARS LTD reserves the right to rectify such minor defects and recover the same from the customer provided that he shall not exceed Ksh 10,000 (Ten Thousand shillings only).
+                                                                <span class="condition-number">6.</span> In the customer's vehicle with less or minor defects and in our history and if made difficult to avail vehicle, Precision Auto Group reserves the right to rectify such minor defects and recover the same from the customer provided that he shall not exceed Ksh 10,000 (Ten Thousand shillings only).
                                                             </div>
 
                                                             <div class="condition-item">
-                                                                <span class="condition-number">7.</span> If the vehicle, while in the process of selling within KELMER'S HOUSE OF CARS LTD receives a serious commitment from a potential buyer, the Customer (Car Owner/Agent) cannot withdraw the vehicle from KELMER'S HOUSE OF CARS LTD premises and the buyer will be given a preference. 
+                                                                <span class="condition-number">7.</span> If the vehicle, while in the process of selling within Precision Auto Group receives a serious commitment from a potential buyer, the Customer (Car Owner/Agent) cannot withdraw the vehicle from Precision Auto Group premises and the buyer will be given a preference. 
                                                                 A penalty of Ksh 10,000 (£25) of proposed value whichever is higher will be charged for any breach of this condition.
                                                                 
                                                                 
@@ -1523,7 +1523,7 @@
                                                                 <div class="signature-line"></div>
                                                                 <div class="label">Sign:</div>
                                                                 <div class="signature-line"></div>
-                                                                <div class="dealer-info">Kelmer's House of Cars</div>
+                                                                <div class="dealer-info">Precision Auto Group</div>
                                                             </div>
 
                                                             <div class="signature-box">
