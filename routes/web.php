@@ -214,13 +214,26 @@ Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Sa
         Route::post('/{id}/approve', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'approveAgreement'])->name('approve');
     });
 
-    // Add these to your hire-purchase Penalty routes group
-    Route::get('/hire-purchase/{agreementId}/penalties', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'getPenalties']);
-    Route::post('/hire-purchase/{agreementId}/penalties/calculate', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'calculatePenalties']);
-    Route::post('/penalties/{penaltyId}/pay', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'payPenalty']);
-    Route::put('/penalties/{penaltyId}/waive', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'waivePenalty']);
-    // Fleet Payment Routes
-    Route::post('/fleet-payments/{id}/confirm', [App\Http\Controllers\Dashboard\FleetPaymentController::class, 'confirm'])->name('fleet_payments.confirm');
+    // Hire Purchase Penalty Routes
+Route::prefix('hire-purchase')->group(function () {
+    Route::get('/{agreementId}/penalties', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'getPenalties']);
+    Route::post('/{agreementId}/penalties/calculate', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'calculatePenalties']);
+    Route::get('/{agreementId}/penalties/breakdown', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'getPenaltyBreakdown']);
+});
+
+// Gentleman Agreement Penalty Routes
+Route::prefix('gentleman-agreement')->group(function () {
+    Route::get('/{agreementId}/penalties', [App\Http\Controllers\Dashboard\GentlemanAgreementController::class, 'getPenalties']);
+    Route::post('/{agreementId}/penalties/calculate', [App\Http\Controllers\Dashboard\GentlemanAgreementController::class, 'calculatePenalties']);
+    Route::get('/{agreementId}/penalties/breakdown', [App\Http\Controllers\Dashboard\GentlemanAgreementController::class, 'getPenaltyBreakdown']);
+});
+
+// Shared Penalty Payment Routes (can work for both)
+Route::post('/penalties/{penaltyId}/pay', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'payPenalty']);
+Route::put('/penalties/{penaltyId}/waive', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'waivePenalty']);// Fleet Payment Routes
+   
+//Fleet Agreement
+Route::post('/fleet-payments/{id}/confirm', [App\Http\Controllers\Dashboard\FleetPaymentController::class, 'confirm'])->name('fleet_payments.confirm');
     Route::get('/fleet-payments/{id}', [App\Http\Controllers\Dashboard\FleetPaymentController::class, 'show'])->name('fleet_payments.show');
     Route::get('/leads', [App\Http\Controllers\Dashboard\LeadsController::class, 'index'])->name('leads');
     Route::get('/sales', [App\Http\Controllers\Dashboard\SalesController::class, 'sales'])->name('sales');

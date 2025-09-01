@@ -652,16 +652,16 @@ public function getPenalties($agreementId)
         $penaltyService = app(PenaltyService::class);
         
         // Calculate cumulative penalties
-        $result = $penaltyService->calculatePenaltiesForAgreement('hire_purchase', $agreementId);
+        $result = $penaltyService->calculatePenaltiesForAgreement('gentleman_agreement', $agreementId);
         
         // Get penalties ordered by sequence
-        $penalties = Penalty::forAgreement('hire_purchase', $agreementId)
+        $penalties = Penalty::forAgreement('gentleman_agreement', $agreementId)
             ->with('paymentSchedule')
             ->orderBy('penalty_sequence', 'asc')
             ->get();
             
         // Get summary
-        $summary = $penaltyService->getPenaltySummary('hire_purchase', $agreementId);
+        $summary = $penaltyService->getPenaltySummary('gentleman_agreement', $agreementId);
         
         return response()->json([
             'success' => true,
@@ -685,7 +685,7 @@ public function calculatePenalties(Request $request, $agreementId)
 {
     try {
         $penaltyService = app(PenaltyService::class);
-        $result = $penaltyService->calculatePenaltiesForAgreement('hire_purchase', $agreementId);
+        $result = $penaltyService->calculatePenaltiesForAgreement('gentleman_agreement', $agreementId);
         
         return response()->json([
             'success' => true,
@@ -702,7 +702,7 @@ public function calculatePenalties(Request $request, $agreementId)
     }
 }
 /**
- * Get penalty calculation breakdown
+ * Get penalty calculation breakdown for Gentleman Agreement
  */
 public function getPenaltyBreakdown($agreementId)
 {
@@ -1279,6 +1279,7 @@ public function waivePenalty(Request $request, $penaltyId)
     /**
      * Generate payment receipt
      */
+    
     public function generateReceipt($paymentId)
     {
         $payment = DB::table('hire_purchase_payments as hp')

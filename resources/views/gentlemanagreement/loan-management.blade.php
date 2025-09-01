@@ -169,69 +169,47 @@
                 </div>
             </div>
 
-            @php
-    // Find the next payment due chronologically (not by status)
-    $nextDueInstallment = null;
-    $today = \Carbon\Carbon::today();
+@php
+// Simplified and more reliable next payment calculation
+$nextDueInstallment = null;
+$today = \Carbon\Carbon::today();
+
+if($agreement->paymentSchedule && $agreement->paymentSchedule->count() > 0) {
+    // Get the first unpaid installment (pending, overdue, or partial)
+    $nextDueInstallment = $agreement->paymentSchedule
+        ->whereIn('status', ['pending', 'overdue', 'partial'])
+        ->sortBy('due_date')
+        ->first();
     
-    if($agreement->paymentSchedule && $agreement->paymentSchedule->count() > 0) {
-        // Method 1: Get the next payment due by date (including today and future dates)
-        $nextDueInstallment = $agreement->paymentSchedule
-            ->filter(function($schedule) use ($today) {
-                // Parse the due date and check if it's today or in the future
-                try {
-                    $dueDate = \Carbon\Carbon::parse($schedule->due_date);
-                    $remainingAmount = ($schedule->total_amount ?? 0) - ($schedule->amount_paid ?? 0);
-                    
-                    // Include this payment if:
-                    // 1. It has a remaining balance OR
-                    // 2. It's not marked as 'paid' or 'completed'
-                    return $remainingAmount > 0 || !in_array($schedule->status ?? '', ['paid', 'completed']);
-                } catch (Exception $e) {
-                    return false;
-                }
-            })
-            ->sortBy('due_date')
-            ->first();
-            
-        // Method 2: If no unpaid found, get the very next payment by date regardless of status
-        if (!$nextDueInstallment) {
-            $nextDueInstallment = $agreement->paymentSchedule
-                ->sortBy('due_date')
-                ->first();
+    // If no unpaid installments, check if all are paid (loan completed)
+    if (!$nextDueInstallment) {
+        $totalInstallments = $agreement->paymentSchedule->count();
+        $paidInstallments = $agreement->paymentSchedule->where('status', 'paid')->count();
+        
+        // If all are paid, loan is complete
+        if ($totalInstallments === $paidInstallments) {
+            $nextDueInstallment = null; // Loan is complete
         }
     }
-@endphp
+}
 
-<!-- Next Payment Due Alert -->
-@if($nextDueInstallment)
-    @php
-        // Parse the due date
-        try {
-            $dueDate = \Carbon\Carbon::parse($nextDueInstallment->due_date);
-        } catch (Exception $e) {
-            $dueDate = \Carbon\Carbon::now()->addMonth();
-        }
+// Calculate alert properties if we have a next payment
+$alertData = null;
+if ($nextDueInstallment) {
+    try {
+        $dueDate = \Carbon\Carbon::parse($nextDueInstallment->due_date);
+        $daysUntilDue = $today->diffInDays($dueDate, false); // false = can be negative
         
-        $today = \Carbon\Carbon::today();
-        $daysUntilDue = $today->diffInDays($dueDate, false);
-        
-        // Calculate remaining amount
-        $totalAmount = $nextDueInstallment->total_amount ?? $agreement->monthly_payment;
+        $totalAmount = $nextDueInstallment->total_amount ?? $agreement->monthly_payment ?? 0;
         $amountPaid = $nextDueInstallment->amount_paid ?? 0;
         $remainingAmount = max($totalAmount - $amountPaid, 0);
         
-        // If fully paid, show total amount instead
-        if ($remainingAmount == 0) {
-            $remainingAmount = $totalAmount;
-        }
-        
-        // Determine alert styling
+        // Determine alert styling based on days until due
         if ($daysUntilDue < 0) {
             $alertType = 'danger';
             $badgeType = 'danger';
             $icon = 'exclamation-triangle';
-            $statusText = abs($daysUntilDue) . ' days overdue';
+            $statusText = abs($daysUntilDue) . ' day' . (abs($daysUntilDue) == 1 ? '' : 's') . ' overdue';
         } elseif ($daysUntilDue == 0) {
             $alertType = 'warning';
             $badgeType = 'warning';
@@ -246,35 +224,55 @@
             $alertType = 'info';
             $badgeType = 'info';
             $icon = 'calendar-alt';
-            $statusText = 'Due in ' . $daysUntilDue . ' days';
+            $statusText = 'Due in ' . $daysUntilDue . ' day' . ($daysUntilDue == 1 ? '' : 's');
         }
-    @endphp
-    
-    <div class="alert alert-{{ $alertType }} mt-3">
+        
+        $alertData = [
+            'dueDate' => $dueDate,
+            'daysUntilDue' => $daysUntilDue,
+            'remainingAmount' => $remainingAmount,
+            'amountPaid' => $amountPaid,
+            'alertType' => $alertType,
+            'badgeType' => $badgeType,
+            'icon' => $icon,
+            'statusText' => $statusText,
+            'installmentNumber' => $nextDueInstallment->installment_number ?? 'N/A'
+        ];
+        
+    } catch (\Exception $e) {
+        \Log::error('Error calculating next payment alert: ' . $e->getMessage());
+        $alertData = null;
+    }
+}
+@endphp
+
+<!-- Next Payment Due Alert -->
+@if($alertData)
+    <div class="alert alert-{{ $alertData['alertType'] }} mt-3">
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <h6 class="alert-heading mb-1">
-                    <i class="fas fa-{{ $icon }}"></i>
-                    Next Payment Due
+                    <i class="fas fa-{{ $alertData['icon'] }}"></i>
+                    Next Payment Due (Installment #{{ $alertData['installmentNumber'] }})
                 </h6>
                 <p class="mb-0">
-                    <strong>Amount:</strong> KSh {{ number_format($remainingAmount, 2) }} | 
-                    <strong>Due:</strong> {{ $dueDate->format('M d, Y') }}
-                    <span class="badge bg-{{ $badgeType }} ms-2">{{ $statusText }}</span>
+                    <strong>Amount:</strong> KSh {{ number_format($alertData['remainingAmount'], 0) }} | 
+                    <strong>Due:</strong> {{ $alertData['dueDate']->format('M d, Y') }}
+                    <span class="badge bg-{{ $alertData['badgeType'] }} ms-2">{{ $alertData['statusText'] }}</span>
                 </p>
                 
-                @if($amountPaid > 0)
-                    <small class="">
+                @if($alertData['amountPaid'] > 0)
+                    <small class="text-muted">
                         <i class="fas fa-info-circle"></i>
-                        Partial payment: KSh {{ number_format($amountPaid, 2) }} already paid
+                        Partial payment: KSh {{ number_format($alertData['amountPaid'], 0) }} already paid
                     </small>
                 @endif
             </div>
             @if($agreement->status !== 'completed' && in_array(Auth::user()->role ?? 'Guest', ['Accountant','Managing-Director']))
-                <button class="btn btn-{{ $daysUntilDue < 0 ? 'danger' : 'primary' }}" 
+                <button class="btn btn-{{ $alertData['daysUntilDue'] < 0 ? 'danger' : 'primary' }}" 
                         data-bs-toggle="modal" 
                         data-bs-target="#recordPaymentModal"
-                        onclick="prefillPaymentAmount({{ $remainingAmount }})">
+                        onclick="prefillPaymentAmount({{ $alertData['remainingAmount'] }})">
                     <i class="fas fa-credit-card"></i> Pay Now
                 </button>
             @endif
@@ -290,8 +288,17 @@
             </div>
         </div>
     </div>
+@elseif($agreement->paymentSchedule && $agreement->paymentSchedule->count() > 0)
+    <div class="alert alert-success mt-3">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-check-circle fa-2x me-3"></i>
+            <div>
+                <h6 class="alert-heading mb-1">All Payments Up to Date!</h6>
+                <p class="mb-0">No pending payments at this time.</p>
+            </div>
+        </div>
+    </div>
 @else
-    <!-- Show debug info if no payments found -->
     <div class="alert alert-warning mt-3">
         <h6 class="alert-heading mb-1">
             <i class="fas fa-exclamation-triangle"></i>
@@ -299,9 +306,6 @@
         </h6>
         <p class="mb-0">
             Payment schedule needs to be generated for this agreement.
-            @if($agreement->paymentSchedule)
-                <br><small class="text-muted">Found {{ $agreement->paymentSchedule->count() }} schedule entries, but none qualify as next payment.</small>
-            @endif
         </p>
     </div>
 @endif
@@ -309,12 +313,22 @@
 <script>
 function prefillPaymentAmount(amount) {
     const paymentInput = document.querySelector('input[name="payment_amount"]');
-    if (paymentInput) {
-        paymentInput.value = amount;
+    const maxAmount = {{ $actualOutstanding }};
+    
+    if (paymentInput && amount > 0) {
+        const finalAmount = Math.min(amount, maxAmount);
+        paymentInput.value = finalAmount;
         paymentInput.dispatchEvent(new Event('input'));
     }
 }
-
+$('#recordPaymentModal').on('show.bs.modal', function () {
+    const paymentInput = document.getElementById('paymentAmount');
+    const suggestedAmount = Math.min({{ $agreement->monthly_payment }}, {{ $actualOutstanding }});
+    
+    if (paymentInput && !paymentInput.value) {
+        paymentInput.value = suggestedAmount;
+    }
+});
 // Debug function to see what's in the payment schedule
 function debugNextPayment() {
     console.log('=== Next Payment Debug ===');
@@ -890,7 +904,7 @@ function loadPenalties() {
     
     showPenaltiesLoading();
     
-    fetch(`/hire-purchase/${agreementId}/penalties`)
+    fetch(`/gentleman-agreement/${agreementId}/penalties`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -1104,7 +1118,7 @@ function performPenaltyCalculation(agreementId) {
         });
     }
     
-    fetch(`/hire-purchase/${agreementId}/penalties/calculate`, {
+    fetch(`/gentleman-agreement/${agreementId}/penalties/calculate`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -2464,18 +2478,18 @@ window['showUploadSection' + {{ $agreement->id }}] = function() {
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #007bff;">
                         <!-- Company Details -->
                         <div style="flex: 1; padding-right: 20px;">
-                            <h2 style="font-size: 18px; font-weight: bold; margin: 0 0 8px 0; color: #2c3e50;">Precision Auto Group</h2>
+                            <h2 style="font-size: 18px; font-weight: bold; margin: 0 0 8px 0; color: #2c3e50;">Kelmer's House of Cars LTD</h2>
                             <div style="font-size: 12px; line-height: 1.4; color: #555;">
-                                <div style="margin-bottom: 2px;">Delta Corner Annex, Nairobi Garage Ring Rd Westlands Ln, Nairobi</div>
-                                <div style="margin-bottom: 2px;">P.O Box 1015 - 00100, Nairobi - Kenya</div>
-                                <div style="margin: 4px 0 2px 0;"><strong>Email:</strong> info@qloudpointsolutions.com</div>
-                                <div><strong>Phone:</strong> +254 703 894 372</div>
+                                <div style="margin-bottom: 2px;">Jabavu Lane, Hurlingham</div>
+                                <div style="margin-bottom: 2px;">P.O Box 9215 - 00100, Nairobi - Kenya</div>
+                                <div style="margin: 4px 0 2px 0;"><strong>Email:</strong> info@kelmercars.co.ke</div>
+                                <div><strong>Phone:</strong> +254 700 000 000</div>
                             </div>
                         </div>
                         
                         <!-- Logo -->
                         <div style="flex: 0 0 auto; text-align: center;">
-                            <img src="{{ asset('dashboardv1/assets/images/houseofcars.png') }}" alt="Vehicle Dealership Management System" style="height: 70px; width: auto;">
+                            <img src="{{ asset('dashboardv1/assets/images/houseofcars.png') }}" alt="Kelmer's House of Cars" style="height: 70px; width: auto;">
                         </div>
                     </div>
 
@@ -2581,7 +2595,7 @@ window['showUploadSection' + {{ $agreement->id }}] = function() {
                         </div>
                         <div style="text-align: center;">
                             <div style="height: 50px; border-bottom: 2px solid #495057; margin-bottom: 8px;"></div>
-                            <div style="font-size: 12px; font-weight: bold; color: #495057;">For Precision Auto Group</div>
+                            <div style="font-size: 12px; font-weight: bold; color: #495057;">For Kelmer's House of Cars</div>
                         </div>
                     </div>
 
@@ -2589,7 +2603,7 @@ window['showUploadSection' + {{ $agreement->id }}] = function() {
                     <div style="text-align: center; padding: 12px; background: #f8f9fa; border-radius: 6px; border-top: 2px solid #007bff;">
                         <div style="font-size: 11px; color: #6c757d; margin-bottom: 3px;" id="generatedDateTime"></div>
                         <div style="font-size: 10px; color: #6c757d; font-style: italic;">
-                            Official Receipt from Precision Auto Group
+                            Official Receipt from Kelmer's House of Cars Limited
                         </div>
                     </div>
                 </div>
@@ -2606,6 +2620,7 @@ window['showUploadSection' + {{ $agreement->id }}] = function() {
     </div>
 </div>
 <!-- Record Payment Modal -->
+<!-- Record Payment Modal -->
 <div class="modal fade" id="recordPaymentModal" tabindex="-1" aria-labelledby="recordPaymentModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -2621,16 +2636,16 @@ window['showUploadSection' + {{ $agreement->id }}] = function() {
                     <div class="alert alert-info">
                         <div class="d-flex justify-content-between">
                             <span><strong>Suggested Payment:</strong></span>
-                            <span><strong>KSh {{ number_format($agreement->monthly_payment, 2) }}</strong></span>
+                            <span><strong>KSh {{ number_format($agreement->monthly_payment, 0) }}</strong></span>
                         </div>
                         <div class="d-flex justify-content-between">
-                            <span>Outstanding Balance:</span>
-                            <span><strong>KSh {{ number_format($actualOutstanding, 2) }}</strong></span>
+                            <span><strong>Outstanding Balance:</strong></span>
+                            <span><strong>KSh {{ number_format($actualOutstanding, 0) }}</strong></span>
                         </div>
                         @if($nextDueInstallment)
                             <div class="mt-2 pt-2 border-top">
                                 <small><strong>Next Due:</strong> {{ \Carbon\Carbon::parse($nextDueInstallment->due_date)->format('M d, Y') }} 
-                                - KSh {{ number_format($nextDueInstallment->total_amount, 2) }}</small>
+                                - KSh {{ number_format($nextDueInstallment->total_amount - ($nextDueInstallment->amount_paid ?? 0), 0) }}</small>
                             </div>
                         @endif
                         <div class="mt-2">
@@ -2644,37 +2659,43 @@ window['showUploadSection' + {{ $agreement->id }}] = function() {
                                class="form-control" 
                                name="payment_amount" 
                                id="paymentAmount"
-                               value="{{ $agreement->monthly_payment }}" 
+                               value="{{ min($agreement->monthly_payment, $actualOutstanding) }}" 
                                required 
                                min="1" 
                                max="{{ $actualOutstanding }}"
                                step="0.01">
-                        <small class="text-muted">Maximum: KSh {{ number_format($actualOutstanding, 2) }}</small>
+                        <small class="text-muted">Maximum: KSh {{ number_format($actualOutstanding, 0) }}</small>
                         
                         <!-- Quick Amount Buttons -->
                         <div class="mt-2">
                             <small class="text-muted d-block mb-1">Quick amounts:</small>
                             <div class="btn-group btn-group-sm" role="group">
+                                @if($agreement->monthly_payment <= $actualOutstanding)
                                 <button type="button" class="btn btn-outline-primary" onclick="setQuickAmount({{ $agreement->monthly_payment }})">
                                     Monthly ({{ number_format($agreement->monthly_payment, 0) }})
                                 </button>
-                                @if($actualOutstanding > $agreement->monthly_payment * 2)
-                                <button type="button" class="btn btn-outline-info" onclick="setQuickAmount({{ $agreement->monthly_payment * 2 }})">
-                                    2 Months ({{ number_format($agreement->monthly_payment * 2, 0) }})
+                                @endif
+                                
+                                @if($actualOutstanding >= $agreement->monthly_payment * 2)
+                                <button type="button" class="btn btn-outline-info" onclick="setQuickAmount({{ min($agreement->monthly_payment * 2, $actualOutstanding) }})">
+                                    2 Months ({{ number_format(min($agreement->monthly_payment * 2, $actualOutstanding), 0) }})
                                 </button>
                                 @endif
-                                @if($actualOutstanding > $agreement->monthly_payment * 3)
-                                <button type="button" class="btn btn-outline-warning" onclick="setQuickAmount({{ $agreement->monthly_payment * 3 }})">
-                                    3 Months ({{ number_format($agreement->monthly_payment * 3, 0) }})
+                                
+                                @if($actualOutstanding >= $agreement->monthly_payment * 3)
+                                <button type="button" class="btn btn-outline-warning" onclick="setQuickAmount({{ min($agreement->monthly_payment * 3, $actualOutstanding) }})">
+                                    3 Months ({{ number_format(min($agreement->monthly_payment * 3, $actualOutstanding), 0) }})
                                 </button>
                                 @endif
+                                
                                 <button type="button" class="btn btn-outline-success" onclick="setQuickAmount({{ $actualOutstanding }})">
-                                    Full Payment
+                                    Full Payment ({{ number_format($actualOutstanding, 0) }})
                                 </button>
                             </div>
                         </div>
                     </div>
                     
+                    <!-- Rest of the form remains the same -->
                     <div class="mb-3">
                         <label class="form-label">Payment Date *</label>
                         <input type="date" class="form-control" name="payment_date" value="{{ date('Y-m-d') }}" required>
@@ -2701,7 +2722,8 @@ window['showUploadSection' + {{ $agreement->id }}] = function() {
                         <label class="form-label">Notes (Optional)</label>
                         <textarea class="form-control" name="payment_notes" rows="2" placeholder="Additional notes about this payment"></textarea>
                     </div>
-                      @if(in_array(Auth::user()->role, ['Accountant','Managing-Director']))
+                    
+                    @if(in_array(Auth::user()->role, ['Accountant','Managing-Director']))
                     <button type="submit" class="btn btn-success w-100">
                         <i class="fas fa-save"></i> Record Payment
                     </button>
@@ -3013,7 +3035,16 @@ $.ajaxSetup({
 
 // Set quick payment amounts
 function setQuickAmount(amount) {
-    document.getElementById('paymentAmount').value = amount;
+    const paymentInput = document.getElementById('paymentAmount');
+    const maxAmount = {{ $actualOutstanding }};
+    
+    // Ensure amount doesn't exceed outstanding balance
+    const finalAmount = Math.min(amount, maxAmount);
+    
+    if (paymentInput) {
+        paymentInput.value = finalAmount;
+        paymentInput.dispatchEvent(new Event('input'));
+    }
 }
 
 // Quick payment function for payment schedule

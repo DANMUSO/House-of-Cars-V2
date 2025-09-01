@@ -1490,13 +1490,13 @@
                     <!-- Header Section -->
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #007bff;">
                         <!-- Company Details -->
-                         <div style="flex: 1; padding-right: 20px;">
-                            <h2 style="font-size: 18px; font-weight: bold; margin: 0 0 8px 0; color: #2c3e50;">Precision Auto Group</h2>
+                        <div style="flex: 1; padding-right: 20px;">
+                            <h2 style="font-size: 18px; font-weight: bold; margin: 0 0 8px 0; color: #2c3e50;">Kelmer's House of Cars LTD</h2>
                             <div style="font-size: 12px; line-height: 1.4; color: #555;">
-                                <div style="margin-bottom: 2px;">Delta Corner Annex, Nairobi Garage Ring Rd Westlands Ln, Nairobi</div>
-                                <div style="margin-bottom: 2px;">P.O Box 1015 - 00100, Nairobi - Kenya</div>
-                                <div style="margin: 4px 0 2px 0;"><strong>Email:</strong> info@qloudpointsolutions.com</div>
-                                <div><strong>Phone:</strong> +254 703 894 372</div>
+                                <div style="margin-bottom: 2px;">Jabavu Lane, Huringham</div>
+                                <div style="margin-bottom: 2px;">P.O Box 9215 - 00100, Nairobi - Kenya</div>
+                                <div style="margin: 4px 0 2px 0;"><strong>Email:</strong> info@kelmercars.co.ke</div>
+                                <div><strong>Phone:</strong> +254 700 000 000</div>
                             </div>
                         </div>
                         
@@ -1571,7 +1571,7 @@
                         </div>
                         <div style="text-align: center;">
                             <div style="height: 50px; border-bottom: 2px solid #495057; margin-bottom: 8px;"></div>
-                            <div style="font-size: 12px; font-weight: bold; color: #495057;">For Precision Auto Group</div>
+                            <div style="font-size: 12px; font-weight: bold; color: #495057;">For Kelmer's House of Cars</div>
                         </div>
                     </div>
 
@@ -1579,7 +1579,7 @@
                     <div style="text-align: center; padding: 12px; background: #f8f9fa; border-radius: 6px; border-top: 2px solid #007bff;">
                         <div style="font-size: 11px; color: #6c757d; margin-bottom: 3px;" id="generatedDateTime"></div>
                         <div style="font-size: 10px; color: #6c757d; font-style: italic;">
-                            Official Receipt from Precision Auto Group
+                            Official Receipt from Kelmer's House of Cars Limited
                         </div>
                     </div>
                 </div>
