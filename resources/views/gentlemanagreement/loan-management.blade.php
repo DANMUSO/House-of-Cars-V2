@@ -262,7 +262,7 @@ if ($nextDueInstallment) {
                 </p>
                 
                 @if($alertData['amountPaid'] > 0)
-                    <small class="text-muted">
+                    <small class="">
                         <i class="fas fa-info-circle"></i>
                         Partial payment: KSh {{ number_format($alertData['amountPaid'], 0) }} already paid
                     </small>
