@@ -490,118 +490,216 @@ public function storePayment(Request $request)
         Log::info('✅ Simple payment schedule generated successfully (NO INTEREST)');
     }
 
+/**
+ * Update Payment Schedule when payment is made - FIXED VERSION
+ */
+private function updatePaymentSchedule($agreementId, $paymentAmount, $paymentDate)
+{
+    try {
+        $remainingAmount = $paymentAmount;
+        
+        // Get unpaid installments in CHRONOLOGICAL ORDER by due date first
+        // This ensures we always pay the earliest due installment first
+        // regardless of whether it's partial, overdue, or pending
+        $paymentSchedules = PaymentSchedule::where('agreement_id', $agreementId)
+            ->whereIn('status', ['pending', 'partial', 'overdue'])
+            ->orderBy('due_date', 'asc') // PRIMARY: Chronological order (earliest due date first)
+            ->orderBy('installment_number', 'asc') // SECONDARY: Installment sequence as tiebreaker
+            ->get();
 
-    /**
-     * Update Payment Schedule when payment is made
-     */
-    private function updatePaymentSchedule($agreementId, $paymentAmount, $paymentDate)
-    {
-        try {
-            $remainingAmount = $paymentAmount;
-            
-            $paymentSchedules = PaymentSchedule::where('agreement_id', $agreementId)
-                ->whereIn('status', ['pending', 'partial', 'overdue'])
-                ->orderByRaw("
-                    CASE 
-                        WHEN status = 'overdue' THEN 1 
-                        WHEN status = 'partial' THEN 2 
-                        WHEN status = 'pending' THEN 3 
-                    END
-                ")
-                ->orderBy('due_date', 'asc')
-                ->get();
+        if ($paymentSchedules->isEmpty()) {
+            Log::info('No payment schedules found to update for agreement: ' . $agreementId);
+            return;
+        }
 
-            if ($paymentSchedules->isEmpty()) {
-                Log::info('No payment schedules found to update for agreement: ' . $agreementId);
-                return;
+        Log::info('Updating payment schedule for agreement: ' . $agreementId . ' with amount: ' . $paymentAmount);
+
+        foreach ($paymentSchedules as $schedule) {
+            if ($remainingAmount <= 0) {
+                break;
             }
 
-            Log::info('Updating payment schedule for agreement: ' . $agreementId . ' with amount: ' . $paymentAmount);
+            // Calculate how much is still owed on this installment
+            $currentPaid = $schedule->amount_paid ?? 0;
+            $amountDue = $schedule->total_amount - $currentPaid;
+            
+            if ($amountDue <= 0) {
+                continue; // Skip if already fully paid
+            }
 
-            foreach ($paymentSchedules as $schedule) {
-                if ($remainingAmount <= 0) {
-                    break;
-                }
+            Log::info('Processing installment ' . $schedule->installment_number . 
+                      ' (Due: ' . $schedule->due_date . ', Status: ' . $schedule->status . 
+                      ', Amount Due: ' . $amountDue . ', Already Paid: ' . $currentPaid . ')');
 
-                $currentPaid = $schedule->amount_paid ?? 0;
-                $amountDue = $schedule->total_amount - $currentPaid;
+            if ($remainingAmount >= $amountDue) {
+                // Fully pay this installment
+                $schedule->update([
+                    'amount_paid' => $schedule->total_amount,
+                    'status' => 'paid',
+                    'date_paid' => $paymentDate,
+                    'days_overdue' => 0 // Reset overdue days when paid
+                ]);
                 
-                if ($amountDue <= 0) {
-                    continue;
+                $remainingAmount -= $amountDue;
+                
+                Log::info('Fully paid installment ' . $schedule->installment_number . 
+                          ' for agreement ' . $agreementId . '. Remaining amount: ' . $remainingAmount);
+                
+            } else {
+                // Partially pay this installment
+                $newAmountPaid = $currentPaid + $remainingAmount;
+                
+                // Determine new status based on current status and due date
+                $today = now()->toDateString();
+                $newStatus = 'partial';
+                
+                // If installment is overdue (due date passed), keep it as overdue
+                // even if it's partially paid
+                if ($schedule->due_date < $today) {
+                    $newStatus = 'overdue';
                 }
-
-                if ($remainingAmount >= $amountDue) {
-                    // Fully pay this installment
-                    $schedule->update([
-                        'amount_paid' => $schedule->total_amount,
-                        'status' => 'paid',
-                        'date_paid' => $paymentDate,
-                        'days_overdue' => 0
-                    ]);
-                    
-                    $remainingAmount -= $amountDue;
-                    
-                    Log::info('Fully paid installment ' . $schedule->installment_number . ' for agreement ' . $agreementId);
-                    
-                } else {
-                    // Partially pay this installment
-                    $newAmountPaid = $currentPaid + $remainingAmount;
-                    $newStatus = 'partial';
-                    
-                    if ($schedule->status === 'overdue') {
-                        $newStatus = 'overdue';
-                    }
-                    
-                    $schedule->update([
-                        'amount_paid' => $newAmountPaid,
-                        'status' => $newStatus,
-                        'date_paid' => $paymentDate
-                    ]);
-                    
-                    Log::info('Partially paid installment ' . $schedule->installment_number . ' for agreement ' . $agreementId . '. Amount: ' . $remainingAmount);
-                    
-                    $remainingAmount = 0;
+                
+                $updateData = [
+                    'amount_paid' => $newAmountPaid,
+                    'status' => $newStatus,
+                    'date_paid' => $paymentDate
+                ];
+                
+                // Calculate days overdue if applicable
+                if ($newStatus === 'overdue') {
+                    $dueDate = Carbon::parse($schedule->due_date);
+                    $todayDate = Carbon::parse($today);
+                    $updateData['days_overdue'] = $dueDate->diffInDays($todayDate);
                 }
+                
+                $schedule->update($updateData);
+                
+                Log::info('Partially paid installment ' . $schedule->installment_number . 
+                          ' for agreement ' . $agreementId . '. Amount: ' . $remainingAmount . 
+                          ', New Status: ' . $newStatus);
+                
+                $remainingAmount = 0;
             }
-
-            if ($remainingAmount > 0) {
-                Log::info('Overpayment of ' . $remainingAmount . ' for agreement ' . $agreementId);
-            }
-
-            $this->updateOverdueStatus($agreementId);
-
-        } catch (\Exception $e) {
-            Log::error('Payment schedule update failed: ' . $e->getMessage());
-            throw $e;
         }
-    }
 
-    /**
-     * Update overdue status for payment schedules
-     */
-    private function updateOverdueStatus($agreementId)
-    {
-        try {
-            $today = now()->toDateString();
+        // If there's still remaining amount after all installments are paid,
+        // it might be an overpayment or early payment for future installments
+        if ($remainingAmount > 0) {
+            Log::info('Remaining amount of ' . $remainingAmount . ' for agreement ' . $agreementId);
             
-            PaymentSchedule::where('agreement_id', $agreementId)
-                ->where('due_date', '<', $today)
-                ->where('status', 'pending')
-                ->update([
-                    'status' => 'overdue',
-                    'days_overdue' => DB::raw("DATEDIFF('$today', due_date)")
-                ]);
-
-            PaymentSchedule::where('agreement_id', $agreementId)
-                ->where('status', 'overdue')
-                ->update([
-                    'days_overdue' => DB::raw("DATEDIFF('$today', due_date)")
-                ]);
-
-        } catch (\Exception $e) {
-            Log::error('Overdue status update failed: ' . $e->getMessage());
+            // Optional: Apply remaining amount to future pending installments
+            $this->applyOverpaymentToFutureInstallments($agreementId, $remainingAmount, $paymentDate);
         }
+
+        // Update overdue status for all installments
+        $this->updateOverdueStatus($agreementId);
+
+    } catch (\Exception $e) {
+        Log::error('Payment schedule update failed: ' . $e->getMessage());
+        throw $e;
     }
+}
+private function applyOverpaymentToFutureInstallments($agreementId, $remainingAmount, $paymentDate)
+{
+    try {
+        if ($remainingAmount <= 0) {
+            return;
+        }
+
+        // Get future pending installments in chronological order
+        $futureInstallments = PaymentSchedule::where('agreement_id', $agreementId)
+            ->where('status', 'pending')
+            ->where('due_date', '>', now()->toDateString())
+            ->orderBy('due_date', 'asc')
+            ->get();
+
+        foreach ($futureInstallments as $installment) {
+            if ($remainingAmount <= 0) {
+                break;
+            }
+
+            $amountDue = $installment->total_amount - ($installment->amount_paid ?? 0);
+            
+            if ($remainingAmount >= $amountDue) {
+                // Fully pay this future installment
+                $installment->update([
+                    'amount_paid' => $installment->total_amount,
+                    'status' => 'paid',
+                    'date_paid' => $paymentDate
+                ]);
+                
+                $remainingAmount -= $amountDue;
+                
+                Log::info('Applied overpayment to fully pay future installment ' . 
+                          $installment->installment_number . ' for agreement ' . $agreementId);
+            } else {
+                // Partially pay this future installment
+                $newAmountPaid = ($installment->amount_paid ?? 0) + $remainingAmount;
+                
+                $installment->update([
+                    'amount_paid' => $newAmountPaid,
+                    'status' => 'partial',
+                    'date_paid' => $paymentDate
+                ]);
+                
+                Log::info('Applied overpayment to partially pay future installment ' . 
+                          $installment->installment_number . ' for agreement ' . $agreementId . 
+                          '. Amount: ' . $remainingAmount);
+                
+                $remainingAmount = 0;
+            }
+        }
+
+        // If still remaining after all future installments
+        if ($remainingAmount > 0) {
+            Log::info('Excess overpayment of ' . $remainingAmount . 
+                      ' for agreement ' . $agreementId . '. Consider storing as credit.');
+        }
+
+    } catch (\Exception $e) {
+        Log::error('Future installments overpayment application failed: ' . $e->getMessage());
+        // Don't throw as this is not critical to the main payment process
+    }
+}
+/**
+ * Update overdue status for payment schedules - IMPROVED VERSION
+ */
+private function updateOverdueStatus($agreementId)
+{
+    try {
+        $today = now()->toDateString();
+        
+        // Update overdue installments (pending installments that are past due date)
+        PaymentSchedule::where('agreement_id', $agreementId)
+            ->where('due_date', '<', $today)
+            ->where('status', 'pending')
+            ->update([
+                'status' => 'overdue',
+                'days_overdue' => DB::raw("DATEDIFF('$today', due_date)")
+            ]);
+
+        // Update days overdue for already overdue installments (including partial overdue)
+        PaymentSchedule::where('agreement_id', $agreementId)
+            ->where('status', 'overdue')
+            ->update([
+                'days_overdue' => DB::raw("DATEDIFF('$today', due_date)")
+            ]);
+
+        // Update partial payments that have become overdue
+        PaymentSchedule::where('agreement_id', $agreementId)
+            ->where('due_date', '<', $today)
+            ->where('status', 'partial')
+            ->whereRaw('amount_paid < total_amount')
+            ->update([
+                'status' => 'overdue',
+                'days_overdue' => DB::raw("DATEDIFF('$today', due_date)")
+            ]);
+
+    } catch (\Exception $e) {
+        Log::error('Overdue status update failed: ' . $e->getMessage());
+        // Don't throw here as it's not critical to the payment process
+    }
+}
 
     /**
      * Show agreement details
