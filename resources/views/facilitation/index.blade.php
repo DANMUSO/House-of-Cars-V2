@@ -183,7 +183,8 @@
                                     'Amount' => ['icon' => '💰', 'color' => 'info'],
                                     'Allowance' => ['icon' => '💳', 'color' => 'secondary'],
                                     'Airtime' => ['icon' => '📱', 'color' => 'danger'],
-                                    'Advance' => ['icon' => '💵', 'color' => 'dark']
+                                    'Advance' => ['icon' => '💵', 'color' => 'dark'],
+                                    'Miscellaneous' => ['icon' => '💵', 'color' => 'info']
                                 ];
                             @endphp
                             
@@ -241,6 +242,7 @@
                                                 <option value="Allowance">💳 Allowance</option>
                                                 <option value="Airtime">📱 Airtime</option>
                                                 <option value="Advance">💵 Advance</option>
+                                                <option value="Miscellaneous">🔄 Miscellaneous</option>
                                             </select>
                                         </div>
                                         
@@ -353,6 +355,9 @@
                             @case('Advance')
                                 💵 {{ $facilitation->request }}
                                 @break
+                            @case('Miscellaneous')
+                                💵 {{ $facilitation->request }}
+                                @break
                             @default
                                 {{ $facilitation->request }}
                         @endswitch
@@ -456,6 +461,7 @@
                                                     <option value="Allowance" @if($facilitation->request == 'Allowance') selected @endif>💳 Allowance</option>
                                                     <option value="Airtime" @if($facilitation->request == 'Airtime') selected @endif>📱 Airtime</option>
                                                     <option value="Advance" @if($facilitation->request == 'Advance') selected @endif>💵 Advance</option>
+                                                    <option value="Miscellaneous" @if($facilitation->request == 'Miscellaneous') selected @endif>🔄 Miscellaneous</option>
                                                 </select>
                                             </div>
 

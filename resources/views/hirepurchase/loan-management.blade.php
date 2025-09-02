@@ -1249,8 +1249,8 @@ window.testLumpSumModal = function() {
                 
                 <div class="col-xl-3 col-md-6 mb-3">
                     <div class="text-center p-3 bg-soft-danger rounded">
-                        <h6 class="text-muted mb-1">Outstanding</h6>
-                        <h4 class="mb-0 text-danger">KSh {{ number_format($actualOutstanding, 0) }}</h4>
+                        <h6 class="text-muted mb-1">Outstanding 1</h6>
+                        <h4 class="mb-0 text-danger">KSh {{ number_format($actualOutstanding, 2) }}</h4>
                         @if($actualOutstanding != $agreement->outstanding_balance)
                             
                         @endif
@@ -2823,7 +2823,7 @@ function formatDateTime(dateTimeString) {
                                         <td>-</td>
                                         <td colspan="2">
                                             <span class="text-success">Paid: KSh {{ number_format($agreement->amount_paid, 2) }}</span><br>
-                                            <span class="text-danger">Pending: KSh {{ number_format($totalPending, 2) }}</span>
+                                            <span class="text-danger">Pending: KSh {{ number_format($actualOutstanding, 2) }}</span>
                                         </td>
                                         <td>-</td>
                                     </tr>
