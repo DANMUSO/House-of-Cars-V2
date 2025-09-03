@@ -704,46 +704,108 @@ private function updateOverdueStatus($agreementId)
     /**
      * Show agreement details
      */
-    public function show($id)
-    {
-        $agreement = GentlemanAgreement::with([
-            'customerVehicle',
-            'carImport',
-            'payments', 
-            'paymentSchedule',
-            'penalties', 
-            'approvedBy'
-        ])->findOrFail($id);
-         $this->updateOverdueStatus($id);
-        // Calculate accurate outstanding balance from payment schedule
-        $penaltyService = app(\App\Services\PenaltyService::class);
-        $penaltyService->calculatePenaltiesForAgreement('gentleman_agreement', $id);
-        $penaltySummary = $penaltyService->getPenaltySummary('gentleman_agreement', $id);
-        $totalScheduledAmount = $agreement->paymentSchedule ? $agreement->paymentSchedule->sum('total_amount') : 0;
-        $totalPaidFromSchedule = $agreement->paymentSchedule ? $agreement->paymentSchedule->sum('amount_paid') : 0;
-        $calculatedOutstanding = $totalScheduledAmount - $totalPaidFromSchedule;
-        $actualOutstanding = $totalScheduledAmount > 0 ? $calculatedOutstanding : $agreement->outstanding_balance;
+ public function show($id)
+{
+    $agreement = GentlemanAgreement::with([
+        'customerVehicle',
+        'carImport',
+        'payments', 
+        'paymentSchedule',
+        'penalties', 
+        'approvedBy'
+    ])->findOrFail($id);
+    
+    $this->updateOverdueStatus($id);
+    
+    // Calculate penalties if overdue payments exist
+    $penaltyService = app(\App\Services\PenaltyService::class);
+    $penaltyService->calculatePenaltiesForAgreement('gentleman_agreement', $id);
+    $penaltySummary = $penaltyService->getPenaltySummary('gentleman_agreement', $id);
+    
+    // Calculate accurate outstanding balance from payment schedule
+    $totalScheduledAmount = $agreement->paymentSchedule ? $agreement->paymentSchedule->sum('total_amount') : 0;
+    $totalPaidFromSchedule = $agreement->paymentSchedule ? $agreement->paymentSchedule->sum('amount_paid') : 0;
+    $calculatedOutstanding = $totalScheduledAmount - $totalPaidFromSchedule;
+    $actualOutstanding = $totalScheduledAmount > 0 ? $calculatedOutstanding : $agreement->outstanding_balance;
+    
+    // Calculate other metrics
+    $totalAmountPaid = $agreement->deposit_amount + $agreement->amount_paid;
+    $paymentProgress = $agreement->total_amount > 0 ? 
+        (($totalAmountPaid) / $agreement->total_amount) * 100 : 0;
+    
+    // Enhanced Next Payment Due Calculation
+    $overduePayments = collect();
+    $nextDueInstallment = null;
+    $totalAmountDue = 0;
+    $overdueCount = 0;
+    $paymentBreakdown = [];
+    
+    if ($agreement->paymentSchedule) {
+        $today = \Carbon\Carbon::today();
         
-        // Calculate other metrics
-        $totalAmountPaid = $agreement->deposit_amount + $agreement->amount_paid;
-        $paymentProgress = $agreement->total_amount > 0 ? 
-            (($totalAmountPaid) / $agreement->total_amount) * 100 : 0;
+        // Get all payments that are overdue or due today and not fully paid
+        $overduePayments = $agreement->paymentSchedule->filter(function($schedule) use ($today) {
+            $dueDate = \Carbon\Carbon::parse($schedule->due_date);
+            $remainingAmount = ($schedule->total_amount ?? 0) - ($schedule->amount_paid ?? 0);
+            
+            return ($dueDate->lte($today) && $remainingAmount > 0) || 
+                   in_array($schedule->status, ['overdue', 'partial']);
+        })->sortBy('due_date');
         
-        $nextDueInstallment = $agreement->paymentSchedule ? 
-            $agreement->paymentSchedule->whereIn('status', ['pending', 'overdue', 'partial'])->first() : null;
+        // Calculate total amount due and breakdown
+        foreach ($overduePayments as $payment) {
+            $remainingAmount = ($payment->total_amount ?? 0) - ($payment->amount_paid ?? 0);
+            
+            if ($remainingAmount > 0) {
+                $totalAmountDue += $remainingAmount;
+                $overdueCount++;
+                
+                $paymentBreakdown[] = [
+                    'due_date' => $payment->due_date,
+                    'original_amount' => $payment->total_amount,
+                    'amount_paid' => $payment->amount_paid ?? 0,
+                    'remaining_amount' => $remainingAmount,
+                    'days_overdue' => \Carbon\Carbon::parse($payment->due_date)->isPast() ? 
+                    \Carbon\Carbon::today()->diffInDays(\Carbon\Carbon::parse($payment->due_date)) : 0,
+                    'status' => $payment->status
+                ];
+            }
+        }
         
-        $overdueAmount = $agreement->paymentSchedule ? 
-            $agreement->paymentSchedule->where('status', 'overdue')->sum('total_amount') : 0;
-        
-        return view('gentlemanagreement.loan-management', compact(
-            'agreement',
-            'actualOutstanding',
-            'totalAmountPaid',
-            'paymentProgress',
-            'nextDueInstallment',
-            'overdueAmount'
-        ));
+        // If no overdue payments, find next upcoming payment
+        if ($totalAmountDue == 0) {
+            $nextDueInstallment = $agreement->paymentSchedule
+                ->filter(function($schedule) use ($today) {
+                    $dueDate = \Carbon\Carbon::parse($schedule->due_date);
+                    $remainingAmount = ($schedule->total_amount ?? 0) - ($schedule->amount_paid ?? 0);
+                    
+                    return $dueDate->gt($today) && $remainingAmount > 0;
+                })
+                ->sortBy('due_date')
+                ->first();
+        } else {
+            // Use the oldest overdue payment as the "next" payment for compatibility
+            $nextDueInstallment = $overduePayments->first();
+        }
     }
+    
+    // Calculate overdue amount (for backward compatibility)
+    $overdueAmount = $agreement->paymentSchedule ? 
+        $agreement->paymentSchedule->where('status', 'overdue')->sum('total_amount') : 0;
+    
+    return view('gentlemanagreement.loan-management', compact(
+        'agreement',
+        'actualOutstanding',
+        'totalAmountPaid',
+        'paymentProgress',
+        'nextDueInstallment',
+        'overdueAmount',
+        'penaltySummary',
+        'totalAmountDue',        // NEW
+        'overdueCount',          // NEW
+        'paymentBreakdown'       // NEW
+    ));
+}
 public function getPenalties($agreementId)
 {
     try {

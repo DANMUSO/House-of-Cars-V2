@@ -258,16 +258,16 @@
                                 <input type="number" class="form-control" id="phone_numberalt" name="phone_numberalt">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Email Address <span class="text-danger">*</span></label>
-                                <input type="email" class="form-control" id="email" name="email" required>
+                                <label class="form-label">Email Address (Optional) <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="email" name="email">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Email Address (Optional)</label>
                                 <input type="email" class="form-control" id="emailalt" name="emailalt">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">KRA PIN <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="KRA" name="KRA" required>
+                                <label class="form-label">KRA PIN  (Optional)</label>
+                                <input type="text" class="form-control" id="KRA" name="KRA" >
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">National ID <span class="text-danger">*</span></label>

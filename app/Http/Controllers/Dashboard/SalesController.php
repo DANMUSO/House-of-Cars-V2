@@ -229,8 +229,6 @@ class SalesController extends Controller
         $request->validate([
             'Client_Name' => 'required|string|max:255',
             'Phone_No' => 'required|string|max:20',
-            'email' => 'required|email|max:255',
-            'KRA' => 'required|string|max:255',
             'National_ID' => 'required|string|max:255',
             'Amount' => 'required|numeric',
             'PaidAmount'  => 'required|numeric',

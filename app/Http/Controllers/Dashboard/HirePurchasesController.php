@@ -3452,7 +3452,7 @@ public function show($id)
         'carImport',
         'payments', 
         'paymentSchedule', 
-        'penalties',  // Add penalties relationship
+        'penalties',
         'approvedBy'
     ])->findOrFail($id);
     
@@ -3464,6 +3464,7 @@ public function show($id)
     
     // Get penalty summary
     $penaltySummary = $penaltyService->getPenaltySummary('hire_purchase', $id);
+    
     // Load rescheduling history directly without user join
     $reschedulingHistory = DB::table('loan_rescheduling_history')
         ->where('agreement_id', $id)
@@ -3473,9 +3474,7 @@ public function show($id)
     
     // Convert to collection and add to agreement
     $agreement->reschedulingHistory = $reschedulingHistory->map(function($item) {
-        // Convert date to Carbon instance for compatibility
         $item->rescheduling_date = \Carbon\Carbon::parse($item->rescheduling_date);
-        // We don't need the processedBy relationship for basic functionality
         $item->processedBy = (object)['name' => 'System User'];
         return $item;
     });
@@ -3491,9 +3490,69 @@ public function show($id)
     $paymentProgress = $agreement->total_amount > 0 ? 
         (($totalAmountPaid) / $agreement->total_amount) * 100 : 0;
     
-    $nextDueInstallment = $agreement->paymentSchedule ? 
-        $agreement->paymentSchedule->whereIn('status', ['pending', 'overdue', 'partial'])->first() : null;
+    // REPLACE THIS SECTION - Enhanced Next Payment Due Calculation
+    // OLD CODE - REMOVE THIS:
+    // $nextDueInstallment = $agreement->paymentSchedule ? 
+    //     $agreement->paymentSchedule->whereIn('status', ['pending', 'overdue', 'partial'])->first() : null;
     
+    // NEW CODE - ADD THIS:
+    // Get all overdue and current due payments
+    $overduePayments = collect();
+    $nextDueInstallment = null;
+    $totalAmountDue = 0;
+    $overdueCount = 0;
+    $paymentBreakdown = [];
+    
+    if ($agreement->paymentSchedule) {
+        $today = \Carbon\Carbon::today();
+        
+        // Get all payments that are overdue or due today and not fully paid
+        $overduePayments = $agreement->paymentSchedule->filter(function($schedule) use ($today) {
+            $dueDate = \Carbon\Carbon::parse($schedule->due_date);
+            $remainingAmount = ($schedule->total_amount ?? 0) - ($schedule->amount_paid ?? 0);
+            
+            return ($dueDate->lte($today) && $remainingAmount > 0) || 
+                   in_array($schedule->status, ['overdue', 'partial']);
+        })->sortBy('due_date');
+        
+        // Calculate total amount due and breakdown
+        foreach ($overduePayments as $payment) {
+            $remainingAmount = ($payment->total_amount ?? 0) - ($payment->amount_paid ?? 0);
+            
+            if ($remainingAmount > 0) {
+                $totalAmountDue += $remainingAmount;
+                $overdueCount++;
+                
+                $paymentBreakdown[] = [
+                    'due_date' => $payment->due_date,
+                    'original_amount' => $payment->total_amount,
+                    'amount_paid' => $payment->amount_paid ?? 0,
+                    'remaining_amount' => $remainingAmount,
+                     'days_overdue' => \Carbon\Carbon::parse($payment->due_date)->isPast() ? 
+                      \Carbon\Carbon::today()->diffInDays(\Carbon\Carbon::parse($payment->due_date)) : 0,
+                    'status' => $payment->status
+                ];
+            }
+        }
+        
+        // If no overdue payments, find next upcoming payment
+        if ($totalAmountDue == 0) {
+            $nextDueInstallment = $agreement->paymentSchedule
+                ->filter(function($schedule) use ($today) {
+                    $dueDate = \Carbon\Carbon::parse($schedule->due_date);
+                    $remainingAmount = ($schedule->total_amount ?? 0) - ($schedule->amount_paid ?? 0);
+                    
+                    return $dueDate->gt($today) && $remainingAmount > 0;
+                })
+                ->sortBy('due_date')
+                ->first();
+        } else {
+            // Use the oldest overdue payment as the "next" payment for compatibility
+            $nextDueInstallment = $overduePayments->first();
+        }
+    }
+    
+    // Calculate overdue amount (for backward compatibility)
     $overdueAmount = $agreement->paymentSchedule ? 
         $agreement->paymentSchedule->where('status', 'overdue')->sum('total_amount') : 0;
     
@@ -3520,7 +3579,10 @@ public function show($id)
         'nextDueInstallment',
         'overdueAmount',
         'reschedulingStats',
-        'penaltySummary' 
+        'penaltySummary',
+        'totalAmountDue',        // ADD THIS
+        'overdueCount',          // ADD THIS
+        'paymentBreakdown'       // ADD THIS
     ));
 }
 // Add these methods to your HirePurchasesController class

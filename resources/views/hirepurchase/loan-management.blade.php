@@ -1249,7 +1249,7 @@ window.testLumpSumModal = function() {
                 
                 <div class="col-xl-3 col-md-6 mb-3">
                     <div class="text-center p-3 bg-soft-danger rounded">
-                        <h6 class="text-muted mb-1">Outstanding 1</h6>
+                        <h6 class="text-muted mb-1">Outstanding</h6>
                         <h4 class="mb-0 text-danger">KSh {{ number_format($actualOutstanding, 2) }}</h4>
                         @if($actualOutstanding != $agreement->outstanding_balance)
                             
@@ -1316,190 +1316,526 @@ window.testLumpSumModal = function() {
     }
 @endphp
 
-<!-- Next Payment Due Alert -->
-@if($nextDueInstallment)
-    @php
-        // Parse the due date
-        try {
-            $dueDate = \Carbon\Carbon::parse($nextDueInstallment->due_date);
-        } catch (Exception $e) {
-            $dueDate = \Carbon\Carbon::now()->addMonth();
+
+@php
+    // Calculate payment breakdown and overdue information FIRST
+    $paymentBreakdown = [];
+    $totalAmountDue = 0;
+    $overdueCount = 0;
+    $today = \Carbon\Carbon::today();
+    
+    if($agreement->paymentSchedule && $agreement->paymentSchedule->count() > 0) {
+        foreach($agreement->paymentSchedule as $schedule) {
+            $remainingAmount = ($schedule->total_amount ?? 0) - ($schedule->amount_paid ?? 0);
+            
+            // Only include if there's a remaining balance
+            if ($remainingAmount > 0) {
+                $dueDate = \Carbon\Carbon::parse($schedule->due_date);
+                $daysOverdue = $today->diffInDays($dueDate, false);
+                
+                if ($daysOverdue < 0) { // Payment is overdue (negative days means past due)
+                    $daysOverdue = abs($daysOverdue);
+                    $overdueCount++;
+                    $paymentBreakdown[] = [
+                        'due_date' => $schedule->due_date,
+                        'original_amount' => $schedule->total_amount,
+                        'amount_paid' => $schedule->amount_paid ?? 0,
+                        'remaining_amount' => $remainingAmount,
+                        'days_overdue' => $daysOverdue,
+                    ];
+                    $totalAmountDue += $remainingAmount;
+                }
+            }
         }
-        
-        $today = \Carbon\Carbon::today();
-        $daysUntilDue = $today->diffInDays($dueDate, false);
-        
-        // Calculate remaining amount
-        $totalAmount = $nextDueInstallment->total_amount ?? $agreement->monthly_payment;
-        $amountPaid = $nextDueInstallment->amount_paid ?? 0;
-        $remainingAmount = max($totalAmount - $amountPaid, 0);
-        
-        // If fully paid, show total amount instead
-        if ($remainingAmount == 0) {
-            $remainingAmount = $totalAmount;
-        }
-        
-        // Determine alert styling
-        if ($daysUntilDue < 0) {
+    }
+    
+    // Find the next payment due chronologically
+    $nextDueInstallment = null;
+    
+    if($agreement->paymentSchedule && $agreement->paymentSchedule->count() > 0) {
+        $nextDueInstallment = $agreement->paymentSchedule
+            ->filter(function($schedule) {
+                $remainingAmount = ($schedule->total_amount ?? 0) - ($schedule->amount_paid ?? 0);
+                return $remainingAmount > 0 || !in_array($schedule->status ?? '', ['paid', 'completed']);
+            })
+            ->sortBy('due_date')
+            ->first();
+    }
+
+    // Determine alert styling based on payment status with enhanced color scheme
+    $alertType = 'info';
+    $badgeType = 'info';
+    $textColor = 'info';
+    $icon = 'calendar-alt';
+    $statusText = '';
+    $actionRequired = '';
+    $urgencyLevel = 'normal';
+    $daysOverdue = 0;
+    
+    if ($totalAmountDue > 0) {
+        // There are overdue payments
+        if ($overdueCount > 1) {
+            // CRITICAL: Multiple overdue payments
             $alertType = 'danger';
             $badgeType = 'danger';
+            $textColor = 'danger';
             $icon = 'exclamation-triangle';
-            $statusText = abs($daysUntilDue) . ' days overdue';
-        } elseif ($daysUntilDue == 0) {
-            $alertType = 'warning';
-            $badgeType = 'warning';
-            $icon = 'clock';
-            $statusText = 'Due today';
-        } elseif ($daysUntilDue <= 7) {
-            $alertType = 'warning';
-            $badgeType = 'warning';
-            $icon = 'clock';
-            $statusText = 'Due in ' . $daysUntilDue . ' day' . ($daysUntilDue == 1 ? '' : 's');
+            $urgencyLevel = 'critical';
+            
+            // Calculate days overdue from oldest payment
+            $oldestPayment = collect($paymentBreakdown)->sortBy('due_date')->first();
+            $daysOverdue = $oldestPayment ? 
+                \Carbon\Carbon::today()->diffInDays(\Carbon\Carbon::parse($oldestPayment['due_date'])) : 0;
+            
+            $statusText = "CRITICALLY OVERDUE - {$daysOverdue} days";
+            $actionRequired = "⚠️ URGENT ACTION REQUIRED";
         } else {
-            $alertType = 'info';
-            $badgeType = 'info';
-            $icon = 'calendar-alt';
-            $statusText = 'Due in ' . $daysUntilDue . ' days';
+            // WARNING: Single overdue payment
+            $alertType = 'warning';
+            $badgeType = 'warning';  
+            $textColor = 'warning';
+            $icon = 'clock';
+            $urgencyLevel = 'high';
+            
+            $firstOverdue = collect($paymentBreakdown)->first();
+            $daysOverdue = $firstOverdue['days_overdue'] ?? 0;
+            
+            $statusText = "OVERDUE - {$daysOverdue} days late";
+            $actionRequired = "🔔 Payment Required";
         }
-    @endphp
-    
-    <div class="alert alert-{{ $alertType }} mt-3">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h6 class="alert-heading mb-1">
-                    <i class="fas fa-{{ $icon }}"></i>
-                    Next Payment Due
+    } elseif ($nextDueInstallment) {
+        // No overdue payments - check next payment
+        $dueDate = \Carbon\Carbon::parse($nextDueInstallment->due_date);
+        $daysUntilDue = \Carbon\Carbon::today()->diffInDays($dueDate, false);
+        $remainingAmount = ($nextDueInstallment->total_amount ?? 0) - ($nextDueInstallment->amount_paid ?? 0);
+        
+        // Only show if there's actually an amount due
+        if ($remainingAmount > 0) {
+            $totalAmountDue = $remainingAmount;
+            
+            if ($daysUntilDue == 0) {
+                // Due today
+                $alertType = 'warning';
+                $badgeType = 'warning';
+                $textColor = 'warning';
+                $icon = 'clock';
+                $statusText = 'DUE TODAY';
+                $actionRequired = '📅 Payment Due Now';
+                $urgencyLevel = 'high';
+            } elseif ($daysUntilDue > 0 && $daysUntilDue <= 3) {
+                // Very soon - Orange/Warning
+                $alertType = 'warning';
+                $badgeType = 'warning';
+                $textColor = 'warning';
+                $icon = 'hourglass-half';
+                $statusText = "Due in {$daysUntilDue} days";
+                $actionRequired = '⏰ Payment Due Soon';
+                $urgencyLevel = 'medium';
+            } elseif ($daysUntilDue > 3 && $daysUntilDue <= 7) {
+                // Soon - Primary
+                $alertType = 'primary';
+                $badgeType = 'primary';
+                $textColor = 'primary';
+                $icon = 'clock';
+                $statusText = "Due in {$daysUntilDue} days";
+                $actionRequired = '📋 Upcoming Payment';
+                $urgencyLevel = 'low';
+            } else {
+                // Future - Success/Green (not due yet)
+                $alertType = 'success';
+                $badgeType = 'success';
+                $textColor = 'success';
+                $icon = 'calendar-check';
+                $statusText = "Due in {$daysUntilDue} days";
+                $actionRequired = '✅ Future Payment Scheduled';
+                $urgencyLevel = 'future';
+            }
+        } else {
+            // No remaining amount due
+            $totalAmountDue = 0;
+        }
+    }
+
+    // Enhanced button styling based on urgency
+    $buttonStyle = match($urgencyLevel) {
+        'critical' => 'btn-danger shadow-lg',
+        'high' => 'btn-warning shadow',
+        'medium' => 'btn-primary shadow-sm',
+        'low' => 'btn-outline-primary',
+        'future' => 'btn-outline-success',
+        default => 'btn-info'
+    };
+@endphp
+
+<!-- Enhanced Next Payment Due Alert with Improved Colors & Messages -->
+@if($totalAmountDue > 0)
+    <div class="alert alert-{{ $alertType }} border-{{ $alertType }} mt-3 {{ $urgencyLevel === 'critical' ? 'alert-dismissible border-3 shadow-lg' : '' }}" 
+         style="{{ $urgencyLevel === 'critical' ? 'border-left: 6px solid var(--bs-danger) !important;' : '' }}">
+        
+        @if($urgencyLevel === 'critical')
+            <!-- Critical Alert Header -->
+            <div class="d-flex align-items-center mb-3 p-2 bg-danger bg-opacity-10 rounded">
+                <i class="fas fa-siren fa-lg text-danger me-2"></i>
+                <h5 class="mb-0 text-danger fw-bold">ACCOUNT IN DEFAULT - IMMEDIATE ACTION REQUIRED</h5>
+            </div>
+        @endif
+
+        <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1">
+                <h6 class="alert-heading mb-2 text-{{ $textColor }}">
+                    <i class="fas fa-{{ $icon }} me-1"></i>
+                    {{ $actionRequired }}
                 </h6>
-                <p class="mb-0">
-                    <strong>Amount:</strong> KSh {{ number_format($remainingAmount, 2) }} | 
-                    <strong>Due:</strong> {{ $dueDate->format('M d, Y') }}
-                    <span class="badge bg-{{ $badgeType }} ms-2">{{ $statusText }}</span>
-                </p>
                 
-                @if($amountPaid > 0)
-                    <small class="">
-                        <i class="fas fa-info-circle"></i>
-                        Partial payment: KSh {{ number_format($amountPaid, 2) }} already paid
+                <!-- Total Amount Due (Most Prominent with Enhanced Styling) -->
+                <div class="row mb-2">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center mb-2">
+                            <h4 class="mb-0 me-3 text-{{ $textColor }} {{ $urgencyLevel === 'critical' ? 'fw-bold text-decoration-underline' : '' }}">
+                                <strong>
+                                    {{ $urgencyLevel === 'critical' ? '💸 TOTAL AMOUNT DUE: ' : 'TOTAL DUE: ' }}
+                                    KSh {{ number_format($totalAmountDue, 2) }}
+                                </strong>
+                            </h4>
+                            <span class="badge bg-{{ $badgeType }} fs-6 {{ $urgencyLevel === 'critical' ? 'animate__animated animate__pulse animate__infinite' : '' }}">
+                                {{ $statusText }}
+                            </span>
+                        </div>
+                        
+                        @if($overdueCount > 1)
+                            <div class="alert alert-danger alert-sm py-2 mb-2">
+                                <p class="mb-1 text-danger fw-bold">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                    <strong>MULTIPLE DEFAULTS: {{ $overdueCount }} payments are severely overdue</strong>
+                                </p>
+                                <p class="mb-0 text-danger">
+                                    <i class="fas fa-warning me-1"></i>
+                                    This account requires immediate resolution to avoid further action
+                                </p>
+                            </div>
+                        @elseif($overdueCount == 1)
+                            <div class="alert alert-warning alert-sm py-2 mb-2">
+                                <p class="mb-0 text-warning">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <strong>Single Payment Overdue:</strong> Please settle immediately to avoid penalties
+                                </p>
+                            </div>
+                        @endif
+                        
+                        @if(!empty($paymentBreakdown))
+                            <p class="mb-0">
+                                <strong class="text-{{ $textColor }}">Oldest Outstanding Payment:</strong> 
+                                <span class="text-{{ $urgencyLevel === 'critical' ? 'danger' : 'muted' }}">
+                                    {{ \Carbon\Carbon::parse(collect($paymentBreakdown)->sortBy('due_date')->first()['due_date'])->format('M d, Y') }}
+                                    @if($urgencyLevel === 'critical')
+                                        <i class="fas fa-exclamation-circle text-danger ms-1"></i>
+                                    @endif
+                                </span>
+                            </p>
+                        @elseif($nextDueInstallment)
+                            <p class="mb-0">
+                                <strong class="text-{{ $textColor }}">Due Date:</strong> 
+                                <span class="text-{{ $urgencyLevel === 'future' ? 'success' : 'success' }}">
+                                    {{ \Carbon\Carbon::parse($nextDueInstallment->due_date)->format('M d, Y') }}
+                                    @if($urgencyLevel === 'future')
+                                        <i class="fas fa-check-circle text-success ms-1"></i>
+                                    @endif
+                                </span>
+                                
+                                @if($nextDueInstallment->amount_paid > 0)
+                                    <br><small class="text-success">
+                                        <i class="fas fa-check-circle"></i>
+                                        Partial payment received: KSh {{ number_format($nextDueInstallment->amount_paid, 2) }}
+                                    </small>
+                                @elseif($urgencyLevel === 'future')
+                                    <br><small class="text-success">
+                                        <i class="fas fa-calendar-check"></i>
+                                        Payment is scheduled and not yet due
+                                    </small>
+                                @endif
+                            </p>
+                        @endif
+                    </div>
+                </div>
+                
+                <!-- Payment Breakdown (Enhanced with better colors) -->
+                @if(count($paymentBreakdown) > 1)
+                    <div class="mt-2">
+                        <button class="btn btn-link btn-sm p-0 text-{{ $textColor }} fw-bold" 
+                                type="button" 
+                                data-bs-toggle="collapse" 
+                                data-bs-target="#paymentBreakdownCollapse" 
+                                aria-expanded="false">
+                            <i class="fas fa-list-ul me-1"></i>
+                            View All {{ count($paymentBreakdown) }} Outstanding Payments
+                            <i class="fas fa-chevron-down ms-1"></i>
+                        </button>
+                        
+                        <div class="collapse mt-2" id="paymentBreakdownCollapse">
+                            <div class="card border-{{ $alertType }}">
+                                <div class="card-header bg-{{ $alertType }} bg-opacity-10 py-2">
+                                    <h6 class="mb-0 text-{{ $textColor }}">
+                                        <i class="fas fa-list-alt me-1"></i>Payment Breakdown
+                                    </h6>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover mb-0">
+                                            <thead class="table-{{ $alertType }} bg-opacity-25">
+                                                <tr>
+                                                    <th style="font-size: 0.75rem;">Due Date</th>
+                                                    <th style="font-size: 0.75rem;">Original</th>
+                                                    <th style="font-size: 0.75rem;">Paid</th>
+                                                    <th style="font-size: 0.75rem;">Remaining</th>
+                                                    <th style="font-size: 0.75rem;">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($paymentBreakdown as $payment)
+                                                    <tr class="{{ $payment['days_overdue'] > 30 ? 'table-danger text-danger fw-bold' : ($payment['days_overdue'] > 0 ? 'table-warning text-warning' : '') }}" 
+                                                        style="font-size: 0.8rem;">
+                                                        <td>{{ \Carbon\Carbon::parse($payment['due_date'])->format('M d, Y') }}</td>
+                                                        <td>KSh {{ number_format($payment['original_amount'], 0) }}</td>
+                                                        <td>KSh {{ number_format($payment['amount_paid'], 0) }}</td>
+                                                        <td class="fw-bold">KSh {{ number_format($payment['remaining_amount'], 0) }}</td>
+                                                        <td>
+                                                            @if($payment['days_overdue'] > 30)
+                                                                <span class="badge bg-danger" style="font-size: 0.65rem;">
+                                                                    <i class="fas fa-exclamation-triangle"></i> {{ $payment['days_overdue'] }}d CRITICAL
+                                                                </span>
+                                                            @elseif($payment['days_overdue'] > 0)
+                                                                <span class="badge bg-warning text-dark" style="font-size: 0.65rem;">
+                                                                    <i class="fas fa-clock"></i> {{ $payment['days_overdue'] }}d late
+                                                                </span>
+                                                            @else
+                                                                <span class="badge bg-info" style="font-size: 0.65rem;">
+                                                                    <i class="fas fa-calendar"></i> Due now
+                                                                </span>
+                                                            @endif
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                            <tfoot class="table-{{ $alertType }}">
+                                                <tr style="font-size: 0.85rem;">
+                                                    <td colspan="3" class="fw-bold">TOTAL OUTSTANDING:</td>
+                                                    <td class="fw-bold text-{{ $textColor }}">KSh {{ number_format($totalAmountDue, 0) }}</td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+            </div>
+            
+            <!-- Enhanced Action Button -->
+            <div class="ms-3">
+                @if($agreement->status !== 'completed' && in_array(Auth::user()->role ?? 'Guest', ['Accountant','Managing-Director']))
+                    <button class="btn {{ $buttonStyle }} btn-lg" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#recordPaymentModal"
+                            onclick="prefillPaymentAmount({{ $totalAmountDue }})">
+                        @if($urgencyLevel === 'critical')
+                            <i class="fas fa-credit-card me-1"></i>
+                            <strong>SETTLE NOW</strong>
+                        @elseif($overdueCount > 1)
+                            <i class="fas fa-coins me-1"></i>
+                            Pay All Outstanding
+                        @else
+                            <i class="fas fa-credit-card me-1"></i>
+                            {{ $urgencyLevel === 'future' ? 'Early Payment' : ($daysOverdue > 0 ? 'Pay Overdue' : 'Make Payment') }}
+                        @endif
+                    </button>
+                    
+                    @if($urgencyLevel === 'critical')
+                        <br><small class="text-danger mt-1 d-block">
+                            <i class="fas fa-phone"></i> Call for payment plans
+                        </small>
+                    @endif
+                @endif
+            </div>
+        </div>
+    </div>
+
+@elseif($agreement->status === 'completed')
+    <!-- Enhanced Completed loan message -->
+    <div class="alert alert-success border-success mt-3 shadow-sm">
+        <div class="d-flex align-items-center">
+            <div class="me-3">
+                <i class="fas fa-check-circle fa-3x text-success"></i>
+            </div>
+            <div class="flex-grow-1">
+                <h5 class="alert-heading mb-2 text-success">
+                    🎉 Loan Successfully Completed!
+                </h5>
+                <p class="mb-1">All payments have been successfully completed and processed.</p>
+                <small class="text-muted">
+                    <i class="fas fa-calendar-check me-1"></i>
+                    Account is in good standing
+                </small>
+            </div>
+            <div class="ms-3">
+                <span class="badge bg-success fs-6">
+                    <i class="fas fa-star"></i> PAID IN FULL
+                </span>
+            </div>
+        </div>
+    </div>
+
+@else
+    <!-- Enhanced No payment schedule message -->
+    <div class="alert alert-warning border-warning mt-3">
+        <div class="d-flex align-items-start">
+            <div class="me-3">
+                <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+            </div>
+            <div class="flex-grow-1">
+                <h6 class="alert-heading mb-2 text-warning">
+                    📋 Payment Schedule Missing
+                </h6>
+                <p class="mb-1">
+                    A payment schedule needs to be generated for this loan agreement.
+                </p>
+                @if($agreement->paymentSchedule)
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Found {{ $agreement->paymentSchedule->count() }} schedule entries, but none qualify as the next payment due.
+                    </small>
+                @else
+                    <small class="text-muted">
+                        <i class="fas fa-calendar-plus me-1"></i>
+                        Please contact administration to set up payment schedule.
                     </small>
                 @endif
             </div>
-            @if($agreement->status !== 'completed' && in_array(Auth::user()->role ?? 'Guest', ['Accountant','Managing-Director']))
-                <button class="btn btn-{{ $daysUntilDue < 0 ? 'danger' : 'primary' }}" 
-                        data-bs-toggle="modal" 
-                        data-bs-target="#recordPaymentModal"
-                        onclick="prefillPaymentAmount({{ $remainingAmount }})">
-                    <i class="fas fa-credit-card"></i> Pay Now
+            <div class="ms-3">
+                <button class="btn btn-outline-warning btn-sm">
+                    <i class="fas fa-plus"></i> Generate Schedule
                 </button>
-            @endif
-        </div>
-    </div>
-@elseif($agreement->status === 'completed')
-    <div class="alert alert-success mt-3">
-        <div class="d-flex align-items-center">
-            <i class="fas fa-check-circle fa-2x me-3"></i>
-            <div>
-                <h6 class="alert-heading mb-1">Loan Completed!</h6>
-                <p class="mb-0">All payments have been successfully completed.</p>
             </div>
         </div>
-    </div>
-@else
-    <!-- Show debug info if no payments found -->
-    <div class="alert alert-warning mt-3">
-        <h6 class="alert-heading mb-1">
-            <i class="fas fa-exclamation-triangle"></i>
-            No Payment Schedule Found
-        </h6>
-        <p class="mb-0">
-            Payment schedule needs to be generated for this agreement.
-            @if($agreement->paymentSchedule)
-                <br><small class="text-muted">Found {{ $agreement->paymentSchedule->count() }} schedule entries, but none qualify as next payment.</small>
-            @endif
-        </p>
     </div>
 @endif
 
 <script>
+// Enhanced prefill function that updates payment form description
 function prefillPaymentAmount(amount) {
     const paymentInput = document.querySelector('input[name="payment_amount"]');
     if (paymentInput) {
-        paymentInput.value = amount;
+        paymentInput.value = amount.toFixed(2);
         paymentInput.dispatchEvent(new Event('input'));
+    }
+    
+    // Update modal info based on payment type
+    const overdueCount = {{ $overdueCount ?? 0 }};
+    const modalAlert = document.querySelector('#recordPaymentModal .alert-info');
+    
+    if (modalAlert && overdueCount > 1) {
+        modalAlert.innerHTML = `
+            <div class="d-flex justify-content-between">
+                <span><strong>Total Amount Due:</strong></span>
+                <span><strong>KSh ${amount.toLocaleString()}</strong></span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span>Overdue Payments:</span>
+                <span><strong>${overdueCount} payments</strong></span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span>Outstanding Balance:</span>
+                <span><strong>KSh {{ number_format($actualOutstanding, 2) }}</strong></span>
+            </div>
+            <div class="mt-2 pt-2 border-top">
+                <small><strong>Recommendation:</strong> Pay the full amount due (KSh ${amount.toLocaleString()}) to bring account current and avoid additional penalties.</small>
+            </div>
+        `;
     }
 }
 
-// Debug function to see what's in the payment schedule
-function debugNextPayment() {
-    console.log('=== Next Payment Debug ===');
-    @if($agreement->paymentSchedule && $agreement->paymentSchedule->count() > 0)
-        console.log('Total payment schedules: {{ $agreement->paymentSchedule->count() }}');
+// Update payment form when modal opens
+document.addEventListener('DOMContentLoaded', function() {
+    $('#recordPaymentModal').on('shown.bs.modal', function() {
+        const overdueCount = {{ $overdueCount ?? 0 }};
+        const totalDue = {{ $totalAmountDue ?? 0 }};
         
-        // Show first few payments by date order
-        @php
-            $debugPayments = $agreement->paymentSchedule->sortBy('due_date')->take(5);
-        @endphp
-        
-        console.log('First 5 payments by due date:');
-        @foreach($debugPayments as $index => $payment)
-            console.log('{{ $index + 1 }}. Due: {{ $payment->due_date }}, Amount: {{ $payment->total_amount }}, Paid: {{ $payment->amount_paid ?? 0 }}, Status: {{ $payment->status ?? "N/A" }}');
-        @endforeach
-        
-        @if($nextDueInstallment)
-            console.log('Selected next payment: Due {{ $nextDueInstallment->due_date }}, Amount: {{ $nextDueInstallment->total_amount }}');
-        @else
-            console.log('No next payment found');
-        @endif
-    @else
-        console.log('No payment schedule exists');
-    @endif
-    console.log('========================');
-}
-
-// Uncomment to debug:
-// debugNextPayment();
+        if (overdueCount > 1 && totalDue > 0) {
+            // Auto-fill the total due amount
+            prefillPaymentAmount(totalDue);
+        }
+    });
+});
 </script>
 
 <style>
-.alert {
-    border-radius: 10px;
-    border: none;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
+/* Maintain the exact red/pink color scheme from your screenshot */
 
+/* Next Payment Due Alert - Red Theme */
 .alert-danger {
-    background: linear-gradient(135deg, #ffe6e6 0%, #ffebee 100%);
-    color: #c62828;
-    border-left: 4px solid #d32f2f;
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c2c7 100%);
+    color: #721c24;
+    border: 1px solid #f5c2c7;
+    border-left: 4px solid #dc3545;
 }
 
+/* Overdue Badge - Pink/Red */
+.badge.bg-danger {
+    background-color: #dc3545 !important;
+    color: #fff;
+}
+
+/* Pay Now Button - Pink/Red */
+.btn-danger {
+    background-color: #e91e63 !important; /* Pink color from screenshot */
+    border-color: #e91e63 !important;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background-color: #c2185b !important;
+    border-color: #c2185b !important;
+    color: #fff;
+}
+
+/* Alert text colors */
+.alert-danger .alert-heading {
+    color: #721c24;
+}
+
+.alert-danger strong {
+    color: #721c24;
+}
+
+/* Partial payment info styling */
+.alert-danger small.text-info {
+    color: #0c5460 !important;
+}
+
+/* For compatibility with your Blade template, ensure these classes work */
 .alert-warning {
-    background: linear-gradient(135deg, #fff3cd 0%, #fef7e0 100%);
-    color: #856404;
-    border-left: 4px solid #ffc107;
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c2c7 100%) !important;
+    color: #721c24 !important;
+    border: 1px solid #f5c2c7 !important;
+    border-left: 4px solid #dc3545 !important;
 }
 
-.alert-info {
-    background: linear-gradient(135deg, #e3f2fd 0%, #f0f8ff 100%);
-    color: #0277bd;
-    border-left: 4px solid #2196f3;
+.badge.bg-warning {
+    background-color: #dc3545 !important;
+    color: #fff !important;
 }
 
-.alert-success {
-    background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%);
-    color: #2e7d32;
-    border-left: 4px solid #4caf50;
+.btn-warning {
+    background-color: #e91e63 !important;
+    border-color: #e91e63 !important;
+    color: #fff !important;
 }
 
-.badge {
-    font-weight: 500;
-    padding: 0.4em 0.6em;
-    border-radius: 0.375rem;
-}
-
-.btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    transition: all 0.2s ease;
+.btn-warning:hover {
+    background-color: #c2185b !important;
+    border-color: #c2185b !important;
+    color: #fff !important;
 }
 </style>
             </div>
