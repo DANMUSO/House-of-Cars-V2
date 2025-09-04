@@ -1929,16 +1929,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 <!-- Payment History Tab -->
                 <div class="tab-pane fade show active" id="payment-history" role="tabpanel">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5>Payment History</h5>
-                        @if($agreement->status !== 'completed')
-                         @if(in_array(Auth::user()->role, ['Accountant','Managing-Director']))
-                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#recordPaymentModal">
-                                <i class="fas fa-plus"></i> Add Payment
-                            </button>
-                         @endif
-                        @endif
-                    </div>
+                     <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5>Payment History</h5>
+    <div class="btn-group">
+        @if($agreement->status !== 'completed')
+         @if(in_array(Auth::user()->role, ['Accountant','Managing-Director']))
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#recordPaymentModal">
+                <i class="fas fa-plus"></i> Add Payment
+            </button>
+         @endif
+        @endif
+    <button class="btn btn-success btn-sm" onclick="exportPaymentHistory()">
+        <i class="fas fa-file-pdf"></i> Export PDF
+    </button>
+    <button class="btn btn-info btn-sm" onclick="exportPaymentHistoryCSV()">
+        <i class="fas fa-file-csv"></i> Export CSV
+    </button>
+    </div>
+</div>
  <!-- Receipt Download Modal -->
 <div class="modal fade" id="receiptModal" tabindex="-1" aria-labelledby="receiptModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -2181,17 +2189,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <!-- 3. PENALTIES TAB CONTENT -->
 <div class="tab-pane fade" id="penalties" role="tabpanel">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5>Penalties Management</h5>
-        <div class="btn-group">
-            <button class="btn btn-outline-warning btn-sm" onclick="calculatePenalties({{ $agreement->id }})">
-                <i class="fas fa-calculator"></i> Calculate Penalties
-            </button>
-            <button class="btn btn-outline-info btn-sm" onclick="refreshPenalties()">
-                <i class="fas fa-sync-alt"></i> Refresh
-            </button>
-        </div>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5>Penalties Management</h5>
+    <div class="btn-group">
+        <button class="btn btn-outline-warning btn-sm" onclick="calculatePenalties({{ $agreement->id }})">
+            <i class="fas fa-calculator"></i> Calculate Penalties
+        </button>
+        <button class="btn btn-outline-info btn-sm" onclick="refreshPenalties()">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+        <button class="btn btn-success btn-sm" onclick="exportPenalties()">
+            <i class="fas fa-file-pdf"></i> PDF
+        </button>
+        <button class="btn btn-info btn-sm" onclick="exportPenaltiesCSV()">
+            <i class="fas fa-file-csv"></i> CSV
+        </button>
     </div>
+</div>
 
     <!-- Penalties Summary Card -->
     <div class="card border-warning mb-4" id="penaltySummaryCard">
@@ -3062,12 +3076,18 @@ function formatDateTime(dateTimeString) {
                 <!-- Payment Schedule Tab -->
                 <div class="tab-pane fade" id="payment-schedule" role="tabpanel">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5>Payment Schedule</h5>
-                        <div>
-                            <span class="badge bg-info me-2">Monthly: KSh {{ number_format($agreement->monthly_payment, 0) }}</span>
-                            <span class="badge bg-secondary">{{ $agreement->duration_months }} Months</span>
-                        </div>
+                    <h5>Payment Schedule</h5>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-info me-2">Monthly: KSh {{ number_format($agreement->monthly_payment, 0) }}</span>
+                        <span class="badge bg-secondary">{{ $agreement->duration_months }} Months</span>
+                        <button class="btn btn-success btn-sm" onclick="exportPaymentSchedule()">
+                            <i class="fas fa-file-pdf"></i> PDF
+                        </button>
+                        <button class="btn btn-info btn-sm" onclick="exportPaymentScheduleCSV()">
+                            <i class="fas fa-file-csv"></i> CSV
+                        </button>
                     </div>
+                </div>
                     
                     <div class="table-responsive">
                         <table class="table table-sm">
@@ -5272,6 +5292,823 @@ window.addEventListener('load', function() {
     const loadTime = performance.now();
     console.log(`Page loaded in ${loadTime.toFixed(2)}ms`);
 });
+// ==============================================
+// ENHANCED EXPORT WITH SUMMARY DATA
+// ==============================================
+
+function exportAllTables() {
+    const clientName = '{{ $agreement->client_name ?? 'Unknown' }}';
+    const agreementId = {{ $agreement->id ?? 'null' }};
+    
+    // Generate comprehensive PDF with all data
+    generateComprehensivePDF(clientName, agreementId);
+}
+
+function generateComprehensivePDF(clientName, agreementId) {
+    const { jsPDF } = window.jspdf;
+    
+    if (!jsPDF) {
+        alert('PDF library not loaded. Please refresh the page and try again.');
+        return;
+    }
+    
+    const doc = new jsPDF();
+    
+    // Title Page
+    doc.setFontSize(24);
+    doc.setTextColor(44, 62, 80);
+    doc.text("Kelmer's House of Cars LTD", 105, 60, { align: 'center' });
+    
+    doc.setFontSize(18);
+    doc.text('Comprehensive Loan Report', 105, 80, { align: 'center' });
+    
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Client: ${clientName}`, 105, 100, { align: 'center' });
+    doc.text(`Agreement ID: ${agreementId}`, 105, 115, { align: 'center' });
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 105, 130, { align: 'center' });
+    
+    // Agreement Summary Box
+    doc.rect(20, 150, 170, 80);
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('Agreement Summary', 25, 165);
+    
+    doc.setFont(undefined, 'normal');
+    doc.text(`Vehicle Price: KSh {{ number_format($agreement->vehicle_price ?? 0, 0) }}`, 25, 180);
+    doc.text(`Deposit: KSh {{ number_format($agreement->deposit_amount ?? 0, 0) }}`, 25, 190);
+    doc.text(`Loan Amount: KSh {{ number_format($agreement->loan_amount ?? 0, 0) }}`, 25, 200);
+    doc.text(`Monthly Payment: KSh {{ number_format($agreement->monthly_payment ?? 0, 0) }}`, 110, 180);
+    doc.text(`Interest Rate: {{ $agreement->interest_rate ?? 0 }}%`, 110, 190);
+    doc.text(`Outstanding: KSh {{ number_format($actualOutstanding ?? 0, 0) }}`, 110, 200);
+    doc.text(`Duration: {{ $agreement->duration_months ?? 0 }} Months`, 25, 210);
+    doc.text(`Status: {{ ucfirst($agreement->status ?? 'Unknown') }}`, 110, 210);
+    
+    // Add new page for detailed reports
+    doc.addPage();
+    
+    // Table of contents
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.text('Table of Contents', 20, 30);
+    
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'normal');
+    doc.text('1. Payment History ......................................................... 3', 20, 50);
+    doc.text('2. Payment Schedule ........................................................ 4', 20, 65);
+    doc.text('3. Penalties Report ......................................................... 5', 20, 80);
+    
+    // Note about individual exports
+    doc.setFontSize(10);
+    doc.setTextColor(128, 128, 128);
+    doc.text('Note: Individual detailed reports can be exported separately from each tab.', 20, 200);
+    
+    // Download
+    const fileName = `Comprehensive_Report_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    doc.save(fileName);
+    
+    // Show success message and offer individual exports
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Report Generated!',
+            html: `
+                <p>Comprehensive report downloaded successfully.</p>
+                <p class="mt-2">Would you also like to generate detailed individual reports?</p>
+                <div class="d-flex justify-content-center gap-2 mt-3">
+                    <button class="btn btn-sm btn-primary" onclick="exportPaymentHistory()">Payment History</button>
+                    <button class="btn btn-sm btn-info" onclick="exportPaymentSchedule()">Payment Schedule</button>
+                    <button class="btn btn-sm btn-warning" onclick="exportPenalties()">Penalties</button>
+                </div>
+            `,
+            icon: 'success',
+            confirmButtonColor: '#28a745',
+            showConfirmButton: false,
+            timer: 5000,
+            timerProgressBar: true
+        });
+    }
+}
+
+// ==============================================
+// UTILITY FUNCTIONS
+// ==============================================
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-GB');
+}
+
+function formatNumber(number) {
+    return new Intl.NumberFormat('en-KE').format(number || 0);
+}
+
+// Add export all button functionality
+function addExportAllButton() {
+    // Check if button already exists
+    if (document.getElementById('exportAllBtn')) {
+        return;
+    }
+    
+    // Find the header section to add the button
+    const headerSection = document.querySelector('.py-3.d-flex.align-items-sm-center');
+    if (headerSection) {
+        const exportAllBtn = document.createElement('button');
+        exportAllBtn.id = 'exportAllBtn';
+        exportAllBtn.className = 'btn btn-outline-success btn-sm ms-2';
+        exportAllBtn.innerHTML = '<i class="fas fa-download me-1"></i>Export All PDF';
+        exportAllBtn.onclick = exportAllTables;
+        
+        const buttonContainer = headerSection.querySelector('.d-flex.gap-2');
+        if (buttonContainer) {
+            buttonContainer.appendChild(exportAllBtn);
+        }
+    }
+}
+
+// Initialize export functionality when document loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if jsPDF is available
+    if (typeof window.jspdf === 'undefined') {
+        console.warn('jsPDF library not found. Loading from CDN...');
+        
+        // Load jsPDF if not already loaded
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        script.onload = function() {
+            console.log('jsPDF loaded successfully');
+            
+            // Load autoTable plugin
+            const autoTableScript = document.createElement('script');
+            autoTableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js';
+            autoTableScript.onload = function() {
+                console.log('jsPDF autoTable plugin loaded successfully');
+                addExportAllButton();
+            };
+            document.head.appendChild(autoTableScript);
+        };
+        document.head.appendChild(script);
+    } else {
+        // jsPDF already available
+        addExportAllButton();
+    }
+    
+    console.log('PDF export functionality initialized');
+});// ==============================================
+// EXPORT FUNCTIONS FOR PAYMENT HISTORY
+// ==============================================
+
+function exportPaymentHistory() {
+    const agreementId = {{ $agreement->id ?? 'null' }};
+    const clientName = '{{ $agreement->client_name ?? 'Unknown' }}';
+    
+    // Collect payment history data
+    const paymentData = [];
+    
+    // Add deposit payment
+    paymentData.push({
+        'Date': '{{ \Carbon\Carbon::parse($agreement->agreement_date)->format('Y-m-d') }}',
+        'Amount': {{ $agreement->deposit_amount }},
+        'Method': 'Initial Deposit',
+        'Reference': '-',
+        'Status': 'Cleared',
+        'Type': 'Deposit'
+    });
+    
+    // Add regular payments
+    @if($agreement->payments)
+        @foreach($agreement->payments as $payment)
+        paymentData.push({
+            'Date': '{{ isset($payment->payment_date) ? \Carbon\Carbon::parse($payment->payment_date)->format('Y-m-d') : \Carbon\Carbon::parse($payment->created_at)->format('Y-m-d') }}',
+            'Amount': {{ $payment->amount }},
+            'Method': '{{ ucfirst(str_replace('_', ' ', $payment->payment_method ?? 'Not Specified')) }}',
+            'Reference': '{{ $payment->reference_number ?? $payment->payment_reference ?? '-' }}',
+            'Status': '{{ isset($payment->is_verified) && $payment->is_verified ? 'Verified' : 'Pending' }}',
+            'Type': 'Payment'
+        });
+        @endforeach
+    @endif
+    
+    // Convert to CSV
+    const csvContent = convertToCSV(paymentData);
+    downloadCSV(csvContent, `Payment_History_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+}
+
+function exportPaymentHistoryExcel() {
+    // Similar to CSV but for Excel format
+    exportPaymentHistory(); // For now, use CSV. Can be enhanced to actual Excel format
+}
+
+// ==============================================
+// EXPORT FUNCTIONS FOR PAYMENT SCHEDULE
+// ==============================================
+
+function exportPaymentSchedule() {
+    const clientName = '{{ $agreement->client_name ?? 'Unknown' }}';
+    const scheduleData = [];
+    
+    @if($agreement->paymentSchedule && $agreement->paymentSchedule->count() > 0)
+        @foreach($agreement->paymentSchedule->sortBy('due_date') as $schedule)
+        scheduleData.push({
+            'Installment': {{ $schedule->installment_number }},
+            'Due Date': '{{ \Carbon\Carbon::parse($schedule->due_date)->format('Y-m-d') }}',
+            'Principal': {{ $schedule->principal_amount }},
+            'Interest': {{ $schedule->interest_amount }},
+            'Total Payment': {{ $schedule->total_amount }},
+            'Balance After': {{ $schedule->balance_after }},
+            'Status': '{{ $schedule->status }}',
+            'Amount Paid': {{ $schedule->amount_paid ?? 0 }},
+            'Days Overdue': {{ $schedule->days_overdue ?? 0 }}
+        });
+        @endforeach
+    @endif
+    
+    const csvContent = convertToCSV(scheduleData);
+    downloadCSV(csvContent, `Payment_Schedule_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+}
+
+function exportPaymentScheduleExcel() {
+    exportPaymentSchedule(); // Use CSV for now
+}
+
+// ==============================================
+// EXPORT FUNCTIONS FOR PENALTIES
+// ==============================================
+
+function exportPenalties() {
+    const clientName = '{{ $agreement->client_name ?? 'Unknown' }}';
+    
+    if (!currentPenalties || currentPenalties.length === 0) {
+        alert('No penalties data to export. Please load penalties first.');
+        return;
+    }
+    
+    const penaltiesData = currentPenalties.map(penalty => ({
+        'Due Date': penalty.due_date,
+        'Days Overdue': penalty.days_overdue,
+        'Expected Amount': penalty.expected_amount,
+        'Penalty Rate': penalty.penalty_rate + '%',
+        'Penalty Amount': penalty.penalty_amount,
+        'Amount Paid': penalty.amount_paid,
+        'Outstanding': penalty.penalty_amount - penalty.amount_paid,
+        'Status': penalty.status,
+        'Created Date': penalty.created_at
+    }));
+    
+    const csvContent = convertToCSV(penaltiesData);
+    downloadCSV(csvContent, `Penalties_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+}
+
+function exportPenaltiesExcel() {
+    exportPenalties(); // Use CSV for now
+}
+
+// ==============================================
+// UTILITY FUNCTIONS
+// ==============================================
+
+function convertToCSV(data) {
+    if (!data || data.length === 0) {
+        return '';
+    }
+    
+    const headers = Object.keys(data[0]);
+    const csvHeaders = headers.join(',');
+    
+    const csvRows = data.map(row => {
+        return headers.map(header => {
+            const value = row[header];
+            // Handle values that contain commas or quotes
+            if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+                return `"${value.replace(/"/g, '""')}"`;
+            }
+            return value;
+        }).join(',');
+    });
+    
+    return [csvHeaders, ...csvRows].join('\n');
+}
+
+function downloadCSV(csvContent, filename) {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    } else {
+        // Fallback for older browsers
+        const url = 'data:text/csv;charset=utf-8,' + encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.click();
+    }
+}
+
+// ==============================================
+// ENHANCED EXPORT WITH SUMMARY DATA
+// ==============================================
+
+function exportAllTables() {
+    const clientName = '{{ $agreement->client_name ?? 'Unknown' }}';
+    const agreementId = {{ $agreement->id ?? 'null' }};
+    
+    // Create a comprehensive export with all three tables
+    const summaryData = {
+        'Agreement Information': {
+            'Client Name': clientName,
+            'Agreement ID': agreementId,
+            'Vehicle Price': {{ $agreement->vehicle_price ?? 0 }},
+            'Deposit Amount': {{ $agreement->deposit_amount ?? 0 }},
+            'Loan Amount': {{ $agreement->loan_amount ?? 0 }},
+            'Monthly Payment': {{ $agreement->monthly_payment ?? 0 }},
+            'Outstanding Balance': {{ $actualOutstanding ?? 0 }},
+            'Export Date': new Date().toISOString().slice(0, 19).replace('T', ' ')
+        }
+    };
+    
+    // Convert summary to CSV format
+    const summaryCSV = Object.entries(summaryData['Agreement Information'])
+        .map(([key, value]) => `${key},${value}`)
+        .join('\n');
+    
+    downloadCSV(summaryCSV, `Agreement_Summary_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+    
+    // Also trigger individual exports
+    setTimeout(() => exportPaymentHistory(), 500);
+    setTimeout(() => exportPaymentSchedule(), 1000);
+    
+    // Export penalties if available
+    if (currentPenalties && currentPenalties.length > 0) {
+        setTimeout(() => exportPenalties(), 1500);
+    }
+}
+
+// Add export all button functionality
+function addExportAllButton() {
+    // Check if button already exists
+    if (document.getElementById('exportAllBtn')) {
+        return;
+    }
+    
+    // Find the header section to add the button
+    const headerSection = document.querySelector('.py-3.d-flex.align-items-sm-center');
+    if (headerSection) {
+        const exportAllBtn = document.createElement('button');
+        exportAllBtn.id = 'exportAllBtn';
+        exportAllBtn.className = 'btn btn-outline-success btn-sm ms-2';
+        exportAllBtn.innerHTML = '<i class="fas fa-download me-1"></i>Export All';
+        exportAllBtn.onclick = exportAllTables;
+        
+        const buttonContainer = headerSection.querySelector('.d-flex.gap-2');
+        if (buttonContainer) {
+            buttonContainer.appendChild(exportAllBtn);
+        }
+    }
+}
+
+// Initialize export functionality when document loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Add export all button
+    addExportAllButton();
+    
+    console.log('Export functionality initialized');
+});
+// ==============================================
+// COMPLETE EXPORT SOLUTION - PDF AND CSV FIXED
+// ==============================================
+
+// Global variables
+let jsPDFLoaded = false;
+let autoTableLoaded = false;
+
+// Initialize libraries on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadPDFLibraries();
+});
+
+function loadPDFLibraries() {
+    // Check if jsPDF is already available
+    if (typeof window.jspdf !== 'undefined') {
+        jsPDFLoaded = true;
+        checkAutoTable();
+        return;
+    }
+    
+    // Load jsPDF
+    const jspdfScript = document.createElement('script');
+    jspdfScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    jspdfScript.onload = function() {
+        console.log('jsPDF loaded');
+        jsPDFLoaded = true;
+        loadAutoTable();
+    };
+    jspdfScript.onerror = function() {
+        console.error('Failed to load jsPDF');
+    };
+    document.head.appendChild(jspdfScript);
+}
+
+function loadAutoTable() {
+    const autoTableScript = document.createElement('script');
+    autoTableScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js';
+    autoTableScript.onload = function() {
+        console.log('jsPDF autoTable loaded');
+        autoTableLoaded = true;
+    };
+    autoTableScript.onerror = function() {
+        console.error('Failed to load autoTable');
+    };
+    document.head.appendChild(autoTableScript);
+}
+
+function checkAutoTable() {
+    if (typeof window.jspdf !== 'undefined') {
+        try {
+            const testDoc = new window.jspdf.jsPDF();
+            if (typeof testDoc.autoTable !== 'undefined') {
+                autoTableLoaded = true;
+                console.log('autoTable already available');
+            } else {
+                loadAutoTable();
+            }
+        } catch (e) {
+            loadAutoTable();
+        }
+    }
+}
+
+function isPDFReady() {
+    return jsPDFLoaded && autoTableLoaded && typeof window.jspdf !== 'undefined';
+}
+
+// ==============================================
+// PAYMENT HISTORY EXPORTS
+// ==============================================
+
+function exportPaymentHistory() {
+    const clientName = '{{ $agreement->client_name ?? 'Unknown' }}';
+    const paymentData = [];
+    
+    // Add deposit payment
+    paymentData.push({
+        date: '{{ \Carbon\Carbon::parse($agreement->agreement_date)->format('M d, Y') }}',
+        amount: {{ $agreement->deposit_amount }},
+        method: 'Initial Deposit',
+        reference: '-',
+        status: 'Cleared',
+        type: 'Deposit'
+    });
+    
+    // Add regular payments
+    @if($agreement->payments)
+        @foreach($agreement->payments as $payment)
+        paymentData.push({
+            date: '{{ isset($payment->payment_date) ? \Carbon\Carbon::parse($payment->payment_date)->format('M d, Y') : \Carbon\Carbon::parse($payment->created_at)->format('M d, Y') }}',
+            amount: {{ $payment->amount }},
+            method: '{{ ucfirst(str_replace('_', ' ', $payment->payment_method ?? 'Not Specified')) }}',
+            reference: '{{ $payment->reference_number ?? $payment->payment_reference ?? '-' }}',
+            status: '{{ isset($payment->is_verified) && $payment->is_verified ? 'Verified' : 'Pending' }}',
+            type: 'Payment'
+        });
+        @endforeach
+    @endif
+    
+    if (!isPDFReady()) {
+        alert('PDF libraries are still loading. Please try again in a moment.');
+        return;
+    }
+    
+    generatePaymentHistoryPDF(paymentData, clientName);
+}
+
+function exportPaymentHistoryCSV() {
+    const clientName = '{{ $agreement->client_name ?? 'Unknown' }}';
+    const paymentData = [];
+    
+    paymentData.push({
+        'Date': '{{ \Carbon\Carbon::parse($agreement->agreement_date)->format('Y-m-d') }}',
+        'Amount (KSh)': {{ $agreement->deposit_amount }},
+        'Method': 'Initial Deposit',
+        'Reference': '-',
+        'Status': 'Cleared',
+        'Type': 'Deposit'
+    });
+    
+    @if($agreement->payments)
+        @foreach($agreement->payments as $payment)
+        paymentData.push({
+            'Date': '{{ isset($payment->payment_date) ? \Carbon\Carbon::parse($payment->payment_date)->format('Y-m-d') : \Carbon\Carbon::parse($payment->created_at)->format('Y-m-d') }}',
+            'Amount (KSh)': {{ $payment->amount }},
+            'Method': '{{ ucfirst(str_replace('_', ' ', $payment->payment_method ?? 'Not Specified')) }}',
+            'Reference': '{{ $payment->reference_number ?? $payment->payment_reference ?? '-' }}',
+            'Status': '{{ isset($payment->is_verified) && $payment->is_verified ? 'Verified' : 'Pending' }}',
+            'Type': 'Payment'
+        });
+        @endforeach
+    @endif
+    
+    downloadCSV(convertToCSV(paymentData), `Payment_History_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+}
+
+// ==============================================
+// PAYMENT SCHEDULE EXPORTS
+// ==============================================
+
+function exportPaymentSchedule() {
+    const clientName = '{{ $agreement->client_name ?? 'Unknown' }}';
+    const scheduleData = [];
+    
+    @if($agreement->paymentSchedule && $agreement->paymentSchedule->count() > 0)
+        @foreach($agreement->paymentSchedule->sortBy('due_date') as $schedule)
+        scheduleData.push({
+            installment: {{ $schedule->installment_number }},
+            dueDate: '{{ \Carbon\Carbon::parse($schedule->due_date)->format('M d, Y') }}',
+            principal: {{ $schedule->principal_amount }},
+            interest: {{ $schedule->interest_amount }},
+            totalPayment: {{ $schedule->total_amount }},
+            balanceAfter: {{ $schedule->balance_after }},
+            status: '{{ $schedule->status }}',
+            amountPaid: {{ $schedule->amount_paid ?? 0 }},
+            daysOverdue: {{ $schedule->days_overdue ?? 0 }}
+        });
+        @endforeach
+    @endif
+    
+    if (!isPDFReady()) {
+        alert('PDF libraries are still loading. Please try again in a moment.');
+        return;
+    }
+    
+    generatePaymentSchedulePDF(scheduleData, clientName);
+}
+
+function exportPaymentScheduleCSV() {
+    const clientName = '{{ $agreement->client_name ?? 'Unknown' }}';
+    const scheduleData = [];
+    
+    @if($agreement->paymentSchedule && $agreement->paymentSchedule->count() > 0)
+        @foreach($agreement->paymentSchedule->sortBy('due_date') as $schedule)
+        scheduleData.push({
+            'Installment #': {{ $schedule->installment_number }},
+            'Due Date': '{{ \Carbon\Carbon::parse($schedule->due_date)->format('Y-m-d') }}',
+            'Principal (KSh)': {{ $schedule->principal_amount }},
+            'Interest (KSh)': {{ $schedule->interest_amount }},
+            'Total Payment (KSh)': {{ $schedule->total_amount }},
+            'Balance After (KSh)': {{ $schedule->balance_after }},
+            'Status': '{{ $schedule->status }}',
+            'Amount Paid (KSh)': {{ $schedule->amount_paid ?? 0 }},
+            'Days Overdue': {{ $schedule->days_overdue ?? 0 }}
+        });
+        @endforeach
+    @endif
+    
+    downloadCSV(convertToCSV(scheduleData), `Payment_Schedule_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+}
+
+// ==============================================
+// PENALTIES EXPORTS
+// ==============================================
+
+function exportPenalties() {
+    const clientName = '{{ $agreement->client_name ?? 'Unknown' }}';
+    
+    if (!currentPenalties || currentPenalties.length === 0) {
+        alert('No penalties data to export. Please load penalties first.');
+        return;
+    }
+    
+    if (!isPDFReady()) {
+        alert('PDF libraries are still loading. Please try again in a moment.');
+        return;
+    }
+    
+    const penaltiesData = currentPenalties.map(penalty => ({
+        dueDate: formatDate(penalty.due_date),
+        daysOverdue: penalty.days_overdue,
+        expectedAmount: penalty.expected_amount,
+        penaltyRate: penalty.penalty_rate + '%',
+        penaltyAmount: penalty.penalty_amount,
+        amountPaid: penalty.amount_paid,
+        outstanding: penalty.penalty_amount - penalty.amount_paid,
+        status: penalty.status
+    }));
+    
+    generatePenaltiesPDF(penaltiesData, clientName);
+}
+
+function exportPenaltiesCSV() {
+    const clientName = '{{ $agreement->client_name ?? 'Unknown' }}';
+    
+    if (!currentPenalties || currentPenalties.length === 0) {
+        alert('No penalties data to export. Please load penalties first.');
+        return;
+    }
+    
+    const penaltiesData = currentPenalties.map(penalty => ({
+        'Due Date': penalty.due_date,
+        'Days Overdue': penalty.days_overdue,
+        'Expected Amount (KSh)': penalty.expected_amount,
+        'Penalty Rate': penalty.penalty_rate + '%',
+        'Penalty Amount (KSh)': penalty.penalty_amount,
+        'Amount Paid (KSh)': penalty.amount_paid,
+        'Outstanding (KSh)': penalty.penalty_amount - penalty.amount_paid,
+        'Status': penalty.status
+    }));
+    
+    downloadCSV(convertToCSV(penaltiesData), `Penalties_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+}
+
+// ==============================================
+// PDF GENERATION FUNCTIONS
+// ==============================================
+
+function generatePaymentHistoryPDF(paymentData, clientName) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(44, 62, 80);
+    doc.text("Kelmer's House of Cars LTD", 20, 20);
+    
+    doc.setFontSize(14);
+    doc.text('Payment History Report', 20, 35);
+    
+    // Client Information
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Client: ${clientName}`, 20, 50);
+    doc.text(`Agreement ID: {{ $agreement->id }}`, 20, 60);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 70);
+    
+    const headers = [['Date', 'Amount (KSh)', 'Method', 'Reference', 'Status', 'Type']];
+    const rows = paymentData.map(payment => [
+        payment.date,
+        payment.amount.toLocaleString(),
+        payment.method,
+        payment.reference,
+        payment.status,
+        payment.type
+    ]);
+    
+    doc.autoTable({
+        head: headers,
+        body: rows,
+        startY: 85,
+        headStyles: { fillColor: [52, 73, 94], textColor: 255 },
+        bodyStyles: { fontSize: 9 },
+        columnStyles: { 1: { halign: 'right' } }
+    });
+    
+    const totalPaid = paymentData.reduce((sum, payment) => sum + payment.amount, 0);
+    doc.setFont(undefined, 'bold');
+    doc.text(`Total Paid: KSh ${totalPaid.toLocaleString()}`, 20, doc.lastAutoTable.finalY + 20);
+    
+    doc.save(`Payment_History_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+function generatePaymentSchedulePDF(scheduleData, clientName) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('landscape');
+    
+    doc.setFontSize(20);
+    doc.text("Kelmer's House of Cars LTD", 20, 20);
+    doc.setFontSize(14);
+    doc.text('Payment Schedule Report', 20, 35);
+    
+    doc.setFontSize(12);
+    doc.text(`Client: ${clientName}`, 20, 50);
+    doc.text(`Agreement ID: {{ $agreement->id }}`, 20, 60);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 70);
+    
+    if (scheduleData.length === 0) {
+        doc.text('No payment schedule data available', 20, 100);
+        doc.save(`Payment_Schedule_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`);
+        return;
+    }
+    
+    const headers = [['#', 'Due Date', 'Principal', 'Interest', 'Total', 'Balance', 'Status']];
+    const rows = scheduleData.map(schedule => [
+        schedule.installment,
+        schedule.dueDate,
+        schedule.principal.toLocaleString(),
+        schedule.interest.toLocaleString(),
+        schedule.totalPayment.toLocaleString(),
+        schedule.balanceAfter.toLocaleString(),
+        schedule.status
+    ]);
+    
+    doc.autoTable({
+        head: headers,
+        body: rows,
+        startY: 85,
+        headStyles: { fillColor: [52, 73, 94], textColor: 255 },
+        bodyStyles: { fontSize: 8 },
+        columnStyles: { 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } }
+    });
+    
+    const totalPrincipal = scheduleData.reduce((sum, s) => sum + s.principal, 0);
+    const totalInterest = scheduleData.reduce((sum, s) => sum + s.interest, 0);
+    doc.setFont(undefined, 'bold');
+    doc.save(`Payment_Schedule_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+function generatePenaltiesPDF(penaltiesData, clientName) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('landscape');
+    
+    doc.setFontSize(20);
+    doc.text("Kelmer's House of Cars LTD", 20, 20);
+    doc.setFontSize(14);
+    doc.text('Penalties Report', 20, 35);
+    
+    doc.setFontSize(12);
+    doc.text(`Client: ${clientName}`, 20, 50);
+    doc.text(`Agreement ID: {{ $agreement->id }}`, 20, 60);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 70);
+    
+    const headers = [['Due Date', 'Days Overdue', 'Expected Amount', 'Rate', 'Penalty Amount', 'Outstanding', 'Status']];
+    const rows = penaltiesData.map(penalty => [
+        penalty.dueDate,
+        penalty.daysOverdue,
+        penalty.expectedAmount.toLocaleString(),
+        penalty.penaltyRate,
+        penalty.penaltyAmount.toLocaleString(),
+        penalty.outstanding.toLocaleString(),
+        penalty.status.toUpperCase()
+    ]);
+    
+    doc.autoTable({
+        head: headers,
+        body: rows,
+        startY: 85,
+        headStyles: { fillColor: [220, 53, 69], textColor: 255 },
+        bodyStyles: { fontSize: 8 },
+        columnStyles: { 2: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } }
+    });
+    
+    const totalPenalties = penaltiesData.reduce((sum, p) => sum + p.penaltyAmount, 0);
+    doc.setFont(undefined, 'bold');
+    doc.text(`Total Penalties: KSh ${totalPenalties.toLocaleString()}`, 20, doc.lastAutoTable.finalY + 20);
+    
+    doc.save(`Penalties_Report_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+// ==============================================
+// CSV UTILITY FUNCTIONS
+// ==============================================
+
+function convertToCSV(data) {
+    if (!data || data.length === 0) return '';
+    
+    const headers = Object.keys(data[0]);
+    const csvRows = data.map(row => 
+        headers.map(header => {
+            const value = row[header];
+            if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+                return `"${value.replace(/"/g, '""')}"`;
+            }
+            return value;
+        }).join(',')
+    );
+    
+    return [headers.join(','), ...csvRows].join('\n');
+}
+
+function downloadCSV(csvContent, filename) {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+// ==============================================
+// UTILITY FUNCTIONS
+// ==============================================
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-GB');
+}
+
+function formatNumber(number) {
+    return new Intl.NumberFormat('en-KE').format(number || 0);
+}
 </script>
 <style>
 /* Lump Sum Payment Button Styling */
@@ -5473,6 +6310,28 @@ window.addEventListener('load', function() {
 .progress-bar {
     border-radius: 10px;
     transition: width 0.6s ease;
+}
+/* Export Button Styling */
+.btn-group .btn {
+    border-radius: 6px;
+    margin-left: 2px;
+}
+
+.btn-group .btn:first-child {
+    margin-left: 0;
+}
+
+/* Responsive export buttons */
+@media (max-width: 768px) {
+    .btn-group {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .btn-group .btn {
+        margin: 2px 0;
+        width: 100%;
+    }
 }
 </style>
 <!-- DEBUGGING AND FIXES FOR THE NON-CLICKABLE BUTTON -->
