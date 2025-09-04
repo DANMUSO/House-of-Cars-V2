@@ -324,9 +324,11 @@
                                                         data-price="{{ $price }}"
                                                         data-make="{{ $customer->vehicle_make ?? 'Unknown' }}"
                                                         data-model="{{ $customer->vehicle_model ?? '' }}"
-                                                        data-plate="{{ $customer->number_plate ?? '' }}">
+                                                        data-plate="{{ $customer->number_plate ?? '' }}"
+                                                        data-variant="{{ $customer->model ?? '' }}">
                                                     {{ $customer->vehicle_make ?? 'Unknown' }}
-                                                    @if($customer->vehicle_model) {{ $customer->vehicle_model }} @endif
+                                                    @if($customer->vehicle_model) - {{ $customer->vehicle_model }} @endif
+                                                    @if($customer->model) - {{ $customer->model }} @endif
                                                     @if($customer->number_plate) ({{ $customer->number_plate }}) @endif
                                                     @if($price > 0) - KSh {{ number_format($price) }} @endif
                                                 </option>

@@ -318,7 +318,7 @@
                                         @foreach ($cars as $car)
                                             @if ($car->customerVehicle)
                                                 <option value="customer-{{ $car->customerVehicle->id }}">
-                                                    {{ $car->customerVehicle->vehicle_make }} - {{ $car->customerVehicle->number_plate }}
+                                                    {{ $car->customerVehicle->vehicle_make }} -  {{ $car->customerVehicle->model }} - {{ $car->customerVehicle->number_plate }}
                                                 </option>
                                             @endif
                                         @endforeach
@@ -845,7 +845,7 @@
                                                         <span class="me-2">🔄</span>
                                                         <div>
                                                             <strong>{{ $car ? $car->vehicle_make : 'N/A' }}</strong>
-                                                            @if($car)<br><small class="text-muted">{{ $car->number_plate }}</small>@endif
+                                                            @if($car)<br><small class="text-muted">{{ $car->model }} - {{ $car->number_plate }}</small>@endif
                                                         </div>
                                                     </div>
                                                 @else

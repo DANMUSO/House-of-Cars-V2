@@ -1,3 +1,4 @@
+<!-- Updated Blade Template with External Download Button -->
 <x-app-layout>
 <div class="container-fluid">
     <!-- Compact Header -->
@@ -167,6 +168,14 @@
                                         @else
                                             {{ $sale->phone_number ?? 'N/A' }}
                                         @endif
+                                        Email: 
+                                        @if($sale->record_type == 'incash')
+                                            {{ $sale->email ?? 'N/A' }}
+                                        @elseif($sale->record_type == 'hire_purchase')
+                                            {{ $sale->customer_phone ?? $sale->email ?? 'N/A' }}
+                                        @else
+                                            {{ $sale->email ?? 'N/A' }}
+                                        @endif
                                     </div>
                                 </div>
                                 <div class="customer-id">
@@ -214,23 +223,46 @@
                     </div>
 
                     <!-- Security Alert -->
-                    <div class="security-verification">
+                    <!-- <div class="security-verification">
                         <div class="verification-icon">
                             <i class="fas fa-exclamation-triangle"></i>
                         </div>
                         <div class="verification-content">
-                            <div class="verification-title">VERIFY ID:</div>
+                           
                             <div class="verification-text">Security must check customer ID before vehicle release</div>
                         </div>
-                    </div>
+                    </div> -->
+                    <!-- ADD SIGNATURE SECTIONS HERE -->
+<div class="signatures-section">
+    <div class="signatures-header">Authorization Signatures</div>
+    <div class="signatures-grid">
+        <!-- Buyer Signature -->
+        <div class="signature-box">
+            <div class="signature-label">Seller</div>
+            <div class="signature-area"></div>
+            <div class="signature-date">
+                <strong>Date:</strong> ________________
+            </div>
+        </div>
+        
+        <!-- Seller Representative Signature -->
+        <div class="signature-box">
+            <div class="signature-label">Buyer</div>
+            <div class="signature-area"></div>
+            <div class="signature-date">
+                <strong>Date:</strong> ________________
+            </div>
+        </div>
+    </div>
+</div>
                 </div>
-
-                <!-- Compact Actions -->
-                <div class="card-footer bg-light p-2">
-                    <button class="btn btn-primary btn-sm w-100" onclick="downloadCard({{ $sale->id }})">
-                        <i class="fas fa-download"></i> Download Gate Pass
-                    </button>
-                </div>
+            </div>
+            
+            <!-- Download Button OUTSIDE Card -->
+            <div class="download-actions mb-3">
+                <button class="btn btn-primary btn-sm w-100" onclick="downloadCard({{ $sale->id }})">
+                    <i class="fas fa-download"></i> Download Gate Pass
+                </button>
             </div>
         </div>
         @endforeach
@@ -253,7 +285,7 @@
     @endif
 </div>
 
-<!-- JavaScript for Instant Filtering -->
+<!-- JavaScript -->
 <script>
 class GatePassFilter {
     constructor() {
@@ -274,7 +306,6 @@ class GatePassFilter {
     }
 
     setupEventListeners() {
-        // Add event listeners for all filter inputs
         Object.values(this.filters).forEach(filter => {
             if (filter.type === 'text') {
                 filter.addEventListener('input', () => this.applyFilters());
@@ -283,7 +314,6 @@ class GatePassFilter {
             }
         });
 
-        // Clear filters button
         document.getElementById('clear-filters').addEventListener('click', () => {
             this.clearAllFilters();
         });
@@ -329,33 +359,15 @@ class GatePassFilter {
     }
 
     checkMatches(filterValues, itemData) {
-        // Sale type filter
-        if (filterValues.saleType && !itemData.saleType.includes(filterValues.saleType)) {
-            return false;
-        }
-
-        // Pass ID filter (supports both full ID and number only)
+        if (filterValues.saleType && !itemData.saleType.includes(filterValues.saleType)) return false;
         if (filterValues.passId) {
             const passIdMatch = itemData.passId.includes(filterValues.passId) ||
                                itemData.passId.replace('gp-', '').includes(filterValues.passId);
             if (!passIdMatch) return false;
         }
-
-        // ID Number filter
-        if (filterValues.idNumber && !itemData.idNumber.includes(filterValues.idNumber)) {
-            return false;
-        }
-
-        // Customer filter
-        if (filterValues.customer && !itemData.customer.includes(filterValues.customer)) {
-            return false;
-        }
-
-        // Vehicle filter
-        if (filterValues.vehicle && !itemData.vehicle.includes(filterValues.vehicle)) {
-            return false;
-        }
-
+        if (filterValues.idNumber && !itemData.idNumber.includes(filterValues.idNumber)) return false;
+        if (filterValues.customer && !itemData.customer.includes(filterValues.customer)) return false;
+        if (filterValues.vehicle && !itemData.vehicle.includes(filterValues.vehicle)) return false;
         return true;
     }
 
@@ -400,570 +412,353 @@ class GatePassFilter {
     }
 }
 
-// Enhanced Download Function
+// CLEAN Download Function - Clones existing card and adds signatures
 function downloadCard(saleId) {
-    // Get the original card data
     const cardElement = document.getElementById(`gate-pass-${saleId}`);
     const gatePassItem = cardElement.closest('.gate-pass-item');
     
-    // Extract data from the card
-    const passId = gatePassItem.dataset.passId;
-    const saleType = gatePassItem.dataset.saleType;
-    const customer = gatePassItem.dataset.customer;
+    // Extract customer data for signature section
+    const customerName = gatePassItem.dataset.customer;
     const idNumber = gatePassItem.dataset.idNumber;
-    const vehicle = gatePassItem.dataset.vehicle;
     
-    // Get vehicle and chassis info from the card
-    const vehicleText = cardElement.querySelector('.text-primary strong')?.textContent || vehicle;
-    const chassisText = cardElement.querySelector('.small.text-muted')?.textContent || 'N/A';
-    const phoneText = cardElement.querySelectorAll('.small.text-muted')[1]?.textContent || 'N/A';
+    // Clone the existing card HTML
+    const cardClone = cardElement.cloneNode(true);
     
-    // Determine badge type and color
-    let badgeText = '', badgeColor = '', badgeTextColor = '#fff';
-    if (saleType === 'incash') {
-        badgeText = 'CASH';
-        badgeColor = '#28a745';
-    } else if (saleType === 'hire_purchase') {
-        badgeText = 'H.P.';
-        badgeColor = '#17a2b8';
-    } else {
-        badgeText = 'G.A.';
-        badgeColor = '#ffc107';
-        badgeTextColor = '#000';
-    }
+    // Add signature sections HTML to the cloned card
+    const signatureHTML = `
+        <!-- Signature Sections -->
+        <div class="signatures-section">
+            <div class="signatures-header">Authorization Signatures</div>
+            <div class="signatures-grid">
+                <!-- Buyer Signature -->
+                <div class="signature-box">
+                    <div class="signature-label">Vehicle Buyer</div>
+                    <div class="signature-area"></div>
+                    <div class="signature-details">
+                        <strong>Name:</strong> ${customerName || 'N/A'}<br>
+                        <strong>ID Number:</strong> ${idNumber || 'N/A'}
+                    </div>
+                    <div class="signature-date">
+                        <strong>Date:</strong> ________________
+                    </div>
+                </div>
+                
+                <!-- Seller Representative Signature -->
+                <div class="signature-box">
+                    <div class="signature-label">Seller Representative</div>
+                    <div class="signature-area"></div>
+                    <div class="signature-details">
+                        <strong>Title:</strong> Sales Manager<br>
+                        <strong>Department:</strong> Vehicle Sales
+                    </div>
+                    <div class="signature-date">
+                        <strong>Date:</strong> ________________
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
     
-    // Get current date
-    const currentDate = new Date();
-    const formattedDate = currentDate.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: '2-digit', 
-        year: 'numeric' 
-    });
+    // Add signature sections to the card body
+    const cardBody = cardClone.querySelector('.gate-pass-body');
+    cardBody.insertAdjacentHTML('beforeend', signatureHTML);
     
+    // Create print window with the cloned card
     const printWindow = window.open('', '_blank');
-    
     printWindow.document.write(`
         <html>
             <head>
-                <title>Gate Pass - ${passId}</title>
+                <title>Gate Pass - ${gatePassItem.dataset.passId}</title>
                 <style>
                     * { margin: 0; padding: 0; box-sizing: border-box; }
                     body { 
-                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-                        background: white;
-                        padding: 20px;
-                        color: #333;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        background: white; padding: 20px; color: #333; line-height: 1.5;
                     }
-                    .gate-pass-container {
-                        max-width: 600px;
-                        margin: 0 auto;
-                        border: 3px solid #000;
-                        border-radius: 8px;
-                        overflow: hidden;
-                        background: white;
+                    
+                    /* Include all existing card styles */
+                    .gate-pass-card {
+                        border: 2px solid #000; border-radius: 12px; background: #fff; overflow: hidden;
+                        max-width: 600px; margin: 0 auto;
                     }
                     .gate-pass-header {
-                        background: linear-gradient(135deg, #007bff, #0056b3);
-                        color: white;
-                        padding: 20px;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
+                        background: linear-gradient(135deg, #007bff, #0056b3); color: white; padding: 16px 20px;
                     }
-                    .header-left h2 {
-                        margin: 0 0 5px 0;
-                        font-size: 1.5rem;
-                        font-weight: bold;
+                    .gate-pass-body { font-size: 0.9rem; background: #f8f9fa; padding: 24px; }
+                    .info-section {
+                        background: #fff; margin: 0 0 12px 0; border-radius: 6px; 
+                        border: 1px solid #e9ecef; overflow: hidden;
                     }
-                    .header-left .id {
-                        opacity: 0.8;
-                        font-size: 0.9rem;
+                    .section-header {
+                        background: #f8f9fa; padding: 10px 16px; border-bottom: 1px solid #e9ecef;
+                        display: flex; align-items: center; gap: 10px; font-weight: 600; 
+                        font-size: 0.8rem; color: #495057; letter-spacing: 0.5px;
                     }
-                    .header-right {
-                        text-align: right;
+                    .section-content { padding: 16px; background: #fff; }
+                    .primary-info {
+                        font-size: 1.1rem; font-weight: 600; color: #007bff; 
+                        margin-bottom: 6px; line-height: 1.3;
                     }
-                    .badge {
-                        background: ${badgeColor};
-                        color: ${badgeTextColor};
-                        padding: 6px 12px;
-                        border-radius: 4px;
-                        font-weight: bold;
-                        font-size: 0.8rem;
-                        margin-bottom: 8px;
-                        display: inline-block;
+                    .secondary-info { font-size: 0.85rem; color: #6c757d; line-height: 1.4; }
+                    .customer-layout {
+                        display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
                     }
-                    .date {
-                        opacity: 0.8;
-                        font-size: 0.9rem;
-                    }
-                    .gate-pass-body {
-                        padding: 25px;
-                    }
-                    .section {
-                        margin-bottom: 20px;
-                        padding-bottom: 15px;
-                        border-bottom: 1px solid #eee;
-                    }
-                    .section:last-of-type {
-                        border-bottom: none;
-                        margin-bottom: 0;
-                    }
-                    .vehicle-info h3 {
-                        color: #007bff;
-                        font-size: 1.2rem;
-                        margin-bottom: 5px;
-                        font-weight: bold;
-                    }
-                    .chassis {
-                        color: #666;
-                        font-size: 0.9rem;
-                    }
-                    .customer-section {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: flex-start;
-                    }
-                    .customer-info h3 {
-                        font-size: 1.1rem;
-                        margin-bottom: 5px;
-                        color: #333;
-                    }
-                    .phone {
-                        color: #666;
-                        font-size: 0.9rem;
-                    }
+                    .customer-main { flex: 1; }
+                    .customer-main .primary-info { color: #495057; font-size: 1.05rem; }
                     .customer-id {
-                        text-align: right;
-                        color: #007bff;
-                        font-weight: bold;
-                        font-size: 0.9rem;
+                        background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px;
+                        padding: 10px 12px; text-align: center; min-width: 120px;
                     }
-                    .auth-section {
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: flex-start;
+                    .id-label {
+                        font-size: 0.7rem; color: #6c757d; font-weight: 500; margin-bottom: 4px;
+                        text-transform: uppercase; letter-spacing: 0.3px;
                     }
-                    .auth-details {
-                        color: #666;
-                        font-size: 0.9rem;
-                        line-height: 1.5;
+                    .id-number {
+                        font-weight: 700; color: #007bff; font-size: 0.9rem; font-family: 'Courier New', monospace;
                     }
-                    .status-badge {
-                        background: ${saleType === 'incash' ? '#d1e7dd' : '#fff3cd'};
-                        color: ${saleType === 'incash' ? '#0f5132' : '#664d03'};
-                        padding: 6px 12px;
-                        border-radius: 4px;
-                        font-size: 0.85rem;
-                        font-weight: 600;
+                    .auth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+                    .auth-item { display: flex; flex-direction: column; gap: 2px; }
+                    .auth-label {
+                        font-size: 0.75rem; color: #6c757d; font-weight: 500;
+                        text-transform: uppercase; letter-spacing: 0.3px;
                     }
-                    .security-alert {
-                        background: #f8d7da;
-                        border: 1px solid #f5c6cb;
-                        color: #721c24;
-                        padding: 15px;
-                        border-radius: 4px;
-                        margin-top: 20px;
-                        text-align: center;
-                        font-size: 0.9rem;
+                    .auth-value { font-size: 0.85rem; color: #495057; font-weight: 500; }
+                    .security-verification {
+                        background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 6px;
+                        padding: 12px 16px; display: flex; align-items: center; gap: 12px; margin-top: 12px;
                     }
-                    .security-alert strong {
-                        font-weight: bold;
+                    .verification-icon { color: #721c24; font-size: 1.1rem; flex-shrink: 0; }
+                    .verification-title {
+                        color: #721c24; font-size: 0.8rem; font-weight: 700; margin-bottom: 2px;
+                        text-transform: uppercase; letter-spacing: 0.5px;
                     }
+                    .verification-text { color: #721c24; font-size: 0.8rem; line-height: 1.3; }
+                    
+                    /* Signature Styles */
+                    .signatures-section {
+                        background: white; border: 1px solid #e9ecef; border-radius: 8px;
+                        padding: 20px; margin-top: 20px;
+                    }
+                    .signatures-header {
+                        text-align: center; margin-bottom: 20px; color: #333; font-weight: 700;
+                        font-size: 1rem; text-transform: uppercase; letter-spacing: 0.5px;
+                        border-bottom: 2px solid #007bff; padding-bottom: 8px;
+                    }
+                    .signatures-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+                    .signature-box {
+                        text-align: center; border: 1px solid #dee2e6; border-radius: 6px;
+                        padding: 16px; background: #fafafa;
+                    }
+                    .signature-area {
+                        height: 60px; border-bottom: 2px solid #333; margin-bottom: 12px; position: relative;
+                    }
+                    .signature-area::after {
+                        content: 'Signature'; position: absolute; right: 0; bottom: -18px;
+                        font-size: 0.7rem; color: #999; font-style: italic;
+                    }
+                    .signature-label {
+                        font-weight: 700; color: #333; font-size: 0.9rem; margin-bottom: 6px;
+                        text-transform: uppercase; letter-spacing: 0.3px;
+                    }
+                    .signature-details { font-size: 0.8rem; color: #6c757d; line-height: 1.3; }
+                    .signature-date {
+                        margin-top: 12px; padding-top: 8px; border-top: 1px solid #dee2e6;
+                        font-size: 0.75rem; color: #6c757d;
+                    }
+                    .signature-date strong { color: #333; }
+                    
+                    /* Hide download buttons and actions */
+                    .download-actions, .card-footer, button { display: none !important; }
+                    
                     @media print {
                         body { padding: 0; }
-                        .gate-pass-container { border: 2px solid #000; }
+                        .download-actions, .card-footer, button { display: none !important; }
                     }
                 </style>
             </head>
             <body onload="window.print(); window.close();">
-                <div class="gate-pass-container">
-                    <div class="gate-pass-header">
-                        <div class="header-left">
-                            <h2>Gate Pass</h2>
-                            <div class="id">ID: ${passId}</div>
-                        </div>
-                        <div class="header-right">
-                            <div class="badge">${badgeText}</div>
-                            <div class="date">${formattedDate}</div>
-                        </div>
-                    </div>
-                    
-                    <div class="gate-pass-body">
-                        <div class="section vehicle-info">
-                            <h3>${vehicleText}</h3>
-                            <div class="chassis">${chassisText}</div>
-                        </div>
-                        
-                        <div class="section">
-                            <div class="customer-section">
-                                <div class="customer-info">
-                                    <h3>${customer || 'N/A'}</h3>
-                                    <div class="phone">${phoneText}</div>
-                                </div>
-                                <div class="customer-id">
-                                    ID: ${idNumber || 'N/A'}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="section">
-                            <div class="auth-section">
-                                <div class="auth-details">
-                                    <div>Purpose: Vehicle delivery to client</div>
-                                    <div>Date: ${currentDate.toISOString().split('T')[0]}</div>
-                                    <div>Time: ${currentDate.toTimeString().slice(0,5)}</div>
-                                    <div>Authorized By: Showroom Manager</div>
-                                </div>
-                                <div class="status-badge">
-                                    ${saleType === 'incash' ? 'PAID' : 'FINANCED'}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="security-alert">
-                            <strong>⚠️ VERIFY ID:</strong> Security must check customer ID before vehicle release
-                        </div>
-                    </div>
-                </div>
+                ${cardClone.outerHTML}
             </body>
         </html>
     `);
     printWindow.document.close();
 }
 
-// Initialize filter system when page loads
+// Initialize
 document.addEventListener('DOMContentLoaded', function() {
     new GatePassFilter();
-    
-    // Show success/error messages
-    @if(session('success'))
-        showNotification('{{ session("success") }}', 'success');
-    @endif
-    
-    @if(session('error'))
-        showNotification('{{ session("error") }}', 'error');
-    @endif
 });
-
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
-    notification.style.cssText = 'top: 20px; right: 20px; z-index: 1060; min-width: 300px;';
-    notification.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        if (notification.parentNode) {
-            notification.remove();
-        }
-    }, 3000);
-}
 </script>
 
-<!-- Precise CSS Styles -->
+<!-- Enhanced CSS -->
 <style>
 .gate-pass-card {
-    border: 1px solid #000;
-    border-radius: 12px;
-    transition: all 0.3s ease;
-    background: #fff;
-    overflow: hidden;
+    border: 1px solid #000; border-radius: 12px; transition: all 0.3s ease;
+    background: #fff; overflow: hidden;
 }
-
 .gate-pass-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.12);
 }
-
 .gate-pass-header {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    border-radius: 11px 11px 0 0;
-    margin: -1px -1px 0 -1px;
-    padding: 16px 20px;
+    background: linear-gradient(135deg, #007bff, #0056b3); border-radius: 11px 11px 0 0;
+    margin: -1px -1px 0 -1px; padding: 16px 20px;
 }
-
-.gate-pass-body {
-    font-size: 0.9rem;
-    background: #fff;
-}
-
-/* Enhanced Section Styling */
+.gate-pass-body { font-size: 0.9rem; background: #fff; }
 .info-section {
-    background: #fff;
-    margin: 0 0 12px 0;
-    border-radius: 6px;
-    border: 1px solid #e9ecef;
-    overflow: hidden;
+    background: #fff; margin: 0 0 12px 0; border-radius: 6px;
+    border: 1px solid #e9ecef; overflow: hidden;
 }
-
-.info-section:last-of-type {
-    margin-bottom: 0;
-}
-
+.info-section:last-of-type { margin-bottom: 0; }
 .section-header {
-    background: #f8f9fa;
-    padding: 10px 16px;
-    border-bottom: 1px solid #e9ecef;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 600;
-    font-size: 0.8rem;
-    color: #495057;
-    letter-spacing: 0.5px;
+    background: #f8f9fa; padding: 10px 16px; border-bottom: 1px solid #e9ecef;
+    display: flex; align-items: center; gap: 10px; font-weight: 600;
+    font-size: 0.8rem; color: #495057; letter-spacing: 0.5px;
 }
-
-.section-header i {
-    font-size: 0.85rem;
-    color: #6c757d;
-    width: 16px;
-    text-align: center;
-}
-
-.section-content {
-    padding: 16px;
-    background: #fff;
-}
-
-/* Typography */
+.section-header i { font-size: 0.85rem; color: #6c757d; width: 16px; text-align: center; }
+.section-content { padding: 16px; background: #fff; }
 .primary-info {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #007bff;
-    margin-bottom: 6px;
-    line-height: 1.3;
+    font-size: 1.1rem; font-weight: 600; color: #007bff;
+    margin-bottom: 6px; line-height: 1.3;
 }
-
-.secondary-info {
-    font-size: 0.85rem;
-    color: #6c757d;
-    line-height: 1.4;
-}
-
-/* Customer Layout */
+.secondary-info { font-size: 0.85rem; color: #6c757d; line-height: 1.4; }
 .customer-layout {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
 }
-
-.customer-main {
-    flex: 1;
-}
-
-.customer-main .primary-info {
-    color: #495057;
-    font-size: 1.05rem;
-}
-
+.customer-main { flex: 1; }
+.customer-main .primary-info { color: #495057; font-size: 1.05rem; }
 .customer-id {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-    padding: 10px 12px;
-    text-align: center;
-    min-width: 120px;
+    background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px;
+    padding: 10px 12px; text-align: center; min-width: 120px;
 }
-
 .id-label {
-    font-size: 0.7rem;
-    color: #6c757d;
-    font-weight: 500;
-    margin-bottom: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
+    font-size: 0.7rem; color: #6c757d; font-weight: 500; margin-bottom: 4px;
+    text-transform: uppercase; letter-spacing: 0.3px;
 }
-
 .id-number {
-    font-weight: 700;
-    color: #007bff;
-    font-size: 0.9rem;
-    font-family: 'Courier New', monospace;
+    font-weight: 700; color: #007bff; font-size: 0.9rem; font-family: 'Courier New', monospace;
 }
-
-/* Status Badge */
-.status-badge-container {
-    margin-left: auto;
-}
-
-.status-badge {
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.status-badge.paid {
-    background: #d1e7dd;
-    color: #0f5132;
-    border: 1px solid #badbcc;
-}
-
-.status-badge.financed {
-    background: #fff3cd;
-    color: #664d03;
-    border: 1px solid #ffecb5;
-}
-
-/* Authorization Grid */
-.auth-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px 16px;
-}
-
-.auth-item {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
+.auth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+.auth-item { display: flex; flex-direction: column; gap: 2px; }
 .auth-label {
-    font-size: 0.75rem;
-    color: #6c757d;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
+    font-size: 0.75rem; color: #6c757d; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.3px;
 }
-
-.auth-value {
-    font-size: 0.85rem;
-    color: #495057;
-    font-weight: 500;
-}
-
-/* Security Verification */
+.auth-value { font-size: 0.85rem; color: #495057; font-weight: 500; }
 .security-verification {
-    background: #f8d7da;
-    border: 1px solid #f5c6cb;
-    border-radius: 6px;
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 12px;
+    background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 6px;
+    padding: 12px 16px; display: flex; align-items: center; gap: 12px; margin-top: 12px;
 }
-
-.verification-icon {
-    color: #721c24;
-    font-size: 1.1rem;
-    flex-shrink: 0;
-}
-
+.verification-icon { color: #721c24; font-size: 1.1rem; flex-shrink: 0; }
 .verification-title {
-    color: #721c24;
-    font-size: 0.8rem;
-    font-weight: 700;
-    margin-bottom: 2px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    color: #721c24; font-size: 0.8rem; font-weight: 700; margin-bottom: 2px;
+    text-transform: uppercase; letter-spacing: 0.5px;
 }
+.verification-text { color: #721c24; font-size: 0.8rem; line-height: 1.3; }
 
-.verification-text {
-    color: #721c24;
-    font-size: 0.8rem;
-    line-height: 1.3;
-}
-
-/* Form Controls */
-.form-control-sm, .form-select-sm {
-    border-radius: 6px;
-    border: 1px solid #ced4da;
-    transition: all 0.2s ease;
-}
-
-.form-control-sm:focus, .form-select-sm:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.15);
-}
-
-/* Buttons */
-.btn-sm {
-    padding: 8px 12px;
-    font-size: 0.85rem;
-    border-radius: 6px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-.card-footer {
-    background: #f8f9fa;
-    border-top: 1px solid #dee2e6;
-    padding: 12px 16px;
-}
-
-.card-footer .btn {
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
+/* Download Actions Styling */
+.download-actions { padding: 0 15px; }
+.download-actions .btn {
+    font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;
 }
 
 /* Header Badges */
-.badge {
-    font-size: 0.75rem;
-    padding: 6px 10px;
-    font-weight: 600;
-    border-radius: 4px;
-}
+.badge { font-size: 0.75rem; padding: 6px 10px; font-weight: 600; border-radius: 4px; }
 
 /* Responsive */
 @media (max-width: 768px) {
-    .col-md-2 {
-        margin-bottom: 10px;
-    }
-    
-    .gate-pass-card {
-        margin-bottom: 20px;
-    }
-    
-    .customer-layout {
-        flex-direction: column;
-        gap: 12px;
-    }
-    
-    .customer-id {
-        align-self: flex-start;
-        min-width: auto;
-    }
-    
-    .auth-grid {
-        grid-template-columns: 1fr;
-        gap: 8px;
-    }
-    
-    .auth-item {
-        flex-direction: row;
-        align-items: center;
-        gap: 8px;
-    }
-    
-    .auth-label {
-        min-width: 70px;
-    }
+    .col-md-2 { margin-bottom: 10px; }
+    .gate-pass-card { margin-bottom: 20px; }
+    .customer-layout { flex-direction: column; gap: 12px; }
+    .customer-id { align-self: flex-start; min-width: auto; }
+    .auth-grid { grid-template-columns: 1fr; gap: 8px; }
+    .auth-item { flex-direction: row; align-items: center; gap: 8px; }
+    .auth-label { min-width: 70px; }
 }
 
-#no-results {
-    background: #f8f9fa;
-    border-radius: 8px;
-    margin: 20px 0;
-}
+#no-results { background: #f8f9fa; border-radius: 8px; margin: 20px 0; }
 
+/* Hide download buttons in print */
 @media print {
-    .card-footer, .btn {
-        display: none !important;
-    }
-    
-    .gate-pass-card {
-        break-inside: avoid;
-        border: 2px solid #000 !important;
-        margin-bottom: 20px;
-    }
+    .download-actions, .card-footer, .btn { display: none !important; }
+    .gate-pass-card { break-inside: avoid; border: 2px solid #000 !important; margin-bottom: 20px; }
+}
+/* Professional Signature Section */
+.signatures-section {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 24px;
+    margin-top: 16px;
+}
+
+.signatures-header {
+    text-align: center;
+    margin-bottom: 24px;
+    color: #495057;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 12px;
+}
+
+.signatures-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+}
+
+.signature-box {
+    border: none;
+    padding: 0;
+    background: transparent;
+}
+
+.signature-label {
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 0.8rem;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+}
+
+.signature-area {
+    height: 2px;
+    border-bottom: 1px solid #495057;
+    margin-bottom: 8px;
+    background: transparent;
+    position: relative;
+}
+
+.signature-area::after {
+    content: '';
+    display: none;
+}
+
+.signature-details {
+    font-size: 0.82rem;
+    color: #6c757d;
+    line-height: 1.6;
+    margin-top: 12px;
+}
+
+.signature-details strong {
+    color: #495057;
+    font-weight: 600;
+}
+
+.signature-date {
+    margin-top: 16px;
+    font-size: 0.82rem;
+    color: #6c757d;
+}
+
+.signature-date strong {
+    color: #495057;
+    font-weight: 600;
 }
 </style>
 </x-app-layout>
