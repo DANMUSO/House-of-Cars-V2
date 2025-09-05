@@ -266,6 +266,152 @@
             </div>
         </div>
         @endforeach
+
+        @foreach($vehicles as $vehicle)
+        <div class="col-md-6 col-lg-4 gate-pass-item" 
+             data-sale-type="deleted_vehicle"
+             data-pass-id="GP-{{ str_pad($vehicle->id, 6, '0', STR_PAD_LEFT) }}"
+             data-id-number=""
+             data-customer="{{ $vehicle->customer_name }}"
+             data-vehicle="{{ $vehicle->vehicle_make }} {{ $vehicle->model }}">
+            
+            <div class="card gate-pass-card mb-3" id="gate-pass-{{ $vehicle->id }}">
+                <!-- Compact Header -->
+                <div class="gate-pass-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0 text-white fw-bold">Gate Pass</h6>
+                            <small class="text-white-50">ID: GP-{{ str_pad($vehicle->id, 6, '0', STR_PAD_LEFT) }}</small>
+                        </div>
+                        <div class="text-end">
+                            @if($vehicle->sell_type == 1)
+                                <span class="badge bg-success">TRADE-IN</span>
+                            @else
+                                <span class="badge bg-info">SELL-BEHALF</span>
+                            @endif
+                            <div class="small text-white-50">{{ \Carbon\Carbon::parse($vehicle->created_at)->format('M d, Y') }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compact Body -->
+                <div class="gate-pass-body p-4">
+                    <!-- Vehicle Section -->
+                    <div class="info-section">
+                        <div class="section-header">
+                            <i class="fas fa-car"></i>
+                            <span>VEHICLE DETAILS</span>
+                        </div>
+                        <div class="section-content">
+                            <div class="primary-info">
+                                {{ $vehicle->vehicle_make }} {{ $vehicle->model }}
+                            </div>
+                            <div class="secondary-info">
+                                Chassis: {{ $vehicle->chasis_no ?? 'N/A' }}
+                                <br>
+                                Plate: {{ $vehicle->number_plate ?? 'N/A' }}
+                                <br>
+                                Min Price: KSh {{ number_format($vehicle->minimum_price, 2) }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Customer Section -->
+                    <div class="info-section">
+                        <div class="section-header">
+                            <i class="fas fa-user"></i>
+                            <span>CUSTOMER DETAILS</span>
+                        </div>
+                        <div class="section-content">
+                            <div class="customer-layout">
+                                <div class="customer-main">
+                                    <div class="primary-info">
+                                        {{ $vehicle->customer_name ?? 'N/A' }}
+                                    </div>
+                                    <div class="secondary-info">
+                                        Phone: {{ $vehicle->phone_no ?? 'N/A' }}
+                                        <br>
+                                        Email: {{ $vehicle->email ?? 'N/A' }}
+                                    </div>
+                                </div>
+                                <div class="customer-id">
+                                    <div class="id-label">ID Number</div>
+                                    <div class="id-number">N/A</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Authorization Section -->
+                    <div class="info-section">
+                        <div class="section-header">
+                            <i class="fas fa-clipboard-check"></i>
+                            <span>AUTHORIZATION</span>
+                        </div>
+                        <div class="section-content">
+                            <div class="auth-grid">
+                                <div class="auth-item">
+                                    <span class="auth-label">Purpose:</span>
+                                    <span class="auth-value">Vehicle delivery</span>
+                                </div>
+                                <div class="auth-item">
+                                    <span class="auth-label">Date:</span>
+                                    <span class="auth-value">{{ \Carbon\Carbon::parse($vehicle->created_at)->format('Y-m-d') }}</span>
+                                </div>
+                                <div class="auth-item">
+                                    <span class="auth-label">Time:</span>
+                                    <span class="auth-value">{{ \Carbon\Carbon::parse($vehicle->created_at)->format('H:i') }}</span>
+                                </div>
+                                <div class="auth-item">
+                                    <span class="auth-label">By:</span>
+                                    <span class="auth-value">Showroom Manager</span>
+                                </div>
+                                <div class="auth-item">
+                                    <span class="auth-label">Status:</span>
+                                    <span class="auth-value text-danger">DELETED</span>
+                                </div>
+                                <div class="auth-item">
+                                    <span class="auth-label">Deleted:</span>
+                                    <span class="auth-value">{{ \Carbon\Carbon::parse($vehicle->deleted_at)->format('M d, Y') }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ADD SIGNATURE SECTIONS HERE -->
+                    <div class="signatures-section">
+                        <div class="signatures-header">Authorization Signatures</div>
+                        <div class="signatures-grid">
+                            <!-- Buyer Signature -->
+                            <div class="signature-box">
+                                <div class="signature-label">Seller</div>
+                                <div class="signature-area"></div>
+                                <div class="signature-date">
+                                    <strong>Date:</strong> ________________
+                                </div>
+                            </div>
+                            
+                            <!-- Seller Representative Signature -->
+                            <div class="signature-box">
+                                <div class="signature-label">Buyer</div>
+                                <div class="signature-area"></div>
+                                <div class="signature-date">
+                                    <strong>Date:</strong> ________________
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Download Button OUTSIDE Card -->
+            <div class="download-actions mb-3">
+                <button class="btn btn-danger btn-sm w-100" onclick="downloadCard({{ $vehicle->id }})">
+                    <i class="fas fa-download"></i> Download Gate Pass (Deleted)
+                </button>
+            </div>
+        </div>
+@endforeach
     </div>
 
     <!-- No Results Message -->

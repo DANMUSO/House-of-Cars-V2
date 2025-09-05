@@ -3395,6 +3395,41 @@ $(document).ready(function() {
             }
         });
     });
+
+     // Handle Deactivation Vehicle
+    $('.delete-vehicle').click(function () {
+        let id = $(this).data('id');
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "This vehicle will be deactivated.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, Deactivate it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // AJAX request for deleting the user
+                $.ajax({
+                    url: '/vehicle/' + id, // Route for deleting user
+                    type: 'POST', // Using POST instead of DELETE
+                    data: {
+                        _method: 'DELETE', // Overriding method to DELETE
+                        _token: $('meta[name="csrf-token"]').attr('content'), // CSRF token
+                    },
+                    success: function (response) {
+                        $('#user-' + id).fadeOut();  // Hide user row on success
+                        Swal.fire('Deleted!', response.success, 'success');
+                        location.reload();
+                    },
+                    error: function () {
+                        Swal.fire('Error!', 'Failed to deactivate vehicle.', 'error');
+                    }
+                });
+            }
+        });
+    });
     // Handle approve-frequest
     $('.approve-frequest').click(function () {
         let id = $(this).data('id');
@@ -3466,6 +3501,7 @@ $(document).ready(function() {
     });
 
     // Handle Restore User
+
     $('.restore-user').click(function () {
         let id = $(this).data('id');
 
@@ -3482,6 +3518,39 @@ $(document).ready(function() {
                 // AJAX request for restoring the user
                 $.ajax({
                     url: '/users/restore/' + id, // Route for restoring user
+                    type: 'POST',
+                    data: {
+                        _token: $('meta[name="csrf-token"]').attr('content'), // CSRF token
+                    },
+                    success: function (response) {
+                        $('#user-' + id).fadeIn();  // Show user row on restore
+                        Swal.fire('Restored!', response.success, 'success');
+                        location.reload();
+                    },
+                    error: function () {
+                        Swal.fire('Error!', 'Failed to restore user.', 'error');
+                    }
+                });
+            }
+        });
+    });
+    // Restore Vehicle
+    $('.restore-vehicle').click(function () {
+        let id = $(this).data('id');
+
+        Swal.fire({
+            title: 'Restore Vehicle?',
+            text: "This will restore the vehicle's access.",
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, restore it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // AJAX request for restoring the user
+                $.ajax({
+                    url: '/vehicle/restore/' + id, // Route for restoring user
                     type: 'POST',
                     data: {
                         _token: $('meta[name="csrf-token"]').attr('content'), // CSRF token

@@ -12,7 +12,7 @@ class TradeInController extends Controller
     public function index()
     {
            
-       $vehicles = CustomerVehicle::where('status', 1)->get(); // Fetch all vehicle records
+       $vehicles = CustomerVehicle::withTrashed()->where('status', 1)->get(); // Fetch all vehicle records
 
         return view('tradein.index', compact('vehicles'));
     }
@@ -448,4 +448,32 @@ private function generateCustomerVehiclePhotoTemporaryUrl($key, $minutes = 1440)
         throw $e;
     }
 }
+  public function destroy($id)
+    {
+        try {
+            $user = CustomerVehicle::findOrFail($id);
+            
+            // Soft delete the user
+            $user->delete();
+
+            // Optionally, you might want to handle leave days for soft-deleted users
+            // For example, mark them as inactive but keep the records
+            return redirect()->route('tradein')->with('success', 'Vehicle soft-deleted successfully!');
+        } catch (\Exception $e) {
+            Log::error('Vehicle deletion failed: ' . $e->getMessage());
+            return redirect()->route('users')->with('error', 'Failed to delete user.');
+        }
+    }
+    public function restore($id)
+    {
+        try {
+            $user = CustomerVehicle::withTrashed()->findOrFail($id);
+            $user->restore();
+          
+            return redirect()->route('tradein')->with('success', 'Vehicle restored successfully!');
+        } catch (\Exception $e) {
+            Log::error('Vehicle restoration failed: ' . $e->getMessage());
+            return redirect()->route('tradein')->with('error', 'Failed to restore Vehicle.');
+        }
+    }
 }

@@ -44,25 +44,32 @@ public function calculatePenaltiesForAgreement($agreementType, $agreementId)
             return ['penalties_created' => 0, 'penalties_updated' => 0];
         }
 
-        // DETECT SCENARIO: Check if this is a final installment case
+        // IMPROVED SCENARIO DETECTION
         $totalSchedules = PaymentSchedule::where('agreement_id', $agreementId)->count();
         $paidSchedules = PaymentSchedule::where('agreement_id', $agreementId)
             ->where('status', 'paid')->count();
-        $isFinalInstallment = ($overdueSchedules->count() == 1 && 
-                              ($paidSchedules + 1) == $totalSchedules);
+        $pendingSchedules = PaymentSchedule::where('agreement_id', $agreementId)
+            ->where('status', 'pending')->count();
 
-        Log::info("Scenario detection:", [
+        // Check if we're dealing with a final installment scenario
+        // Criteria: Only 1 overdue schedule AND no pending schedules (all others are paid)
+        $isFinalInstallment = ($overdueSchedules->count() == 1 && $pendingSchedules == 0);
+
+        Log::info("IMPROVED Scenario detection:", [
             'total_schedules' => $totalSchedules,
             'paid_schedules' => $paidSchedules,
+            'pending_schedules' => $pendingSchedules,
             'overdue_count' => $overdueSchedules->count(),
             'is_final_installment' => $isFinalInstallment
         ]);
 
         if ($isFinalInstallment) {
             // SCENARIO 1: Final installment - progressive monthly penalty
+            Log::info("Applying PROGRESSIVE MONTHLY PENALTIES for final installment");
             return $this->calculateProgressiveMonthlyPenalties($agreementType, $agreementId, $overdueSchedules->first());
         } else {
             // SCENARIO 2: Multiple installments - cumulative penalty
+            Log::info("Applying CUMULATIVE PENALTIES for multiple installments");
             return $this->calculateCumulativePenalties($agreementType, $agreementId, $overdueSchedules);
         }
 

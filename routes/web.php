@@ -274,10 +274,12 @@ Route::post('/fleet-payments/{id}/confirm', [App\Http\Controllers\Dashboard\Flee
     Route::post('/user/store', [App\Http\Controllers\Dashboard\UsersController::class, 'store'])->name('user.store');
     Route::post('/frequest/store', [App\Http\Controllers\Dashboard\FacilitationController::class, 'store'])->name('frequest.store');
     Route::delete('/users/{id}', [App\Http\Controllers\Dashboard\UsersController::class, 'destroy'])->name('users.softDelete');
+    Route::delete('/vehicle/{id}', [App\Http\Controllers\Dashboard\TradeInController::class, 'destroy'])->name('vehicle.softDelete');
     Route::post('/approvefrequest/{id}', [App\Http\Controllers\Dashboard\FacilitationController::class, 'approve'])->name('approvefrequest'); 
     Route::post('/rejectfrequest/{id}', [App\Http\Controllers\Dashboard\FacilitationController::class, 'reject'])->name('rejectfrequest');  
     Route::post('carimport/won/{id}', [App\Http\Controllers\Dashboard\UsersController::class, 'restore'])->name('carimport.won');
     Route::post('/users/restore/{id}', [App\Http\Controllers\Dashboard\UsersController::class, 'restore'])->name('users.restore');
+    Route::post('/vehicle/restore/{id}', [App\Http\Controllers\Dashboard\TradeInController::class, 'restore'])->name('vehicle.restore');
     Route::get('/users/{id}', [App\Http\Controllers\Dashboard\UsersController::class, 'show'])->name('users.show');
     Route::post('user/update', [App\Http\Controllers\Dashboard\UsersController::class, 'update'])->name('user.update');
     Route::post('deposit/update', [App\Http\Controllers\Dashboard\CarImportController::class, 'depositupdate'])->name('deposit.update');

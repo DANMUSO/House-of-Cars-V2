@@ -220,8 +220,10 @@ class SalesController extends Controller
         $combined = $incash->merge($hirePurchases)
                         ->merge($gentlemanagreement)
                         ->sortByDesc('created_at');
+        $vehicles = CustomerVehicle::onlyTrashed()->where('status', 1)->get();
 
-        return view('sells.index', compact('combined'));
+        
+        return view('sells.index', compact('combined','vehicles'));
     }
 
     public function storeincash(Request $request)
