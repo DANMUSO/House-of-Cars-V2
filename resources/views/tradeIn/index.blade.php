@@ -405,7 +405,7 @@
                                         </button>
                                         <br> <br> <br>
                                          <button class="btn btn-outline-danger btn-sm delete-vehicle" data-id="{{ $vehicle->id }}">
-                                                <i class="fas fa-trash me-1"></i>Delete
+                                                <i class="fas fa-trash me-1"></i>Deactivate
                                             </button>
                                         <!-- ORIGINAL VIEW MODAL - UNCHANGED -->
                                         <div class="modal fade" id="modal{{$vehicle->id}}" tabindex="-1" aria-labelledby="modalLabel{{$vehicle->id}}" aria-hidden="true">
