@@ -1125,7 +1125,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         <tr>
                             <th>Due Date</th>
                             <th>Days Overdue</th>
-                            <th>Expected Amount</th>
                             <th>Penalty Rate</th>
                             <th>Penalty Amount</th>
                             <th>Amount Paid</th>
@@ -1367,7 +1366,6 @@ function displayPenalties() {
                 <td>
                     <span class="badge bg-danger">${penalty.days_overdue} days</span>
                 </td>
-                <td>KSh ${formatNumber(penalty.expected_amount)}</td>
                 <td>${penalty.penalty_rate}%</td>
                 <td>KSh ${formatNumber(penalty.penalty_amount)}</td>
                 <td>KSh ${formatNumber(penalty.amount_paid)}</td>

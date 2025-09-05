@@ -28,7 +28,7 @@ class PenaltyService
 public function calculatePenaltiesForAgreement($agreementType, $agreementId)
 {
     try {
-        Log::info("=== CALCULATING CUMULATIVE PENALTIES ===", [
+        Log::info("=== CALCULATING PENALTIES ===", [
             'agreement_type' => $agreementType,
             'agreement_id' => $agreementId
         ]);
@@ -36,7 +36,7 @@ public function calculatePenaltiesForAgreement($agreementType, $agreementId)
         // Get all overdue payment schedules in chronological order
         $overdueSchedules = PaymentSchedule::where('agreement_id', $agreementId)
             ->where('status', 'overdue')
-            ->orderBy('due_date', 'asc') // Chronological order is crucial
+            ->orderBy('due_date', 'asc')
             ->get();
 
         if ($overdueSchedules->isEmpty()) {
@@ -44,105 +44,200 @@ public function calculatePenaltiesForAgreement($agreementType, $agreementId)
             return ['penalties_created' => 0, 'penalties_updated' => 0];
         }
 
-        Log::info("Found {$overdueSchedules->count()} overdue schedules", [
-            'overdue_dates' => $overdueSchedules->pluck('due_date')->toArray()
+        // DETECT SCENARIO: Check if this is a final installment case
+        $totalSchedules = PaymentSchedule::where('agreement_id', $agreementId)->count();
+        $paidSchedules = PaymentSchedule::where('agreement_id', $agreementId)
+            ->where('status', 'paid')->count();
+        $isFinalInstallment = ($overdueSchedules->count() == 1 && 
+                              ($paidSchedules + 1) == $totalSchedules);
+
+        Log::info("Scenario detection:", [
+            'total_schedules' => $totalSchedules,
+            'paid_schedules' => $paidSchedules,
+            'overdue_count' => $overdueSchedules->count(),
+            'is_final_installment' => $isFinalInstallment
         ]);
 
-        $penaltiesCreated = 0;
-        $penaltiesUpdated = 0;
-        $cumulativeUnpaidAmount = 0;
-
-        foreach ($overdueSchedules as $index => $schedule) {
-            // Add current installment to cumulative unpaid amount
-            $unpaidAmount = $schedule->total_amount - ($schedule->amount_paid ?? 0);
-            $cumulativeUnpaidAmount += $unpaidAmount;
-
-            // Calculate penalty on cumulative unpaid amount
-            $penaltyAmount = $cumulativeUnpaidAmount * (self::PENALTY_RATE / 100);
-
-            Log::info("Processing overdue schedule {$schedule->installment_number}:", [
-                'due_date' => $schedule->due_date,
-                'unpaid_amount' => $unpaidAmount,
-                'cumulative_unpaid' => $cumulativeUnpaidAmount,
-                'penalty_amount' => $penaltyAmount,
-                'penalty_sequence' => $index + 1
-            ]);
-
-            // Check if penalty already exists for this schedule
-            $existingPenalty = Penalty::where('agreement_type', $agreementType)
-                ->where('agreement_id', $agreementId)
-                ->where('payment_schedule_id', $schedule->id)
-                ->first();
-
-            if ($existingPenalty) {
-                // Update existing penalty if amount changed
-                if (abs($existingPenalty->penalty_amount - $penaltyAmount) > 0.01) {
-                    $existingPenalty->update([
-                        'penalty_amount' => $penaltyAmount,
-                        'cumulative_unpaid_amount' => $cumulativeUnpaidAmount,
-                        'penalty_sequence' => $index + 1,
-                        'updated_at' => now()
-                    ]);
-                    $penaltiesUpdated++;
-                    
-                    Log::info("Updated existing penalty for installment {$schedule->installment_number}");
-                }
-            } else {
-                // Create new penalty - FIXED to match your table schema
-                $penalty = Penalty::create([
-                    'agreement_type' => $agreementType,
-                    'agreement_id' => $agreementId,
-                    'payment_schedule_id' => $schedule->id,
-                    'installment_number' => $schedule->installment_number, // ADD THIS LINE
-                    // ✅ FIXED: Use expected_amount (from your table) instead of installment_number
-                    'expected_amount' => $schedule->total_amount, // The expected payment amount
-                    'penalty_rate' => self::PENALTY_RATE,
-                    'penalty_amount' => $penaltyAmount,
-                    'due_date' => $schedule->due_date,
-                    'days_overdue' => $this->calculateDaysOverdue($schedule->due_date),
-                    'status' => 'pending',
-                    'amount_paid' => 0,
-                    // ✅ FIXED: Add required created_by field
-                    'created_by' => auth()->id() ?? 1, // Use authenticated user or system user
-                    // ✅ FIXED: Add cumulative_unpaid_amount and penalty_sequence
-                    'cumulative_unpaid_amount' => $cumulativeUnpaidAmount,
-                    'penalty_sequence' => $index + 1,
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ]);
-                
-                $penaltiesCreated++;
-                
-                Log::info("Created new penalty for installment {$schedule->installment_number}:", [
-                    'penalty_id' => $penalty->id,
-                    'penalty_amount' => $penaltyAmount
-                ]);
-            }
+        if ($isFinalInstallment) {
+            // SCENARIO 1: Final installment - progressive monthly penalty
+            return $this->calculateProgressiveMonthlyPenalties($agreementType, $agreementId, $overdueSchedules->first());
+        } else {
+            // SCENARIO 2: Multiple installments - cumulative penalty
+            return $this->calculateCumulativePenalties($agreementType, $agreementId, $overdueSchedules);
         }
 
-        // Clean up penalties for schedules that are no longer overdue
-        $this->cleanupResolvedPenalties($agreementType, $agreementId, $overdueSchedules->pluck('id'));
-
-        Log::info("Cumulative penalty calculation completed", [
-            'penalties_created' => $penaltiesCreated,
-            'penalties_updated' => $penaltiesUpdated
-        ]);
-
-        return [
-            'penalties_created' => $penaltiesCreated,
-            'penalties_updated' => $penaltiesUpdated,
-            'total_overdue_schedules' => $overdueSchedules->count(),
-            'final_cumulative_amount' => $cumulativeUnpaidAmount
-        ];
-
     } catch (\Exception $e) {
-        Log::error('Cumulative penalty calculation failed:', [
+        Log::error('Penalty calculation failed:', [
             'error' => $e->getMessage(),
             'agreement_type' => $agreementType,
             'agreement_id' => $agreementId
         ]);
         throw $e;
     }
+}
+/**
+ * SCENARIO 1: Progressive monthly penalties for final installment
+ */
+private function calculateProgressiveMonthlyPenalties($agreementType, $agreementId, $overdueSchedule)
+{
+    $unpaidAmount = $overdueSchedule->total_amount - ($overdueSchedule->amount_paid ?? 0);
+    $dueDate = Carbon::parse($overdueSchedule->due_date);
+    $today = Carbon::today();
+    
+    // FIX: Better month calculation logic
+    $monthsOverdue = $dueDate->diffInMonths($today);
+    
+    // If current day is >= due day OR we're in a later month, count full months
+    if ($today->day >= $dueDate->day || $monthsOverdue > 0) {
+        $monthsOverdue = $monthsOverdue + 1;
+    }
+    
+    // Ensure at least 1 month if overdue
+    $monthsOverdue = max(1, $monthsOverdue);
+
+    Log::info("DEBUGGING: Progressive monthly penalty calculation:", [
+        'unpaid_amount' => $unpaidAmount,
+        'due_date' => $dueDate->format('Y-m-d'),
+        'today' => $today->format('Y-m-d'),
+        'calculated_months_overdue' => $monthsOverdue,
+        'due_day' => $dueDate->day,
+        'today_day' => $today->day
+    ]);
+
+    $penaltiesCreated = 0;
+    $penaltiesUpdated = 0;
+
+    // Create penalty for each month overdue UP TO TODAY
+    for ($month = 1; $month <= $monthsOverdue; $month++) {
+        $penaltyAmount = $unpaidAmount * $month * (self::PENALTY_RATE / 100);
+        $penaltyDate = $dueDate->copy()->addMonths($month - 1);
+        
+        Log::info("Processing month {$month}:", [
+            'penalty_date' => $penaltyDate->format('Y-m-d'),
+            'penalty_amount' => $penaltyAmount,
+            'is_penalty_date_past' => $penaltyDate->lte($today)
+        ]);
+        
+        // Only create penalty if the penalty month has started
+        if ($penaltyDate->lte($today)) {
+            $existingPenalty = Penalty::where('agreement_type', $agreementType)
+                ->where('agreement_id', $agreementId)
+                ->where('payment_schedule_id', $overdueSchedule->id)
+                ->where('penalty_sequence', $month)
+                ->first();
+
+            if ($existingPenalty) {
+                if (abs($existingPenalty->penalty_amount - $penaltyAmount) > 0.01) {
+                    $existingPenalty->update([
+                        'penalty_amount' => $penaltyAmount,
+                        'days_overdue' => $today->diffInDays($dueDate),
+                        'updated_at' => now()
+                    ]);
+                    $penaltiesUpdated++;
+                    
+                    Log::info("Updated existing penalty for month {$month}");
+                }
+            } else {
+                Penalty::create([
+                    'agreement_type' => $agreementType,
+                    'agreement_id' => $agreementId,
+                    'payment_schedule_id' => $overdueSchedule->id,
+                    'installment_number' => $overdueSchedule->installment_number,
+                    'expected_amount' => $overdueSchedule->total_amount,
+                    'penalty_rate' => self::PENALTY_RATE,
+                    'penalty_amount' => $penaltyAmount,
+                    'due_date' => $penaltyDate,
+                    'days_overdue' => $today->diffInDays($dueDate),
+                    'status' => 'pending',
+                    'amount_paid' => 0,
+                    'created_by' => auth()->id() ?? 1,
+                    'cumulative_unpaid_amount' => $unpaidAmount,
+                    'penalty_sequence' => $month,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+                $penaltiesCreated++;
+                
+                Log::info("Created penalty for month {$month}:", [
+                    'penalty_date' => $penaltyDate->format('Y-m-d'),
+                    'penalty_amount' => $penaltyAmount
+                ]);
+            }
+        } else {
+            Log::info("Skipping month {$month} - penalty date {$penaltyDate->format('Y-m-d')} is in the future");
+        }
+    }
+
+    return [
+        'penalties_created' => $penaltiesCreated,
+        'penalties_updated' => $penaltiesUpdated,
+        'calculation_type' => 'progressive_monthly',
+        'months_calculated' => $monthsOverdue
+    ];
+}
+/**
+ * SCENARIO 2: Cumulative penalties for multiple installments
+ */
+private function calculateCumulativePenalties($agreementType, $agreementId, $overdueSchedules)
+{
+    $penaltiesCreated = 0;
+    $penaltiesUpdated = 0;
+    $cumulativeUnpaidAmount = 0;
+
+    foreach ($overdueSchedules as $index => $schedule) {
+        $unpaidAmount = $schedule->total_amount - ($schedule->amount_paid ?? 0);
+        $cumulativeUnpaidAmount += $unpaidAmount;
+        $penaltyAmount = $cumulativeUnpaidAmount * (self::PENALTY_RATE / 100);
+
+        Log::info("Cumulative penalty for installment {$schedule->installment_number}:", [
+            'unpaid_amount' => $unpaidAmount,
+            'cumulative_unpaid' => $cumulativeUnpaidAmount,
+            'penalty_amount' => $penaltyAmount
+        ]);
+
+        $existingPenalty = Penalty::where('agreement_type', $agreementType)
+            ->where('agreement_id', $agreementId)
+            ->where('payment_schedule_id', $schedule->id)
+            ->first();
+
+        if ($existingPenalty) {
+            if (abs($existingPenalty->penalty_amount - $penaltyAmount) > 0.01) {
+                $existingPenalty->update([
+                    'penalty_amount' => $penaltyAmount,
+                    'cumulative_unpaid_amount' => $cumulativeUnpaidAmount,
+                    'penalty_sequence' => $index + 1,
+                    'updated_at' => now()
+                ]);
+                $penaltiesUpdated++;
+            }
+        } else {
+            Penalty::create([
+                'agreement_type' => $agreementType,
+                'agreement_id' => $agreementId,
+                'payment_schedule_id' => $schedule->id,
+                'installment_number' => $schedule->installment_number,
+                'expected_amount' => $schedule->total_amount,
+                'penalty_rate' => self::PENALTY_RATE,
+                'penalty_amount' => $penaltyAmount,
+                'due_date' => $schedule->due_date,
+                'days_overdue' => $this->calculateDaysOverdue($schedule->due_date),
+                'status' => 'pending',
+                'amount_paid' => 0,
+                'created_by' => auth()->id() ?? 1,
+                'cumulative_unpaid_amount' => $cumulativeUnpaidAmount,
+                'penalty_sequence' => $index + 1,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+            $penaltiesCreated++;
+        }
+    }
+
+    return [
+        'penalties_created' => $penaltiesCreated,
+        'penalties_updated' => $penaltiesUpdated,
+        'calculation_type' => 'cumulative'
+    ];
 }
     /**
      * Get penalty summary with cumulative totals

@@ -3653,45 +3653,78 @@ public function calculatePenalties(Request $request, $agreementId)
 public function getPenaltyBreakdown($agreementId)
 {
     try {
+        $penaltyService = app(PenaltyService::class);
+        
+        // Get current penalties to see calculation type
+        $penalties = Penalty::forAgreement('gentleman_agreement', $agreementId)
+            ->orderBy('penalty_sequence', 'asc')
+            ->get();
+            
+        if ($penalties->isEmpty()) {
+            return response()->json([
+                'message' => 'No penalties found',
+                'breakdown' => []
+            ]);
+        }
+
+        // Detect calculation type
+        $firstPenalty = $penalties->first();
         $overdueSchedules = PaymentSchedule::where('agreement_id', $agreementId)
             ->where('status', 'overdue')
             ->orderBy('due_date', 'asc')
             ->get();
 
-        if ($overdueSchedules->isEmpty()) {
-            return response()->json([
-                'message' => 'No overdue schedules found',
-                'breakdown' => []
-            ]);
-        }
-
         $breakdown = [];
-        $cumulativeUnpaid = 0;
-        $penaltyRate = 10;
+        $explanation = '';
 
-        foreach ($overdueSchedules as $index => $schedule) {
+        if ($overdueSchedules->count() == 1) {
+            // Progressive monthly penalty explanation
+            $schedule = $overdueSchedules->first();
             $unpaidAmount = $schedule->total_amount - ($schedule->amount_paid ?? 0);
-            $cumulativeUnpaid += $unpaidAmount;
-            $penaltyAmount = $cumulativeUnpaid * ($penaltyRate / 100);
-
-            $breakdown[] = [
-                'sequence' => $index + 1,
-                'installment_number' => $schedule->installment_number,
-                'due_date' => $schedule->due_date->format('M d, Y'),
-                'days_overdue' => now()->diffInDays($schedule->due_date),
-                'unpaid_amount' => $unpaidAmount,
-                'cumulative_unpaid' => $cumulativeUnpaid,
-                'penalty_rate' => $penaltyRate,
-                'penalty_amount' => $penaltyAmount,
-                'calculation' => "KSh " . number_format($cumulativeUnpaid, 2) . " × {$penaltyRate}% = KSh " . number_format($penaltyAmount, 2)
-            ];
+            
+            foreach ($penalties->groupBy('penalty_sequence') as $month => $monthPenalties) {
+                $penalty = $monthPenalties->first();
+                $breakdown[] = [
+                    'sequence' => $month,
+                    'installment_number' => $penalty->installment_number,
+                    'month' => "Month {$month}",
+                    'calculation' => "KSh " . number_format($unpaidAmount, 2) . " × {$month} × 10%",
+                    'penalty_amount' => $penalty->penalty_amount,
+                    'status' => $penalty->status
+                ];
+            }
+            
+            $explanation = 'Progressive Monthly Penalty: Each month multiplies the base unpaid amount by the month number × 10%';
+            
+        } else {
+            // Cumulative penalty explanation
+            $cumulativeAmount = 0;
+            foreach ($overdueSchedules as $index => $schedule) {
+                $unpaidAmount = $schedule->total_amount - ($schedule->amount_paid ?? 0);
+                $cumulativeAmount += $unpaidAmount;
+                $penalty = $penalties->where('payment_schedule_id', $schedule->id)->first();
+                
+                $breakdown[] = [
+                    'sequence' => $index + 1,
+                    'installment_number' => $schedule->installment_number,
+                    'due_date' => $schedule->due_date->format('M d, Y'),
+                    'unpaid_amount' => $unpaidAmount,
+                    'cumulative_unpaid' => $cumulativeAmount,
+                    'calculation' => "KSh " . number_format($cumulativeAmount, 2) . " × 10%",
+                    'penalty_amount' => $penalty ? $penalty->penalty_amount : 0,
+                    'status' => $penalty ? $penalty->status : 'pending'
+                ];
+            }
+            
+            $explanation = 'Cumulative Penalty: Each penalty includes all previous unpaid installments × 10%';
         }
 
         return response()->json([
             'success' => true,
             'breakdown' => $breakdown,
-            'total_penalties' => array_sum(array_column($breakdown, 'penalty_amount')),
-            'explanation' => 'Each penalty is calculated on the cumulative sum of all unpaid installments up to that point'
+            'total_penalties' => $penalties->sum('penalty_amount'),
+            'explanation' => $explanation,
+            'calculation_type' => $overdueSchedules->count() == 1 ? 'progressive_monthly' : 'cumulative'
         ]);
 
     } catch (\Exception $e) {
