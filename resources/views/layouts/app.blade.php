@@ -1324,8 +1324,8 @@
                                 </div>
                             </li>
                             @endif
-                            {{-- HR and Managing-Director --}}
-                            @if(in_array(Auth::user()->role, ['HR','Managing-Director']))
+                            {{-- HR, Managing-Director and General-Manager --}}
+                            @if(in_array(Auth::user()->role, ['HR','Managing-Director','General-Manager']))
                             <li>
                                 <a href="#sidebarTables" data-bs-toggle="collapse">
                                     <i class="fa-solid fa-users"></i>
