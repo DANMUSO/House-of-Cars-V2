@@ -237,6 +237,13 @@
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#recordPaymentModal">
             <i class="fas fa-credit-card"></i> Record Payment 
         </button>
+            <!-- Loan Restructuring Button -->
+        <button type="button" class="btn btn-outline-info" 
+                id="restructuringBtn" 
+                onclick="checkRestructuringEligibility({{ $agreement->id }})">
+            <i class="fas fa-sync-alt me-1"></i>
+            Restructure Loan
+        </button>
         
         <!-- Lump Sum Payment Button - CORRECTED -->
         <button type="button" class="btn lump-sum-btn"  id="lumpSumPaymentBtn" onclick="openLumpSumModal()">
@@ -6113,6 +6120,160 @@ function formatNumber(number) {
     return new Intl.NumberFormat('en-KE').format(number || 0);
 }
 </script>
+<!-- Add this JavaScript to the existing scripts section -->
+<script>
+/**
+ * Check restructuring eligibility and redirect if eligible
+ */
+function checkRestructuringEligibility(agreementId) {
+    // Show loading state
+    const btn = document.getElementById('restructuringBtn');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Checking...';
+    btn.disabled = true;
+    
+    fetch(`/loan-restructuring/${agreementId}/eligibility`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (data.eligibility.eligible) {
+                    // Redirect to restructuring page
+                    window.location.href = `/loan-restructuring/${agreementId}/options`;
+                } else {
+                    // Show eligibility errors
+                    let errorMessage = 'Loan restructuring is not available:\n\n';
+                    data.eligibility.errors.forEach(error => {
+                        errorMessage += '• ' + error + '\n';
+                    });
+                    
+                    if (data.eligibility.warnings.length > 0) {
+                        errorMessage += '\nWarnings:\n';
+                        data.eligibility.warnings.forEach(warning => {
+                            errorMessage += '• ' + warning + '\n';
+                        });
+                    }
+                    
+                    alert(errorMessage);
+                }
+            } else {
+                alert('Error checking eligibility: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Network error occurred. Please try again.');
+        })
+        .finally(() => {
+            // Restore button state
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        });
+}
+
+/**
+ * Alternative: Direct link without eligibility check
+ * Use this if you prefer to check eligibility on the restructuring page itself
+ */
+function redirectToRestructuring(agreementId) {
+    window.location.href = `/loan-restructuring/${agreementId}/options`;
+}
+
+/**
+ * Show restructuring summary (optional - for quick preview)
+ */
+function showRestructuringSummary(agreementId) {
+    fetch(`/loan-restructuring/${agreementId}/financial-summary`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const summary = data.financial_summary;
+                const fee = data.restructuring_fee;
+                const feeRate = data.restructuring_fee_rate;
+                
+                const message = `Current Outstanding Breakdown:
+                
+• Due Payments: KSh ${summary.due_payments.toLocaleString()}
+• Principal Balance: KSh ${summary.principal_balance.toLocaleString()}
+• Total Penalties: KSh ${summary.total_penalties.toLocaleString()}
+• Total Outstanding: KSh ${summary.total_outstanding.toLocaleString()}
+
+Restructuring Fee (${feeRate}%): KSh ${fee.toLocaleString()}
+New Loan Amount: KSh ${(summary.total_outstanding + fee).toLocaleString()}
+
+Would you like to proceed to restructuring options?`;
+                
+                if (confirm(message)) {
+                    window.location.href = `/loan-restructuring/${agreementId}/options`;
+                }
+            } else {
+                alert('Error loading summary: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Network error occurred. Please try again.');
+        });
+}
+</script>
+
+<!-- Alternative: Simple direct link button (no eligibility check) -->
+@if($agreement->status === 'approved' && $agreement->outstanding_balance > 0)
+    <a href="{{ route('loan-restructuring.options', $agreement->id) }}" 
+       class="btn btn-outline-info">
+        <i class="fas fa-sync-alt me-1"></i>
+        Restructure Loan
+    </a>
+@endif
+
+<!-- Enhanced button with tooltip and better styling -->
+@if($agreement->status === 'approved' && $agreement->outstanding_balance > 0)
+    <button type="button" 
+            class="btn btn-outline-info"
+            onclick="checkRestructuringEligibility({{ $agreement->id }})"
+            data-bs-toggle="tooltip" 
+            data-bs-placement="top" 
+            title="Modify your loan terms without making a lump sum payment">
+        <i class="fas fa-sync-alt me-1"></i>
+        Restructure Loan
+    </button>
+@else
+    <!-- Show disabled button with explanation -->
+    <button type="button" 
+            class="btn btn-outline-secondary" 
+            disabled
+            data-bs-toggle="tooltip" 
+            data-bs-placement="top" 
+            title="Loan must be approved and have outstanding balance to restructure">
+        <i class="fas fa-sync-alt me-1"></i>
+        Restructure Loan
+    </button>
+@endif
+
+<!-- CSS for enhanced button styling -->
+<style>
+.btn-outline-info:hover {
+    background-color: #0dcaf0;
+    border-color: #0dcaf0;
+    color: #fff;
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+}
+
+.btn-outline-info:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.btn-pulse {
+    animation: pulse 2s infinite;
+}
+</style>
 <style>
 /* Lump Sum Payment Button Styling */
 .lump-sum-btn {

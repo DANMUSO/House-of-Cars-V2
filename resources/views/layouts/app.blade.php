@@ -1123,14 +1123,14 @@
                         </div>
 
                         <ul id="side-menu">
-
+                            @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director', 'Accountant','General-Manager']))
                             <li>
                                 <a href="{{url('admin/dashboard')}}" >
                                     <i data-feather="home"></i>
                                     <span> Dashboard </span>
                                 </a>
                             </li>
-                            @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director', 'Accountant','General-Manager']))
+                            
                             <li>
                                 <a href="#sidebarAuth" data-bs-toggle="collapse">
                                 <i class="fa-solid fa-car"></i> 
@@ -1204,7 +1204,7 @@
                                 </div>
                             </li>
                             @endif
-                            @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director', 'Salesperson','General-Manager']))
+                            @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director','General-Manager']))
                             <li>
                                 <a href="#sidebarExpages" data-bs-toggle="collapse">
                                 <i class="fa-solid fa-clipboard-check"></i>

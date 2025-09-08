@@ -106,7 +106,28 @@ Route::get('/proxy-image', function(Request $request) {
 })->name('proxy.image');
 Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Suppport-Staff,HR,General-Manager'])->group(function () {
       
-    
+     // Loan Restructuring Routes
+    Route::prefix('loan-restructuring')->name('loan-restructuring.')->group(function () {
+        
+        // Show restructuring options page
+        Route::get('/{agreementId}/options', [App\Http\Controllers\Dashboard\LoanRestructuringController::class, 'showRestructuringPage'])
+            ->name('options');
+        
+        // API endpoints for AJAX calls
+        Route::get('/calculate-options', [App\Http\Controllers\Dashboard\LoanRestructuringController::class, 'getRestructuringOptions'])
+            ->name('calculate-options');
+        
+        // Process restructuring
+        Route::post('/process', [App\Http\Controllers\Dashboard\LoanRestructuringController::class, 'processRestructuring'])
+            ->name('process');
+        
+        // Additional utility routes
+        Route::get('/{agreementId}/eligibility', [App\Http\Controllers\Dashboard\LoanRestructuringController::class, 'checkEligibility'])
+            ->name('check-eligibility');
+        
+        Route::get('/{agreementId}/financial-summary', [App\Http\Controllers\Dashboard\LoanRestructuringController::class, 'getFinancialSummary'])
+            ->name('financial-summary');
+    });
     // Leave Applications Routes
     Route::prefix('leave-applications')->name('leave-applications.')->group(function () {
         
