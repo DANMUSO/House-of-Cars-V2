@@ -597,11 +597,14 @@ public function getRestructuringOptions(Request $request)
             $eligibility['errors'][] = 'Loan must be approved before restructuring';
         }
         
+         // REMOVED: Payment requirement check
+        /*
         $paymentsMade = $agreement->paymentSchedule()->where('status', 'paid')->count();
         if ($paymentsMade === 0) {
             $eligibility['eligible'] = false;
             $eligibility['errors'][] = 'At least one payment must be made before restructuring';
         }
+        */
         
         $recentRestructuring = DB::table('loan_rescheduling_history')
             ->where('agreement_id', $agreement->id)
