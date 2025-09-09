@@ -713,12 +713,14 @@ public function getRestructuringOptions(Request $request)
         return $nextSchedule ? $nextSchedule->due_date : now()->addMonth();
     }
     
-    private function clearUnpaidSchedules($agreementId)
-    {
-        PaymentSchedule::where('agreement_id', $agreementId)
-            ->whereIn('status', ['pending', 'partial', 'overdue'])
-            ->delete();
-    }
+     private function clearUnpaidSchedules($agreementId, $restructuringType = null)
+        {
+            $deletedCount = PaymentSchedule::where('agreement_id', $agreementId)
+                ->whereIn('status', ['pending', 'partial', 'overdue'])
+                ->delete();
+                
+            return $deletedCount;
+        }
     
     private function captureOriginalTerms($agreement)
     {

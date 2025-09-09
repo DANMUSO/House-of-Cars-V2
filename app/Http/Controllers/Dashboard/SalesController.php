@@ -339,6 +339,7 @@ class SalesController extends Controller
             ]);
         }
         
+        
         return response()->json(['message' => 'Info submitted successfully!']);
             
          
