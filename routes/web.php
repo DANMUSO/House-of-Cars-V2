@@ -103,17 +103,18 @@ Route::get('/proxy-image', function(Request $request) {
     } catch (Exception $e) {
         abort(404);
     }
-})->name('proxy.image');
+})->name('proxy.image');  
 Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Suppport-Staff,HR,General-Manager'])->group(function () {
       
-     // Loan Restructuring Routes
+    // Loan Restructuring Routes
     Route::prefix('loan-restructuring')->name('loan-restructuring.')->group(function () {
         
+        // Show restructuring options page
         // Show restructuring options page
         Route::get('/{agreementId}/options', [App\Http\Controllers\Dashboard\LoanRestructuringController::class, 'showRestructuringPage'])
             ->name('options');
         
-        // API endpoints for AJAX calls
+        // AJAX endpoints for calculations (these should come BEFORE parameterized routes)
         Route::get('/calculate-options', [App\Http\Controllers\Dashboard\LoanRestructuringController::class, 'getRestructuringOptions'])
             ->name('calculate-options');
         
@@ -121,7 +122,11 @@ Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Sa
         Route::post('/process', [App\Http\Controllers\Dashboard\LoanRestructuringController::class, 'processRestructuring'])
             ->name('process');
         
-        // Additional utility routes
+        // Settings endpoint
+        Route::get('/settings/get', [App\Http\Controllers\Dashboard\LoanRestructuringController::class, 'getRestructuringSettings'])
+            ->name('settings');
+        
+        // Additional utility routes (these come after the static routes to avoid conflicts)
         Route::get('/{agreementId}/eligibility', [App\Http\Controllers\Dashboard\LoanRestructuringController::class, 'checkEligibility'])
             ->name('check-eligibility');
         
@@ -588,5 +593,4 @@ Route::middleware(['auth'])->prefix('api/dashboard')->group(function () {
     });
 });
 });
-
 

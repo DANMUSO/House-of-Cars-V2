@@ -14,7 +14,7 @@ class PaymentSchedule extends Model
     protected $fillable = [
         'agreement_id', 'installment_number', 'due_date', 'principal_amount',
         'interest_amount', 'total_amount', 'balance_after', 'status',
-        'amount_paid', 'date_paid', 'days_overdue'
+        'amount_paid', 'date_paid', 'days_overdue','schedule_type','restructuring_type'
     ];
 
     protected $casts = [
