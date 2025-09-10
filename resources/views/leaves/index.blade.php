@@ -146,7 +146,7 @@
                 <div class="btn-group-vertical" id="actions-{{ $application->id }}">
                     @if($application->status === 'Pending')
                         {{-- Approve/Reject buttons only for Managing Director and HR, but not for their own applications --}}
-                        @if(in_array(Auth::user()->role, ['Managing-Director', 'HR']) && $application->user_id !== auth()->id())
+                        @if(in_array(Auth::user()->role, ['Managing-Director','General-Manager', 'HR']) && $application->user_id !== auth()->id())
                             <button class="btn btn-sm btn-success mb-1" onclick="approveApplication({{ $application->id }})" id="approve-btn-{{ $application->id }}">
                                 <i class="fas fa-check me-1"></i> Approve
                             </button>
@@ -163,10 +163,10 @@
                         @endif
                         
                         {{-- Show "No actions" if not their application and not Managing Director/HR, OR if it's HR/MD's own application --}}
-                        @if(($application->user_id !== auth()->id() && !in_array(Auth::user()->role, ['Managing-Director', 'HR'])) || 
-                            (in_array(Auth::user()->role, ['Managing-Director', 'HR']) && $application->user_id === auth()->id()))
+                        @if(($application->user_id !== auth()->id() && !in_array(Auth::user()->role, ['Managing-Director','General-Manager', 'HR'])) || 
+                            (in_array(Auth::user()->role, ['Managing-Director','General-Manager', 'HR']) && $application->user_id === auth()->id()))
                             <span class="text-muted">
-                                <i class="fas fa-ban me-1"></i>@if($application->user_id === auth()->id() && in_array(Auth::user()->role, ['Managing-Director', 'HR']))Cannot approve own request @else No actions available @endif
+                                <i class="fas fa-ban me-1"></i>@if($application->user_id === auth()->id() && in_array(Auth::user()->role, ['Managing-Director','General-Manager', 'HR']))Cannot approve own request @else No actions available @endif
                             </span>
                         @endif
                     @else
@@ -259,14 +259,14 @@
                                                 
                                                 // Define role priority based on current user's role
                                                 $rolePriority = [
-                                                    'Support-Staff' => ['Support-Staff', 'Salesperson', 'Showroom-Manager', 'Managing-Director', 'Accountant'],
-                                                    'Salesperson' => ['Salesperson', 'Support-Staff', 'Showroom-Manager', 'Managing-Director', 'Accountant'],
-                                                    'Showroom-Manager' => ['Showroom-Manager', 'Managing-Director', 'Accountant', 'Salesperson', 'Support-Staff'],
-                                                    'Accountant' => ['Accountant', 'Managing-Director', 'Showroom-Manager', 'Salesperson', 'Support-Staff'],
-                                                    'Managing-Director' => ['Managing-Director', 'Showroom-Manager', 'Accountant', 'Salesperson', 'Support-Staff']
+                                                    'Support-Staff' => ['Support-Staff', 'Salesperson', 'Showroom-Manager', 'Managing-Director','General-Manager', 'Accountant'],
+                                                    'Salesperson' => ['Salesperson', 'Support-Staff', 'Showroom-Manager', 'Managing-Director','General-Manager', 'Accountant'],
+                                                    'Showroom-Manager' => ['Showroom-Manager', 'Managing-Director','General-Manager', 'Accountant', 'Salesperson', 'Support-Staff'],
+                                                    'Accountant' => ['Accountant', 'Managing-Director','General-Manager', 'Showroom-Manager', 'Salesperson', 'Support-Staff'],
+                                                    'Managing-Director' => ['Managing-Director','General-Manager', 'Showroom-Manager', 'Accountant', 'Salesperson', 'Support-Staff']
                                                 ];
                                                 
-                                                $orderedRoles = $rolePriority[$userRole] ?? ['Support-Staff', 'Salesperson', 'Showroom-Manager', 'Managing-Director', 'Accountant'];
+                                                $orderedRoles = $rolePriority[$userRole] ?? ['Support-Staff', 'Salesperson', 'Showroom-Manager', 'Managing-Director','General-Manager', 'Accountant'];
                                             @endphp
                                             
                                             @foreach($orderedRoles as $role)
@@ -295,7 +295,7 @@
                                             <i class="fas fa-info-circle me-1"></i>Recommended: Other Support Staff members{{ isset($handoverSuggestions) && $handoverSuggestions->where('role', 'Support-Staff')->isEmpty() ? ' or Salesperson' : '' }}
                                         @elseif($userRole === 'Salesperson')
                                             <i class="fas fa-info-circle me-1"></i>Recommended: Other Salesperson or Support Staff members
-                                        @elseif(in_array($userRole, ['Managing-Director', 'Showroom-Manager', 'Accountant']))
+                                        @elseif(in_array($userRole, ['Managing-Director','General-Manager', 'Showroom-Manager', 'Accountant']))
                                             <i class="fas fa-info-circle me-1"></i>Recommended: Management team members
                                         @else
                                             <i class="fas fa-info-circle me-1"></i>Select the person who will handle your duties

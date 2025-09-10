@@ -22,7 +22,7 @@ class LeavesController extends Controller
         $userRole = Auth::user()->role;
         
         // Apply role-based filtering
-        if (in_array($userRole, ['Managing-Director', 'HR'])) {
+        if (in_array($userRole, ['Managing-Director','General-Manager', 'HR'])) {
             // Show all leave applications for Managing Director and HR
             $leaveApplications = LeaveApplication::with(['user', 'leaveDay'])
                 ->orderBy('created_at', 'desc')
@@ -132,9 +132,9 @@ class LeavesController extends Controller
             $roleHierarchy = [
                 'Support-Staff' => ['Support-Staff', 'Salesperson'],
                 'Salesperson' => ['Salesperson', 'Support-Staff'],
-                'Showroom-Manager' => ['Showroom-Manager', 'Managing-Director', 'Accountant'],
-                'Accountant' => ['Accountant', 'Managing-Director', 'Showroom-Manager'],
-                'Managing-Director' => ['Managing-Director', 'Showroom-Manager', 'Accountant'],
+                'Showroom-Manager' => ['Showroom-Manager', 'Managing-Director','General-Manager', 'Accountant'],
+                'Accountant' => ['Accountant', 'Managing-Director','General-Manager', 'Showroom-Manager'],
+                'Managing-Director' => ['Managing-Director','General-Manager', 'Showroom-Manager', 'Accountant'],
             ];
 
             $currentUserRole = $currentUser->role ?? 'Support-Staff';
@@ -322,7 +322,7 @@ public function approve(Request $request, $id)
         Log::info("Attempting to approve leave application {$id}. Current status: {$leave->status}");
 
         // Check if user has permission to approve leaves
-        if (!in_array(auth()->user()->role, ['Managing-Director', 'HR'])) {
+        if (!in_array(auth()->user()->role, ['Managing-Director','General-Manager', 'HR'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'You do not have permission to approve leave applications.'
@@ -404,7 +404,7 @@ public function reject(Request $request, $id)
         Log::info("Attempting to reject leave application {$id}. Current status: {$leave->status}");
 
         // Check if user has permission to reject leaves
-        if (!in_array(auth()->user()->role, ['Managing-Director', 'HR'])) {
+        if (!in_array(auth()->user()->role, ['Managing-Director','General-Manager', 'HR'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'You do not have permission to reject leave applications.'

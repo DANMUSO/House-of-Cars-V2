@@ -2,11 +2,12 @@
 
 return [
 
-    'onfonmedia' => [
-        'access_key' => env('ONFONMEDIA_ACCESS_KEY'),
-        'api_key' => env('ONFONMEDIA_API_KEY'),
-        'client_id' => env('ONFONMEDIA_CLIENT_ID'),
-    ],
+     'onfonmedia' => [
+                        'access_key' => env('ONFONMEDIA_ACCESS_KEY'),
+                        'api_key' => env('ONFONMEDIA_API_KEY'),
+                        'client_id' => env('ONFONMEDIA_CLIENT_ID'),
+                        'sender_id' => env('ONFONMEDIA_SENDER_ID', 'DefaultSender'),
+                    ],
     /*
     |--------------------------------------------------------------------------
     | Third Party Services
