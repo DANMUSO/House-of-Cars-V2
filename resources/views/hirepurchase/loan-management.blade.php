@@ -406,7 +406,7 @@
                     <h6 class="mb-2 text-primary">
                         <i class="fas fa-clock me-2"></i>Reduce Loan Duration
                     </h6>
-                    <p class="mb-2 text-muted">Keep your current monthly payment and finish the loan earlier</p>
+                    <p class="mb-2">Keep your current monthly payment and finish the loan earlier</p>
                     <div id="durationOption" class="option-details text-success">
                         <small>Loading calculation...</small>
                     </div>
@@ -429,7 +429,7 @@
                     <h6 class="mb-2 text-success">
                         <i class="fas fa-money-bill-wave me-2"></i>Reduce Monthly Payment
                     </h6>
-                    <p class="mb-2 text-muted">Lower your monthly payments while keeping the same loan duration</p>
+                    <p class="mb-2">Lower your monthly payments while keeping the same loan duration</p>
                     <div id="paymentOption" class="option-details text-success">
                         <small>Loading calculation...</small>
                     </div>
@@ -4009,9 +4009,17 @@ window['showUploadSection' + {{ $agreement->id }}] = function() {
                                             <td><strong>Phone:</strong></td>
                                             <td>{{ $agreement->phone_number }}</td>
                                         </tr>
+                                         <tr>
+                                            <td><strong>Alternative Phone:</strong></td>
+                                            <td>{{ $agreement->phone_numberalt }}</td>
+                                        </tr>
                                         <tr>
                                             <td><strong>Email:</strong></td>
                                             <td>{{ $agreement->email }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Alternative Email:</strong></td>
+                                            <td>{{ $agreement->emailalt }}</td>
                                         </tr>
                                         <tr>
                                             <td><strong>National ID:</strong></td>

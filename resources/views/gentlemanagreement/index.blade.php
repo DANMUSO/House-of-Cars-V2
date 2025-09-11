@@ -186,11 +186,11 @@
                         
                         <div class="col-md-6">
                             <label class="form-label">Phone Number *</label>
-                            <input type="tel" class="form-control" name="phone_number" required>
+                            <input type="number" class="form-control" name="phone_number" required placeholder="254700000000">
                         </div>
                          <div class="col-md-6">
                             <label class="form-label">Alternative Phone Number (Optional)</label>
-                            <input type="tel" class="form-control" name="phone_numberalt">
+                            <input type="number" class="form-control" name="phone_numberalt" placeholder="254700000000">
                         </div>
                         
                         <div class="col-md-6">
@@ -595,7 +595,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Phone Number</label>
-                                <input type="tel" class="form-control" id="edit_phone_number" name="phone_number" required>
+                                <input type="number" class="form-control" id="edit_phone_number" name="phone_number" required placeholder="254700000000">
                             </div>
                         </div>
                         

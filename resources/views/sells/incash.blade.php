@@ -251,11 +251,11 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Phone No <span class="text-danger">*</span></label>
-                                <input type="number" class="form-control" id="Phone_No" name="Phone_No" required>
+                                <input type="number" class="form-control" id="Phone_No" name="Phone_No" required placeholder="254700000000">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Phone No (Optional)</label>
-                                <input type="number" class="form-control" id="phone_numberalt" name="phone_numberalt">
+                                <input type="number" class="form-control" id="phone_numberalt" name="phone_numberalt" placeholder="254700000000">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Email Address (Optional) <span class="text-danger">*</span></label>

@@ -75,11 +75,11 @@ class GentlemanAgreementController extends Controller
             
             $validated = $request->validate([
                 'client_name' => 'required|string|max:100',
-                'phone_number' => 'required|string|max:20',
+                'phone_number' => 'required|string|regex:/^254[17]\d{8}$/',
                 'email' => 'required|email|max:100',
                 'national_id' => 'required|string|max:20',
                 'kra_pin' => 'nullable|string|max:20',
-                'phone_numberalt' => 'nullable|string|max:20',
+                'phone_numberalt' => 'nullable|string|regex:/^254[17]\d{8}$/',
                 'emailalt' => 'nullable|string|max:20',
                 'vehicle_id' => 'required|string',
                 'vehicle_price' => 'required|numeric|min:1',

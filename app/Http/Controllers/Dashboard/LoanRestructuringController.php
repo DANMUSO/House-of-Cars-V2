@@ -7,11 +7,14 @@ use Illuminate\Http\Request;
 use App\Models\HirePurchaseAgreement;
 use App\Models\PaymentSchedule;
 use App\Models\Penalty;
+use App\Models\CarImport;           // ADD THIS
+use App\Models\CustomerVehicle;   
 use App\Services\PenaltyService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
+use App\Services\SmsService;
 
 class LoanRestructuringController extends Controller
 {
@@ -417,6 +420,72 @@ public function getRestructuringOptions(Request $request)
             'history_id' => $historyId
         ]);
         
+         // Send SMS notification - UPDATED FORMAT
+// Send SMS notification - CORRECTED FORMAT
+try {
+    $carDetails = $this->getCarDetails($agreement->car_type, $agreement->car_id);
+    
+    // Get penalty information
+    $penaltyService = app(PenaltyService::class);
+    $penaltySummary = $penaltyService->getPenaltySummary('hire_purchase', $agreement->id);
+    $totalPenalties = $penaltySummary['total_pending'] ?? 0;
+    
+    // Prepare penalty text
+    $penaltyText = '';
+    if ($totalPenalties > 0) {
+        $penaltyText = ', penalties';
+    }
+    
+    // CORRECTED: Use the actual outstanding balance after restructuring
+    // This should match the sum of all remaining payment schedules
+    $currentOutstandingBalance = PaymentSchedule::where('agreement_id', $agreement->id)
+        ->whereIn('status', ['pending', 'partial', 'overdue'])
+        ->sum(DB::raw('total_amount - COALESCE(amount_paid, 0)'));
+    
+    // Format amounts
+    $newBalance = number_format($currentOutstandingBalance, 2); // This should be KSh 1,344,241.97
+    $newDuration = $result['new_duration'] ?? 0;
+    $newInstallment = number_format($result['new_payment'] ?? 0, 2);
+    $feeRate = number_format($actualFeeRate, 0); // Shows as "3" for 3%
+    
+    // Create the message using your exact format
+    $message = "Dear {$agreement->client_name}, your plan for {$carDetails} has been rescheduled. Balance{$penaltyText}, and a {$feeRate}% fee applied. New balance: KSh {$newBalance}, payable over {$newDuration} months. Your new installments will be KSh {$newInstallment} per month. Thank you. For assistance, call us on 0794 598 609.";
+    
+    $smsSent = SmsService::send($agreement->phone_number, $message);
+    
+    if ($smsSent) {
+        Log::info('Loan rescheduling SMS sent', [
+            'agreement_id' => $agreement->id,
+            'history_id' => $historyId,
+            'client' => $agreement->client_name,
+            'phone' => $agreement->phone_number,
+            'car_details' => $carDetails,
+            'current_outstanding_balance' => $currentOutstandingBalance, // Actual balance from schedules
+            'new_loan_amount_calculated' => $newLoanAmount, // What was used for restructuring
+            'new_duration' => $newDuration,
+            'new_installment' => $result['new_payment'],
+            'penalties_included' => $totalPenalties > 0,
+            'penalty_amount' => $totalPenalties,
+            'fee_rate' => $actualFeeRate,
+            'message_sent' => $message
+        ]);
+    } else {
+        Log::warning('Loan rescheduling SMS failed', [
+            'agreement_id' => $agreement->id,
+            'history_id' => $historyId,
+            'client' => $agreement->client_name,
+            'phone' => $agreement->phone_number
+        ]);
+    }
+    
+} catch (\Exception $smsException) {
+    Log::error('SMS error during loan rescheduling: ' . $smsException->getMessage(), [
+        'agreement_id' => $agreement->id,
+        'client' => $agreement->client_name,
+        'error' => $smsException->getMessage()
+    ]);
+    // Don't fail the restructuring process if SMS fails
+}
         return response()->json([
             'success' => true,
             'message' => 'Loan restructured successfully with original interest rate (eligibility bypassed)!',
@@ -437,6 +506,28 @@ public function getRestructuringOptions(Request $request)
             'success' => false,
             'message' => $e->getMessage()
         ], 500);
+    }
+}
+private function getCarDetails($car_type, $car_id)
+{
+    try {
+        if ($car_type === 'import') {
+            $car = CarImport::find($car_id);
+            if ($car) {
+                return "{$car->year} {$car->make} {$car->model}";
+            }
+        } else {
+            $car = CustomerVehicle::find($car_id);
+            if ($car) {
+                return "{$car->year} {$car->vehicle_make} {$car->model}";
+            }
+        }
+        
+        return "your selected vehicle";
+        
+    } catch (\Exception $e) {
+        Log::error('Error getting car details: ' . $e->getMessage());
+        return "your selected vehicle";
     }
 }
 

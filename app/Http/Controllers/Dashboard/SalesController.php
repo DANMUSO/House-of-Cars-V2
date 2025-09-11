@@ -15,6 +15,7 @@ use Carbon\Carbon;
 use App\Models\Installment;
 use App\Models\Payment;
 use App\Services\SmsService;
+use Illuminate\Support\Facades\Log;
 class SalesController extends Controller
 {
    
@@ -227,100 +228,47 @@ class SalesController extends Controller
         return view('sells.index', compact('combined','vehicles'));
     }
 
-public function storeincash(Request $request)
-{
-    $request->validate([
-        'Client_Name' => 'required|string|max:255',
-        'Phone_No' => 'required|string|max:20',
-        'National_ID' => 'required|string|max:255',
-        'Amount' => 'required|numeric',
-        'PaidAmount'  => 'required|numeric',
-        'TradeInnAmount'  => 'nullable|numeric',
-        'car_id' => 'required|string',
-    ]);
-    
-    $carSelection = $request->input('car_id');
-    $car_type = str_starts_with($carSelection, 'import-') ? 'import' : 'customer';
-    $car_id = (int) str_replace(['import-', 'customer-'], '', $carSelection);
-    
-    // Get car details for SMS
-    $carDetails = $this->getCarDetails($car_type, $car_id);
-    
-    // Use 0 instead of null for non-applicable IDs
-    $data = [
-        'Client_Name'   => $request->input('Client_Name'),
-        'Phone_No'      => $request->input('Phone_No'),
-        'email'         => $request->input('email'),
-        'KRA'           => $request->input('KRA'),
-        'phone_numberalt'           => $request->input('phone_numberalt'),
-        'emailalt'           => $request->input('emailalt'),
-        'National_ID'   => $request->input('National_ID'),
-        'Amount'        => $request->input('Amount'),
-        'paid_amount'        => $request->input('PaidAmount'),
-        'totalpaidamount'        => $request->input('PaidAmount') + $request->input('TradeInnAmount'),
-        'tradeinnamount'        => $request->input('TradeInnAmount'),
-        'car_type'      => $car_type,
-        'car_id'        => $car_id,
-        'imported_id'   => $car_type === 'import' ? $car_id : 0,
-        'customer_id'   => $car_type === 'customer' ? $car_id : 0,
-    ];
-    
-    try {
+    public function storeincash(Request $request)
+    {
+        $request->validate([
+            'Client_Name' => 'required|string|max:255',
+            'Phone_No' => 'required|string|regex:/^254[17]\d{8}$/',
+            'National_ID' => 'required|string|max:255',
+            'Amount' => 'required|numeric',
+            'PaidAmount'  => 'required|numeric',
+            'TradeInnAmount'  => 'nullable|numeric',
+            'car_id' => 'required|string',
+        ]);
+        
+        $carSelection = $request->input('car_id');
+        $car_type = str_starts_with($carSelection, 'import-') ? 'import' : 'customer';
+        $car_id = (int) str_replace(['import-', 'customer-'], '', $carSelection);
+        
+        // Use 0 instead of null for non-applicable IDs
+        $data = [
+            'Client_Name'   => $request->input('Client_Name'),
+            'Phone_No'      => $request->input('Phone_No'),
+            'email'         => $request->input('email'),
+            'KRA'           => $request->input('KRA'),
+            'phone_numberalt'           => $request->input('phone_numberalt'),
+            'emailalt'           => $request->input('emailalt'),
+            'National_ID'   => $request->input('National_ID'),
+            'Amount'        => $request->input('Amount'),
+            'paid_amount'        => $request->input('PaidAmount'),
+            'totalpaidamount'        => $request->input('PaidAmount') + $request->input('TradeInnAmount'),
+            'tradeinnamount'        => $request->input('TradeInnAmount'),
+            'car_type'      => $car_type,
+            'car_id'        => $car_id,
+            'imported_id'   => $car_type === 'import' ? $car_id : 0,
+            'customer_id'   => $car_type === 'customer' ? $car_id : 0,
+        ];
+        
         InCash::create($data);
         
-        // Send SMS notification
-        $clientName = $request->input('Client_Name');
-        $phoneNumber = $request->input('Phone_No');
-        
-        $message = "Dear {$clientName}, we are delighted to confirm your purchase of the {$carDetails}. Thank you for choosing House of Cars - a trusted name in premium automobiles. Your confidence in us is highly valued.";
-        
-        $smsSent = SmsService::send($phoneNumber, $message);
-        
-        if ($smsSent) {
-            Log::info('Purchase confirmation SMS sent', [
-                'client' => $clientName, 
-                'phone' => $phoneNumber,
-                'car' => $carDetails
-            ]);
-            return response()->json(['message' => 'Purchase recorded successfully and SMS sent!']);
-        } else {
-            Log::warning('Purchase recorded but SMS failed', [
-                'client' => $clientName, 
-                'phone' => $phoneNumber
-            ]);
-            return response()->json(['message' => 'Purchase recorded successfully, but SMS notification failed.']);
-        }
-        
-    } catch (\Exception $e) {
-        Log::error('Error in storeincash: ' . $e->getMessage());
-        return response()->json(['message' => 'Error processing purchase'], 500);
+        return response()->json(['message' => 'Info submitted successfully!']);
+            
+         
     }
-}
-    /**
- * Get car details for SMS message
- */
-private function getCarDetails($car_type, $car_id)
-{
-    try {
-        if ($car_type === 'import') {
-            $car = CarImport::find($car_id);
-            if ($car) {
-                return "{$car->year} {$car->make} {$car->model}";
-            }
-        } else {
-            $car = CustomerVehicle::find($car_id);
-            if ($car) {
-                return "{$car->year} {$car->make} {$car->model}";
-            }
-        }
-        
-        return "your selected vehicle";
-        
-    } catch (\Exception $e) {
-        Log::error('Error getting car details: ' . $e->getMessage());
-        return "your selected vehicle";
-    }
-}
 
     public function storehirepurchase(Request $request)
     {
@@ -498,20 +446,78 @@ private function getCarDetails($car_type, $car_id)
             'message' => 'Record deleted permanently!'
         ], 200);
     }
-    public function approveincash(Request $request)
-    {
-        $request->validate([
-            'id' => 'required|exists:in_cashes,id',
-        ]);
+   public function approveincash(Request $request)
+{
+    $request->validate([
+        'id' => 'required|exists:in_cashes,id',
+    ]);
 
-        $cash = InCash::findOrFail($request->id);
-        $cash->status = 1;
-        $cash->save();
+    $cash = InCash::findOrFail($request->id);
+    $cash->status = 1;
+    $cash->save();
 
+    // Send SMS notification after approval
+    try {
+        // Get car details for SMS
+        $carDetails = $this->getCarDetails($cash->car_type, $cash->car_id);
+        
+        // Send approval SMS
+        $message = "Dear {$cash->Client_Name}, we are delighted to confirm your purchase of the   {$carDetails}. Thank you for choosing House of Cars - a trusted name in premium automobiles. Your confidence in us is highly valued.";
+        
+        $smsSent = SmsService::send($cash->Phone_No, $message);
+        
+        if ($smsSent) {
+            Log::info('Approval SMS sent', [
+                'client' => $cash->Client_Name,
+                'phone' => $cash->Phone_No,
+                'car' => $carDetails
+            ]);
+            return response()->json([
+                'message' => 'Record approved successfully and SMS sent!'
+            ], 200);
+        } else {
+            Log::warning('Approval SMS failed', [
+                'client' => $cash->Client_Name,
+                'phone' => $cash->Phone_No
+            ]);
+            return response()->json([
+                'message' => 'Record approved successfully, but SMS notification failed.'
+            ], 200);
+        }
+        
+    } catch (\Exception $e) {
+        Log::error('Error sending approval SMS: ' . $e->getMessage());
         return response()->json([
-            'message' => 'Record approved successfully!'
+            'message' => 'Record approved successfully, but SMS notification failed.'
         ], 200);
     }
+}
+
+/**
+ * Get car details for SMS
+ */
+private function getCarDetails($car_type, $car_id)
+{
+    try {
+        if ($car_type === 'import') {
+            $car = CarImport::find($car_id);
+            if ($car) {
+                return "{$car->year} {$car->make} {$car->model}";
+            }
+        } else {
+            $car = CustomerVehicle::find($car_id);
+            if ($car) {
+                return "{$car->year} {$car->vehicle_make} {$car->model}";
+            }
+        }
+        
+        return "your selected vehicle";
+        
+    } catch (\Exception $e) {
+        Log::error('Error getting car details: ' . $e->getMessage());
+        return "your selected vehicle";
+    }
+}
     public function approveHirePurchase(Request $request)
     {
         $request->validate([

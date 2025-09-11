@@ -111,16 +111,16 @@ class InspectionController extends Controller
 
         $validated = $request->validate([
             // Make both optional since only one will be provided
-            'customer_id' => 'nullable|integer|min:0|max:100',
-            'imported_id' => 'nullable|integer|min:0|max:100',
+            'customer_id' => 'nullable|integer',
+            'imported_id' => 'nullable|integer',
             
             'inspection_notes' => 'required|string',
-            'current_mileage' => 'nullable|string|max:255',
-            'overall_percent' => 'required|integer|min:0|max:100',
-            'exterior_percent' => 'required|integer|min:0|max:100',
-            'interior_func_percent' => 'required|integer|min:0|max:100',
-            'interior_acc_percent' => 'required|integer|min:0|max:100',
-            'tools_percent' => 'required|integer|min:0|max:100',
+            'current_mileage' => 'nullable|string',
+            'overall_percent' => 'required|integer',
+            'exterior_percent' => 'required|integer',
+            'interior_func_percent' => 'required|integer',
+            'interior_acc_percent' => 'required|integer',
+            'tools_percent' => 'required|integer',
 
             // Interior Accessories Numbers
             'head_rest_number' => 'nullable|integer|min:0|max:10',

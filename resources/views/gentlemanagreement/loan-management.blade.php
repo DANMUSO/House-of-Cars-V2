@@ -2746,9 +2746,17 @@ window['showUploadSection' + {{ $agreement->id }}] = function() {
                                             <td><strong>Phone:</strong></td>
                                             <td>{{ $agreement->phone_number }} | {{ $agreement->phone_numberalt }} </td>
                                         </tr>
+                                         <tr>
+                                            <td><strong>Alternative Phone:</strong></td>
+                                            <td>{{ $agreement->phone_numberalt }}</td>
+                                        </tr>
                                         <tr>
                                             <td><strong>Email:</strong></td>
-                                            <td>{{ $agreement->email }} | {{ $agreement->emailalt }}</td>
+                                            <td>{{ $agreement->email }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Alternative Email:</strong></td>
+                                            <td>{{ $agreement->emailalt }}</td>
                                         </tr>
                                         <tr>
                                             <td><strong>National ID:</strong></td>

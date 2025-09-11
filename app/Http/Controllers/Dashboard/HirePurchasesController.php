@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema; // ADD THIS LINE
 use Carbon\Carbon;
+use App\Services\SmsService;
 
 class HirePurchasesController extends Controller
 {
@@ -278,6 +279,55 @@ private function applyLumpSumWithCorrectPriority($agreementId, $paymentAmount, $
 
         DB::commit();
         Log::info('✅ Transaction completed successfully');
+        // Send SMS notification
+        try {
+            $carDetails = $this->getCarDetails($agreement->car_type, $agreement->car_id);
+            
+            if ($reschedulingResult['completion'] ?? false) {
+                // Loan completed message
+                $message = "Dear {$agreement->client_name}, your lump sum payment of KSh " . number_format($request->payment_amount, 2) . " has been received and your {$carDetails} loan is now fully paid. Thank you for choosing House of Cars.";
+            } else {
+                // Determine the specific rescheduling message based on option
+                if ($request->reschedule_option === 'reduce_duration') {
+                    $newDuration = $reschedulingResult['new_duration'] ?? 0;
+                    $monthsSaved = $reschedulingResult['duration_reduction'] ?? 0;
+                    $monthlyPayment = number_format($reschedulingResult['monthly_payment'] ?? 0, 2);
+                    
+                    $message = "Dear {$agreement->client_name}, your lump sum payment of KSh " . number_format($request->payment_amount, 2) . " has been received. Your {$carDetails} loan duration is now {$newDuration} months (saved {$monthsSaved} months) with monthly payment of KSh {$monthlyPayment}. Thank you for choosing House of Cars.";
+                } else {
+                    // reduce_installment option
+                    $newPayment = number_format($reschedulingResult['new_monthly_payment'] ?? 0, 2);
+                    $monthlySavings = number_format($reschedulingResult['payment_reduction'] ?? 0, 2);
+                    $remainingDuration = $reschedulingResult['remaining_duration'] ?? 0;
+                    
+                    $message = "Dear {$agreement->client_name}, your lump sum payment of KSh " . number_format($request->payment_amount, 2) . " has been received. Your {$carDetails} loan payment is now KSh {$newPayment} monthly (save KSh {$monthlySavings}) for {$remainingDuration} months. Thank you for choosing House of Cars.";
+                }
+            }
+            
+            $smsSent = SmsService::send($agreement->phone_number, $message);
+            
+            if ($smsSent) {
+                Log::info('Lump sum payment SMS sent', [
+                    'agreement_id' => $agreement->id,
+                    'payment_id' => $paymentData['payment_id'],
+                    'client' => $agreement->client_name,
+                    'phone' => $agreement->phone_number,
+                    'amount' => $request->payment_amount,
+                    'reschedule_option' => $request->reschedule_option,
+                    'loan_completed' => $reschedulingResult['completion'] ?? false
+                ]);
+            } else {
+                Log::warning('Lump sum payment SMS failed', [
+                    'agreement_id' => $agreement->id,
+                    'payment_id' => $paymentData['payment_id'],
+                    'client' => $agreement->client_name
+                ]);
+            }
+            
+        } catch (\Exception $smsException) {
+            Log::error('SMS error during lump sum payment: ' . $smsException->getMessage());
+            // Don't fail the payment process if SMS fails
+        }
 
         return response()->json([
             'success' => true,
@@ -4430,10 +4480,10 @@ public function store(Request $request)
         
         $validated = $request->validate([
             'client_name' => 'required|string|max:100',
-            'phone_number' => 'required|string|max:20',
+            'phone_number' => 'required|string|regex:/^254[17]\d{8}$/',
             'email' => 'required|email|max:100',
             'national_id' => 'required|string|max:20',
-            'phone_numberalt' => 'nullable|string|max:20',
+            'phone_numberalt' => 'nullable|string|regex:/^254[17]\d{8}$/',
             'emailalt' => 'nullable|string|max:20',
             'kra_pin' => 'nullable|string|max:20',
             'vehicle_id' => 'required|string',
@@ -5236,6 +5286,32 @@ private function performReschedulingFlexible($agreement, $newPrincipalBalance, $
     
             // Commit the transaction
             \DB::commit();
+            // Send SMS notification
+            try {
+                $message = "Dear {$agreement->client_name}, installment payment of KSh " . number_format($request->payment_amount, 2) . " has been received on " . date('M d, Y', strtotime($request->payment_date)) . ". Your remaining balance is KSh " . number_format(max(0, $newOutstanding), 2) . ". Thank you for your payment.";
+                
+                $smsSent = SmsService::send($agreement->phone_number, $message);
+                
+                if ($smsSent) {
+                    Log::info('Payment confirmation SMS sent', [
+                        'agreement_id' => $agreement->id,
+                        'payment_id' => $paymentId,
+                        'client' => $agreement->client_name,
+                        'phone' => $agreement->phone_number,
+                        'amount' => $request->payment_amount
+                    ]);
+                } else {
+                    Log::warning('Payment confirmation SMS failed', [
+                        'agreement_id' => $agreement->id,
+                        'payment_id' => $paymentId,
+                        'client' => $agreement->client_name
+                    ]);
+                }
+                
+            } catch (\Exception $smsException) {
+                Log::error('SMS error during payment confirmation: ' . $smsException->getMessage());
+                // Don't fail the payment process if SMS fails
+            }
     
             // Get the created payment for response
             $createdPayment = \DB::table('hire_purchase_payments')
@@ -5583,12 +5659,10 @@ private function applyOverpaymentToFutureInstallments($agreementId, $remainingAm
             ], 500);
         }
     }
-
-
-
     public function approve($id)
-    {
-        $agreement = HirePurchaseAgreement::findOrFail($id);
+{
+    try {
+        $agreement = HirePurchaseAgreement::with(['carImport', 'customerVehicle'])->findOrFail($id);
         
         if ($agreement->status !== 'pending') {
             return response()->json(['success' => false, 'message' => 'Agreement is not in pending status']);
@@ -5600,8 +5674,65 @@ private function applyOverpaymentToFutureInstallments($agreementId, $remainingAm
             'approved_at' => now()
         ]);
 
-        return response()->json(['success' => true, 'message' => 'Agreement approved successfully']);
+        // Send SMS notification
+        try {
+            $carDetails = $this->getCarDetails($agreement->car_type, $agreement->car_id);
+            
+            $message = "Dear {$agreement->client_name}, we confirm your Hire Purchase agreement for the {$carDetails} with a first payment of KSh " . number_format($agreement->deposit_amount, 2) . ", monthly installments of KSh " . number_format($agreement->monthly_payment, 2) . " and a balance of KSh " . number_format($agreement->total_amount - $agreement->deposit_amount, 2) . ". Thank you for choosing House of Cars; we remain committed to providing you with excellent service.";
+            
+            $smsSent = SmsService::send($agreement->phone_number, $message);
+            
+            if ($smsSent) {
+                Log::info('Hire Purchase approval SMS sent', [
+                    'agreement_id' => $id,
+                    'client' => $agreement->client_name,
+                    'phone' => $agreement->phone_number
+                ]);
+                return response()->json(['success' => true, 'message' => 'Agreement approved and SMS notification sent successfully']);
+            } else {
+                Log::warning('Hire Purchase approval SMS failed', [
+                    'agreement_id' => $id,
+                    'client' => $agreement->client_name
+                ]);
+                return response()->json(['success' => true, 'message' => 'Agreement approved successfully, but SMS notification failed']);
+            }
+            
+        } catch (\Exception $smsException) {
+            Log::error('SMS error during hire purchase approval: ' . $smsException->getMessage());
+            return response()->json(['success' => true, 'message' => 'Agreement approved successfully, but SMS notification failed']);
+        }
+
+    } catch (\Exception $e) {
+        Log::error('Hire purchase approval error: ' . $e->getMessage());
+        return response()->json(['success' => false, 'message' => 'Error approving agreement: ' . $e->getMessage()]);
     }
+}
+
+/**
+ * Get car details for SMS
+ */
+private function getCarDetails($car_type, $car_id)
+{
+    try {
+        if ($car_type === 'import') {
+            $car = CarImport::find($car_id);
+            if ($car) {
+                return "{$car->year} {$car->make} {$car->model}";
+            }
+        } else {
+            $car = CustomerVehicle::find($car_id);
+            if ($car) {
+                return "{$car->model}";
+            }
+        }
+        
+        return "your selected vehicle";
+        
+    } catch (\Exception $e) {
+        Log::error('Error getting car details: ' . $e->getMessage());
+        return "your selected vehicle";
+    }
+}
 
     public function recordPayment(Request $request)
     {
