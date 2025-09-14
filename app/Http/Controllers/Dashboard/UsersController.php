@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\DB;
+use App\Services\SmsService;
 use Illuminate\Support\Facades\Log;
 
 class UsersController extends Controller
@@ -312,4 +313,95 @@ class UsersController extends Controller
 
         return response()->json(['message' => 'Password reset successfully!']);
     }
+    /**
+ * Show password reset form
+ */
+public function showPasswordResetForm()
+{
+    return view('auth.forgot-password');
+}
+
+/**
+ * Send new password via SMS
+ */
+public function sendPasswordViaSms(Request $request)
+{
+    $request->validate([
+        'phone' => 'required|string|regex:/^254[17]\d{8}$/',
+    ]);
+
+    try {
+        // Find user by phone number
+        $user = User::where('phone', $request->phone)->first();
+        
+        if (!$user) {
+            return response()->json([
+                'error' => 'No account found with this phone number.'
+            ], 404);
+        }
+
+        // Generate random password
+        $newPassword = $this->generateRandomPassword();
+        
+        // Update user password
+        $user->password = Hash::make($newPassword);
+        $user->save();
+
+        // Send SMS with new password
+        $this->sendPasswordResetSms($user, $newPassword);
+
+        return response()->json([
+            'message' => 'New password sent to your phone number successfully!'
+        ]);
+
+    } catch (\Exception $e) {
+        Log::error('SMS password reset failed: ' . $e->getMessage());
+        
+        return response()->json([
+            'error' => 'Failed to send password. Please try again.'
+        ], 500);
+    }
+}
+
+/**
+ * Generate random password
+ */
+private function generateRandomPassword($length = 8): string
+{
+    $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    return substr(str_shuffle($chars), 0, $length);
+}
+
+/**
+ * Send password reset SMS
+ */
+private function sendPasswordResetSms(User $user, string $newPassword)
+{
+    try {
+        $userName = trim($user->first_name . ' ' . $user->last_name);
+        
+        $message = "Dear {$userName}, your new password is: {$newPassword}. Please login and change it immediately for security.";
+
+        $smsSent = SmsService::send($user->phone, $message);
+        
+        if ($smsSent) {
+            Log::info('Password reset SMS sent successfully', [
+                'user_id' => $user->id,
+                'user_name' => $userName,
+                'phone' => $user->phone
+            ]);
+        } else {
+            Log::warning('Password reset SMS failed', [
+                'user_id' => $user->id,
+                'user_name' => $userName,
+                'phone' => $user->phone
+            ]);
+            throw new \Exception('SMS sending failed');
+        }
+
+    } catch (\Exception $e) {
+        Log::error('Error sending password reset SMS: ' . $e->getMessage());
+        throw $e;
+    }
+}
 }

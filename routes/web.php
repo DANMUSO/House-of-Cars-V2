@@ -106,6 +106,15 @@ Route::get('/proxy-image', function(Request $request) {
         abort(404);
     }
 })->name('proxy.image');  
+
+// SMS Password Reset Routes
+Route::get('/password/reset/sms', [App\Http\Controllers\Dashboard\UsersController::class, 'showPasswordResetForm'])
+    ->name('password.sms.form')
+    ->middleware('guest');
+
+Route::post('/password/reset/sms', [App\Http\Controllers\Dashboard\UsersController::class, 'sendPasswordViaSms'])
+    ->name('password.sms.send')
+    ->middleware('guest');
 Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Suppport-Staff,HR,General-Manager'])->group(function () {
 
       // Gentleman Agreement Loan Restructuring Routes
