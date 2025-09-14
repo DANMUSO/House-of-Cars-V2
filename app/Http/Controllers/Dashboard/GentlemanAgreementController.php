@@ -14,6 +14,7 @@ use App\Models\CarImport;
 use App\Models\CustomerVehicle;
 use App\Models\InCash;
 use App\Models\AppSetting;
+use App\Services\SmsService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use App\Services\PenaltyService;
@@ -387,6 +388,32 @@ public function storePayment(Request $request)
             ]);
 
         DB::commit();
+                    // Send SMS notification
+            try {
+                $message = "Dear {$agreement->client_name}, installment payment of KSh " . number_format($request->payment_amount, 2) . " has been received on " . date('M d, Y', strtotime($request->payment_date)) . ". Your remaining balance is KSh " . number_format(max(0, $newOutstanding), 2) . ". Thank you for your payment.";
+                
+                $smsSent = SmsService::send($agreement->phone_number, $message);
+                
+                if ($smsSent) {
+                    Log::info('Payment confirmation SMS sent', [
+                        'agreement_id' => $agreement->id,
+                        'payment_id' => $paymentId,
+                        'client' => $agreement->client_name,
+                        'phone' => $agreement->phone_number,
+                        'amount' => $request->payment_amount
+                    ]);
+                } else {
+                    Log::warning('Payment confirmation SMS failed', [
+                        'agreement_id' => $agreement->id,
+                        'payment_id' => $paymentId,
+                        'client' => $agreement->client_name
+                    ]);
+                }
+                
+            } catch (\Exception $smsException) {
+                Log::error('SMS error during payment confirmation: ' . $smsException->getMessage());
+                // Don't fail the payment process if SMS fails
+            }
 
         $createdPayment = DB::table('hire_purchase_payments')
             ->where('id', $paymentId)
@@ -1089,10 +1116,61 @@ public function waivePenalty(Request $request, $penaltyId)
             'approved_by' => auth()->id(),
             'approved_at' => now()
         ]);
+        // Send SMS notification
+        try {
+            $carDetails = $this->getCarDetails($agreement->car_type, $agreement->car_id);
+            
+            $message = "Dear {$agreement->client_name}, we confirm your Gentleman's Agreement for the {$carDetails} with a first payment of KSh " . number_format($agreement->deposit_amount, 2) . ", monthly installments of KSh " . number_format($agreement->monthly_payment, 2) . " and a balance of KSh " . number_format($agreement->loan_amount, 2) . ". Thank you for choosing House of Cars; we remain committed to providing you with excellent service.";
+            
+            $smsSent = SmsService::send($agreement->phone_number, $message);
+            
+            if ($smsSent) {
+                Log::info('Gentleman Agreement approval SMS sent', [
+                    'agreement_id' => $id,
+                    'client' => $agreement->client_name,
+                    'phone' => $agreement->phone_number
+                ]);
+                return response()->json(['success' => true, 'message' => 'Agreement approved and SMS notification sent successfully']);
+            } else {
+                Log::warning('Gentleman Agreement approval SMS failed', [
+                    'agreement_id' => $id,
+                    'client' => $agreement->client_name
+                ]);
+                return response()->json(['success' => true, 'message' => 'Agreement approved successfully, but SMS notification failed']);
+            }
+            
+        } catch (\Exception $smsException) {
+            Log::error('SMS error during gentleman agreement approval: ' . $smsException->getMessage());
+            return response()->json(['success' => true, 'message' => 'Agreement approved successfully, but SMS notification failed']);
+        }
 
         return response()->json(['success' => true, 'message' => 'Agreement approved successfully']);
     }
-
+    /**
+ * Get car details for SMS
+ */
+private function getCarDetails($car_type, $car_id)
+{
+    try {
+        if ($car_type === 'import') {
+            $car = CarImport::find($car_id);
+            if ($car) {
+                return "{$car->year} {$car->make} {$car->model}";
+            }
+        } else {
+            $car = CustomerVehicle::find($car_id);
+            if ($car) {
+                return "{$car->model}";
+            }
+        }
+        
+        return "your selected vehicle";
+        
+    } catch (\Exception $e) {
+        Log::error('Error getting car details: ' . $e->getMessage());
+        return "your selected vehicle";
+    }
+}
     /**
      * Delete an agreement
      */

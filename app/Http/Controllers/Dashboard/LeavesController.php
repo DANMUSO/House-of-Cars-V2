@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use App\Services\SmsService;
 
 class LeavesController extends Controller
 {
@@ -87,15 +88,7 @@ class LeavesController extends Controller
         ];
 
         // Add Maternity/Paternity Leave with dynamic days
-        // You can customize this logic based on your business rules
         $maternityPaternityDays = 90; // Default
-        
-        // You can check user's gender/role or other criteria here if needed
-        // For example, if you have a gender field in users table:
-        // if (isset($user->gender)) {
-        //     $maternityPaternityDays = ($user->gender === 'female') ? 90 : 14;
-        // }
-        
         $defaultLeaveTypes['Maternity/Paternity Leave'] = $maternityPaternityDays;
 
         foreach ($defaultLeaveTypes as $leaveType => $totalDays) {
@@ -200,6 +193,7 @@ class LeavesController extends Controller
             DB::beginTransaction();
 
             $userId = Auth::id();
+            $user = Auth::user();
             $startDate = Carbon::parse($validated['start_date']);
             $endDate = Carbon::parse($validated['end_date']);
             
@@ -275,6 +269,14 @@ class LeavesController extends Controller
 
             DB::commit();
 
+            // Send SMS notification to General Managers
+            try {
+                $this->sendLeaveApplicationNotificationToManagers($leaveApplication, $user);
+            } catch (\Exception $smsException) {
+                Log::error('SMS error during leave application: ' . $smsException->getMessage());
+                // Don't fail the leave application if SMS fails
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Leave application submitted successfully!',
@@ -289,6 +291,48 @@ class LeavesController extends Controller
                 'success' => false,
                 'message' => 'Failed to submit leave application. Please try again.'
             ], 500);
+        }
+    }
+
+    /**
+     * Send SMS notification to General Managers when leave is applied
+     */
+    private function sendLeaveApplicationNotificationToManagers($leaveApplication, $applicantUser)
+    {
+        try {
+            // Get all General Managers
+            $generalManagers = User::where('role', 'General-Manager')
+                ->whereNotNull('phone')
+                ->get();
+
+            $applicantName = trim($applicantUser->first_name . ' ' . $applicantUser->last_name);
+            $startDate = Carbon::parse($leaveApplication->start_date)->format('M d, Y');
+            $endDate = Carbon::parse($leaveApplication->end_date)->format('M d, Y');
+            
+            $message = "New leave application from {$applicantName} for {$leaveApplication->leave_type} from {$startDate} to {$endDate} ({$leaveApplication->total_days} days). Reason: {$leaveApplication->reason}. Please review and take action.";
+
+            foreach ($generalManagers as $manager) {
+                $smsSent = SmsService::send($manager->phone, $message);
+                
+                if ($smsSent) {
+                    Log::info('Leave application notification SMS sent to General Manager', [
+                        'leave_application_id' => $leaveApplication->id,
+                        'applicant' => $applicantName,
+                        'manager' => $manager->first_name . ' ' . $manager->last_name,
+                        'manager_phone' => $manager->phone
+                    ]);
+                } else {
+                    Log::warning('Leave application notification SMS failed to General Manager', [
+                        'leave_application_id' => $leaveApplication->id,
+                        'applicant' => $applicantName,
+                        'manager' => $manager->first_name . ' ' . $manager->last_name,
+                        'manager_phone' => $manager->phone
+                    ]);
+                }
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error sending leave application notification to managers: ' . $e->getMessage());
         }
     }
 
@@ -308,219 +352,325 @@ class LeavesController extends Controller
     /**
      * Approve a leave application and deduct days
      */
-     /**
- * Approve a leave application and deduct days
- */
-public function approve(Request $request, $id)
-{
-    try {
-        DB::beginTransaction();
+    public function approve(Request $request, $id)
+    {
+        try {
+            DB::beginTransaction();
 
-        // Find the leave application by ID
-        $leave = LeaveApplication::findOrFail($id);
-        
-        Log::info("Attempting to approve leave application {$id}. Current status: {$leave->status}");
+            // Find the leave application by ID
+            $leave = LeaveApplication::with('user')->findOrFail($id);
+            
+            Log::info("Attempting to approve leave application {$id}. Current status: {$leave->status}");
 
-        // Check if user has permission to approve leaves
-        if (!in_array(auth()->user()->role, ['Managing-Director','General-Manager', 'HR'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You do not have permission to approve leave applications.'
-            ], 403);
-        }
+            // Check if user has permission to approve leaves
+            if (!in_array(auth()->user()->role, ['Managing-Director','General-Manager', 'HR'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to approve leave applications.'
+                ], 403);
+            }
 
-        // Additional check: Users cannot approve their own applications
-        if ($leave->user_id === auth()->id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You cannot approve your own leave application.'
-            ], 403);
-        }
+            // Additional check: Users cannot approve their own applications
+            if ($leave->user_id === auth()->id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You cannot approve your own leave application.'
+                ], 403);
+            }
 
-        // Refresh model to get latest data
-        $leave->refresh();
+            // Refresh model to get latest data
+            $leave->refresh();
 
-        if ($leave->status !== 'Pending') {
-            return response()->json([
-                'success' => false,
-                'message' => "This application has already been processed. Current status: {$leave->status}"
-            ], 400);
-        }
+            if ($leave->status !== 'Pending') {
+                return response()->json([
+                    'success' => false,
+                    'message' => "This application has already been processed. Current status: {$leave->status}"
+                ], 400);
+            }
 
-        // Double-check if user still has enough leave days
-        $leaveDay = $leave->leaveDay;
-        if ($leaveDay && $leaveDay->remaining_days < $leave->total_days) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User no longer has sufficient leave balance. Current balance: ' . $leaveDay->remaining_days . ' days.'
-            ], 400);
-        }
+            // Double-check if user still has enough leave days
+            $leaveDay = $leave->leaveDay;
+            if ($leaveDay && $leaveDay->remaining_days < $leave->total_days) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User no longer has sufficient leave balance. Current balance: ' . $leaveDay->remaining_days . ' days.'
+                ], 400);
+            }
 
-        // Update application status
-        $leave->update([
-            'status' => 'Approved',
-            'approved_by' => Auth::id(),
-            'approved_date' => now(),
-            'comments' => $request->input('comments'),
-        ]);
-
-        // Deduct leave days from the user's balance (if leaveDay exists)
-        if ($leaveDay) {
-            $leaveDay->update([
-                'used_days' => $leaveDay->used_days + $leave->total_days,
-                'remaining_days' => $leaveDay->remaining_days - $leave->total_days,
+            // Update application status
+            $leave->update([
+                'status' => 'Approved',
+                'approved_by' => Auth::id(),
+                'approved_date' => now(),
+                'comments' => $request->input('comments'),
             ]);
-        }
 
-        DB::commit();
+            // Deduct leave days from the user's balance (if leaveDay exists)
+            if ($leaveDay) {
+                $leaveDay->update([
+                    'used_days' => $leaveDay->used_days + $leave->total_days,
+                    'remaining_days' => $leaveDay->remaining_days - $leave->total_days,
+                ]);
+            }
 
-        Log::info("Leave approved for user {$leave->user->name}. Application ID: {$id}");
+            DB::commit();
 
-        return response()->json([
-            'success' => true,
-            'message' => "Leave application approved successfully!"
-        ]);
+            // Send SMS notification to applicant about approval
+            try {
+                $this->sendLeaveApprovalNotificationToApplicant($leave);
+            } catch (\Exception $smsException) {
+                Log::error('SMS error during leave approval: ' . $smsException->getMessage());
+                // Don't fail the approval if SMS fails
+            }
 
-    } catch (\Exception $e) {
-        DB::rollback();
-        Log::error("Leave approval failed for ID {$id}: " . $e->getMessage());
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to approve leave application. Error: ' . $e->getMessage()
-        ], 500);
-    }
-}
+            Log::info("Leave approved for user {$leave->user->first_name} {$leave->user->last_name}. Application ID: {$id}");
 
-/**
- * Reject a leave application
- */
-public function reject(Request $request, $id)
-{
-    try {
-        // Find the leave application by ID
-        $leave = LeaveApplication::findOrFail($id);
-        
-        Log::info("Attempting to reject leave application {$id}. Current status: {$leave->status}");
-
-        // Check if user has permission to reject leaves
-        if (!in_array(auth()->user()->role, ['Managing-Director','General-Manager', 'HR'])) {
             return response()->json([
-                'success' => false,
-                'message' => 'You do not have permission to reject leave applications.'
-            ], 403);
-        }
+                'success' => true,
+                'message' => "Leave application approved successfully!"
+            ]);
 
-        // Additional check: Users cannot reject their own applications
-        if ($leave->user_id === auth()->id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You cannot reject your own leave application.'
-            ], 403);
-        }
-
-        // Refresh model to get latest data
-        $leave->refresh();
-
-        if ($leave->status !== 'Pending') {
-            Log::warning("Cannot reject leave application {$id}. Status is '{$leave->status}' instead of 'Pending'");
+        } catch (\Exception $e) {
+            DB::rollback();
+            Log::error("Leave approval failed for ID {$id}: " . $e->getMessage());
             
             return response()->json([
                 'success' => false,
-                'message' => "This application has already been processed. Current status: {$leave->status}"
-            ], 400);
+                'message' => 'Failed to approve leave application. Error: ' . $e->getMessage()
+            ], 500);
         }
-
-        $leave->update([
-            'status' => 'Rejected',
-            'approved_by' => Auth::id(),
-            'approved_date' => now(),
-            'comments' => $request->input('comments', 'Application rejected'),
-        ]);
-
-        Log::info("Leave application {$id} rejected successfully by user " . Auth::id());
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Leave application rejected successfully!'
-        ]);
-
-    } catch (\Exception $e) {
-        Log::error("Leave rejection failed for ID {$id}: " . $e->getMessage());
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to reject leave application. Error: ' . $e->getMessage()
-        ], 500);
     }
-}
 
-/**
- * Cancel a leave application and restore days if already approved
- */
-public function cancel(Request $request, $id)
-{
-    try {
-        DB::beginTransaction();
+    /**
+     * Send SMS notification to applicant when leave is approved
+     */
+    private function sendLeaveApprovalNotificationToApplicant($leave)
+    {
+        try {
+            $applicantPhone = $leave->user->phone;
+            
+            if (!$applicantPhone) {
+                Log::warning('No phone number found for leave applicant', [
+                    'leave_application_id' => $leave->id,
+                    'user_id' => $leave->user_id
+                ]);
+                return;
+            }
 
-        // Find the leave application by ID
-        $leave = LeaveApplication::findOrFail($id);
+            $applicantName = trim($leave->user->first_name . ' ' . $leave->user->last_name);
+            $startDate = Carbon::parse($leave->start_date)->format('M d, Y');
+            $endDate = Carbon::parse($leave->end_date)->format('M d, Y');
+            $approver = Auth::user();
+            $approverName = trim($approver->first_name . ' ' . $approver->last_name);
 
-        // Only allow cancellation by the applicant
-        if ($leave->user_id !== Auth::id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You can only cancel your own applications.'
-            ], 403);
+            $message = "Dear {$applicantName}, your {$leave->leave_type} application from {$startDate} to {$endDate} ({$leave->total_days} days) has been APPROVED. Enjoy your leave!";
+
+            $smsSent = SmsService::send($applicantPhone, $message);
+            
+            if ($smsSent) {
+                Log::info('Leave approval notification SMS sent to applicant', [
+                    'leave_application_id' => $leave->id,
+                    'applicant' => $applicantName,
+                    'applicant_phone' => $applicantPhone,
+                    'approver' => $approverName
+                ]);
+            } else {
+                Log::warning('Leave approval notification SMS failed to applicant', [
+                    'leave_application_id' => $leave->id,
+                    'applicant' => $applicantName,
+                    'applicant_phone' => $applicantPhone
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error sending leave approval notification to applicant: ' . $e->getMessage());
         }
+    }
 
-        // Refresh model to get latest data
-        $leave->refresh();
+    /**
+     * Reject a leave application
+     */
+    public function reject(Request $request, $id)
+    {
+        try {
+            // Find the leave application by ID
+            $leave = LeaveApplication::with('user')->findOrFail($id);
+            
+            Log::info("Attempting to reject leave application {$id}. Current status: {$leave->status}");
 
-        if (!in_array($leave->status, ['Pending', 'Approved'])) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This application cannot be cancelled.'
-            ], 400);
-        }
+            // Check if user has permission to reject leaves
+            if (!in_array(auth()->user()->role, ['Managing-Director','General-Manager', 'HR'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You do not have permission to reject leave applications.'
+                ], 403);
+            }
 
-        // If application was approved, restore the leave days
-        if ($leave->status === 'Approved' && $leave->leaveDay) {
-            $leaveDay = $leave->leaveDay;
-            $leaveDay->update([
-                'used_days' => $leaveDay->used_days - $leave->total_days,
-                'remaining_days' => $leaveDay->remaining_days + $leave->total_days,
+            // Additional check: Users cannot reject their own applications
+            if ($leave->user_id === auth()->id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You cannot reject your own leave application.'
+                ], 403);
+            }
+
+            // Refresh model to get latest data
+            $leave->refresh();
+
+            if ($leave->status !== 'Pending') {
+                Log::warning("Cannot reject leave application {$id}. Status is '{$leave->status}' instead of 'Pending'");
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => "This application has already been processed. Current status: {$leave->status}"
+                ], 400);
+            }
+
+            $leave->update([
+                'status' => 'Rejected',
+                'approved_by' => Auth::id(),
+                'approved_date' => now(),
+                'comments' => $request->input('comments', 'Application rejected'),
             ]);
 
-            Log::info("Leave cancelled for user {$leave->user->name}. Restored {$leave->total_days} days to {$leave->leave_type}.");
+            // Send SMS notification to applicant about rejection
+            try {
+                $this->sendLeaveRejectionNotificationToApplicant($leave, $request->input('comments'));
+            } catch (\Exception $smsException) {
+                Log::error('SMS error during leave rejection: ' . $smsException->getMessage());
+                // Don't fail the rejection if SMS fails
+            }
+
+            Log::info("Leave application {$id} rejected successfully by user " . Auth::id());
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Leave application rejected successfully!'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error("Leave rejection failed for ID {$id}: " . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to reject leave application. Error: ' . $e->getMessage()
+            ], 500);
         }
-
-        $leave->update([
-            'status' => 'Cancelled',
-            'cancelled_date' => now(),
-        ]);
-
-        DB::commit();
-
-        $message = $leave->status === 'Approved' 
-            ? "Leave application cancelled successfully! {$leave->total_days} days have been restored to your {$leave->leave_type} balance."
-            : 'Leave application cancelled successfully!';
-
-        return response()->json([
-            'success' => true,
-            'message' => $message
-        ]);
-
-    } catch (\Exception $e) {
-        DB::rollback();
-        Log::error("Leave cancellation failed for ID {$id}: " . $e->getMessage());
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to cancel leave application.'
-        ], 500);
     }
-}
+
+    /**
+     * Send SMS notification to applicant when leave is rejected
+     */
+    private function sendLeaveRejectionNotificationToApplicant($leave, $comments = null)
+    {
+        try {
+            $applicantPhone = $leave->user->phone;
+            
+            if (!$applicantPhone) {
+                Log::warning('No phone number found for leave applicant', [
+                    'leave_application_id' => $leave->id,
+                    'user_id' => $leave->user_id
+                ]);
+                return;
+            }
+
+            $applicantName = trim($leave->user->first_name . ' ' . $leave->user->last_name);
+
+            $message = "Dear {$applicantName}, your {$leave->leave_type} application has been REJECTED.";
+            
+            if ($comments) {
+                $message .= " Reason: {$comments}";
+            }
+            
+            $message .= " Please contact HR for more information.";
+
+            $smsSent = SmsService::send($applicantPhone, $message);
+            
+            if ($smsSent) {
+                Log::info('Leave rejection notification SMS sent to applicant', [
+                    'leave_application_id' => $leave->id,
+                    'applicant' => $applicantName,
+                    'applicant_phone' => $applicantPhone
+                ]);
+            } else {
+                Log::warning('Leave rejection notification SMS failed to applicant', [
+                    'leave_application_id' => $leave->id,
+                    'applicant' => $applicantName,
+                    'applicant_phone' => $applicantPhone
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error sending leave rejection notification to applicant: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Cancel a leave application and restore days if already approved
+     */
+    public function cancel(Request $request, $id)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Find the leave application by ID
+            $leave = LeaveApplication::findOrFail($id);
+
+            // Only allow cancellation by the applicant
+            if ($leave->user_id !== Auth::id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You can only cancel your own applications.'
+                ], 403);
+            }
+
+            // Refresh model to get latest data
+            $leave->refresh();
+
+            if (!in_array($leave->status, ['Pending', 'Approved'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This application cannot be cancelled.'
+                ], 400);
+            }
+
+            // If application was approved, restore the leave days
+            if ($leave->status === 'Approved' && $leave->leaveDay) {
+                $leaveDay = $leave->leaveDay;
+                $leaveDay->update([
+                    'used_days' => $leaveDay->used_days - $leave->total_days,
+                    'remaining_days' => $leaveDay->remaining_days + $leave->total_days,
+                ]);
+
+                Log::info("Leave cancelled for user {$leave->user->first_name} {$leave->user->last_name}. Restored {$leave->total_days} days to {$leave->leave_type}.");
+            }
+
+            $leave->update([
+                'status' => 'Cancelled',
+                'cancelled_date' => now(),
+            ]);
+
+            DB::commit();
+
+            $message = $leave->status === 'Approved' 
+                ? "Leave application cancelled successfully! {$leave->total_days} days have been restored to your {$leave->leave_type} balance."
+                : 'Leave application cancelled successfully!';
+
+            return response()->json([
+                'success' => true,
+                'message' => $message
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            Log::error("Leave cancellation failed for ID {$id}: " . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to cancel leave application.'
+            ], 500);
+        }
+    }
 
     /**
      * Get user's active leave balances

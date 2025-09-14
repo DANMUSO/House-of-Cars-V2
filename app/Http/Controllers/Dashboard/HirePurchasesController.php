@@ -3787,7 +3787,7 @@ public function getPenaltyBreakdown($agreementId)
 }
 
 /**
- * Pay penalty (updated for cumulative system)
+ * Pay penalty (updated for cumulative system with SMS notification)
  */
 public function payPenalty(Request $request, $penaltyId)
 {
@@ -3846,6 +3846,54 @@ public function payPenalty(Request $request, $penaltyId)
         ]);
 
         DB::commit();
+
+        // SMS NOTIFICATION - ADDED SECTION
+        try {
+            // Get agreement details for SMS
+            $agreement = null;
+            if ($penalty->agreement_type === 'hire_purchase') {
+                $agreement = HirePurchaseAgreement::find($penalty->agreement_id);
+            } elseif ($penalty->agreement_type === 'gentleman_agreement') {
+                $agreement = GentlemanAgreement::find($penalty->agreement_id);
+            }
+            
+            if ($agreement && $agreement->phone_number) {
+                // Get vehicle details
+                $vehicleDetails = $this->getCarDetails($agreement->car_type ?? 'customer', $agreement->car_id ?? $agreement->id);
+                
+                // Check if penalty is now fully paid
+                $penalty->refresh();
+                $isFullyPaid = ($penalty->status === 'paid');
+                
+                if ($isFullyPaid) {
+                    $message = "Dear {$agreement->client_name}, your penalty payment of KSh " . number_format($validated['payment_amount'], 2) . " for {$vehicleDetails} has been received and your penalty is now fully cleared. Thank you for your payment. - House of Cars";
+                } else {
+                    $remainingBalance = $penalty->penalty_amount - $penalty->amount_paid;
+                    $message = "Dear {$agreement->client_name}, your penalty payment of KSh " . number_format($validated['payment_amount'], 2) . " for {$vehicleDetails} has been received. Remaining penalty balance: KSh " . number_format($remainingBalance, 2) . ". Thank you. - House of Cars";
+                }
+                
+                $smsSent = SmsService::send($agreement->phone_number, $message);
+                
+                if ($smsSent) {
+                    Log::info('Penalty payment SMS sent', [
+                        'penalty_id' => $penalty->id,
+                        'client' => $agreement->client_name,
+                        'phone' => $agreement->phone_number,
+                        'amount' => $validated['payment_amount'],
+                        'fully_paid' => $isFullyPaid
+                    ]);
+                } else {
+                    Log::warning('Penalty payment SMS failed', [
+                        'penalty_id' => $penalty->id,
+                        'client' => $agreement->client_name
+                    ]);
+                }
+            }
+        } catch (\Exception $smsException) {
+            Log::error('SMS error during penalty payment: ' . $smsException->getMessage());
+            // Don't fail the payment process if SMS fails
+        }
+        // END SMS NOTIFICATION SECTION
 
         return response()->json([
             'success' => true,
@@ -5776,7 +5824,7 @@ private function getCarDetails($car_type, $car_id)
 
 
 /**
- * Waive a penalty
+ * Waive a penalty (with SMS notification added)
  */
 public function waivePenalty(Request $request, $penaltyId)
 {
@@ -5796,9 +5844,51 @@ public function waivePenalty(Request $request, $penaltyId)
             ], 422);
         }
 
+        // Store penalty amount before waiving for SMS
+        $penaltyAmount = $penalty->penalty_amount;
+
         $penalty->waive($validated['reason'], auth()->id());
 
         DB::commit();
+
+        // SMS NOTIFICATION - ADDED SECTION
+        try {
+            // Get agreement details for SMS
+            $agreement = null;
+            if ($penalty->agreement_type === 'hire_purchase') {
+                $agreement = HirePurchaseAgreement::find($penalty->agreement_id);
+            } elseif ($penalty->agreement_type === 'gentleman_agreement') {
+                $agreement = GentlemanAgreement::find($penalty->agreement_id);
+            }
+            
+            if ($agreement && $agreement->phone_number) {
+                // Get vehicle details
+                $vehicleDetails = $this->getCarDetails($agreement->car_type ?? 'customer', $agreement->car_id ?? $agreement->id);
+                
+                $message = "Dear {$agreement->client_name}, we have waived your penalty of KSh " . number_format($penaltyAmount, 2) . " for {$vehicleDetails}. This penalty has been removed from your account. Thank you for your continued business. - House of Cars";
+                
+                $smsSent = SmsService::send($agreement->phone_number, $message);
+                
+                if ($smsSent) {
+                    Log::info('Penalty waiver SMS sent', [
+                        'penalty_id' => $penalty->id,
+                        'client' => $agreement->client_name,
+                        'phone' => $agreement->phone_number,
+                        'waived_amount' => $penaltyAmount,
+                        'waived_by' => auth()->id()
+                    ]);
+                } else {
+                    Log::warning('Penalty waiver SMS failed', [
+                        'penalty_id' => $penalty->id,
+                        'client' => $agreement->client_name
+                    ]);
+                }
+            }
+        } catch (\Exception $smsException) {
+            Log::error('SMS error during penalty waiver: ' . $smsException->getMessage());
+            // Don't fail the waiver process if SMS fails
+        }
+        // END SMS NOTIFICATION SECTION
 
         Log::info("Penalty {$penaltyId} waived", [
             'reason' => $validated['reason'],

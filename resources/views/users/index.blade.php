@@ -199,7 +199,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Phone Number</label>
-                                    <input type="text" class="form-control" id="phone" name="phone" required>
+                                    <input type="number" class="form-control" id="phone" name="phone" required placeholder="254700000000">
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">National ID</label>
@@ -228,7 +228,7 @@
                                 </div>
                                  <div class="col-md-6">
                                     <label class="form-label">Password</label>
-                                    <input type="text" class="form-control" id="password" name="password" required>
+                                    <input type="password" class="form-control" id="password" name="password" required>
                                 </div>
                                 <div class="col-12">
                                     <button type="submit" class="btn btn-primary">

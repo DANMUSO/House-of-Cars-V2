@@ -107,7 +107,38 @@ Route::get('/proxy-image', function(Request $request) {
     }
 })->name('proxy.image');  
 Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Suppport-Staff,HR,General-Manager'])->group(function () {
-      
+
+      // Gentleman Agreement Loan Restructuring Routes
+Route::prefix('gentleman-loan-restructuring')->name('gentleman-loan-restructuring.')->group(function () {
+    
+    // Show restructuring options page
+    Route::get('/{agreementId}/options', [App\Http\Controllers\Dashboard\GentlemanLoanRestructuringController::class, 'showRestructuringPage'])
+        ->name('options');
+    
+    // Get restructuring options (AJAX)
+    Route::post('/get-options', [App\Http\Controllers\Dashboard\GentlemanLoanRestructuringController::class, 'getRestructuringOptions'])
+        ->name('get-options');
+    
+    // Process restructuring
+    Route::post('/process', [App\Http\Controllers\Dashboard\GentlemanLoanRestructuringController::class, 'processRestructuring'])
+        ->name('process');
+    
+    // API endpoints
+    Route::prefix('api')->name('api.')->group(function () {
+        
+        // Get financial summary
+        Route::get('/{agreementId}/financial-summary', [App\Http\Controllers\Dashboard\GentlemanLoanRestructuringController::class, 'getFinancialSummary'])
+            ->name('financial-summary');
+        
+        // Get restructuring history
+        Route::get('/{agreementId}/history', [App\Http\Controllers\Dashboard\GentlemanLoanRestructuringController::class, 'getRestructuringHistory'])
+            ->name('history');
+        
+        // Validate restructured schedule
+        Route::get('/{agreementId}/validate-schedule', [App\Http\Controllers\Dashboard\GentlemanLoanRestructuringController::class, 'validateRestructuredSchedule'])
+            ->name('validate-schedule');
+    });
+});
     // Loan Restructuring Routes
     Route::prefix('loan-restructuring')->name('loan-restructuring.')->group(function () {
         
@@ -160,7 +191,15 @@ Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Sa
         // Main leave management page
         Route::get('/leave-management', [App\Http\Controllers\Dashboard\LeavesController::class, 'index'])->name('leave.index');
     // List all Upload Agreement
-    
+    // Logbook upload (matches your agreement upload pattern)
+    Route::post('/upload-logbook', [App\Http\Controllers\AgreementfileController::class, 'upload'])->name('logbook.upload');
+
+    // Logbook show (matches your agreement show pattern) 
+    Route::get('/logbooks/{id}/{type}', [App\Http\Controllers\AgreementfileController::class, 'show'])->name('logbook.show');
+
+    // Logbook delete (matches your agreement delete pattern)
+    Route::delete('/logbooks/{id}', [App\Http\Controllers\AgreementfileController::class, 'destroy'])->name('logbook.delete');
+
     Route::post('/upload-agreement', [App\Http\Controllers\AgreementfileController::class, 'upload'])->name('agreement.upload');
     Route::get('/agreements/{id}/{type}', [App\Http\Controllers\AgreementfileController::class, 'show'])->name('agreement.show');
     Route::delete('/agreements/{id}', [App\Http\Controllers\AgreementfileController::class, 'destroy'])->name('agreement.delete');

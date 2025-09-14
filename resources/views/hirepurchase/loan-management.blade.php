@@ -3084,6 +3084,118 @@ function formatDateTime(dateTimeString) {
                 <div class="tab-pane fade" id="payment-schedule" role="tabpanel">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5>Payment Schedule</h5>
+                    <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#scheduleHistoryModal">
+                        <i class="fas fa-history me-1"></i>View History
+                    </button>
+
+                    <!-- Schedule History Modal -->
+                    <div class="modal fade" id="scheduleHistoryModal" tabindex="-1">
+                        <div class="modal-dialog modal-xl">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-history me-2"></i>Payment Schedule History
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                 @php
+                                    // Get soft deleted schedules
+                                    $deletedSchedules = \App\Models\PaymentSchedule::onlyTrashed()
+                                        ->where('agreement_id', $agreement->id)
+                                        ->orderBy('deleted_at', 'desc')
+                                        ->orderBy('installment_number', 'asc')
+                                        ->get()
+                                        ->groupBy('deleted_at');
+                                @endphp
+                                
+                                @if($deletedSchedules->count() > 0)
+                                    @foreach($deletedSchedules as $deletionDate => $schedules)
+                                        <div class="card mb-3">
+                                            <div class="card-header bg-light">
+                                                <h6 class="mb-0">
+                                                    <i class="fas fa-calendar-times text-warning me-2"></i>
+                                                    Schedule Updated: {{ \Carbon\Carbon::parse($deletionDate)->format('M d, Y H:i') }}
+                                                    <span class="badge bg-secondary ms-2">{{ $schedules->count() }} payments</span>
+                                                </h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm table-striped">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th>#</th>
+                                                                <th>Due Date</th>
+                                                                <th>Principal</th>
+                                                                <th>Interest</th>
+                                                                <th>Total Amount</th>
+                                                                <th>Balance After</th>
+                                                                <th>Status</th>
+                                                                <th>Schedule Type</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach($schedules as $schedule)
+                                                                <tr class="table-warning bg-opacity-25">
+                                                                    <td>{{ $schedule->installment_number }}</td>
+                                                                    <td>{{ \Carbon\Carbon::parse($schedule->due_date)->format('M d, Y') }}</td>
+                                                                    <td>KSh {{ number_format($schedule->principal_amount, 2) }}</td>
+                                                                    <td>KSh {{ number_format($schedule->interest_amount, 2) }}</td>
+                                                                    <td><strong>KSh {{ number_format($schedule->total_amount, 2) }}</strong></td>
+                                                                    <td>KSh {{ number_format($schedule->balance_after, 2) }}</td>
+                                                                    <td>
+                                                                        <span class="badge bg-secondary">{{ ucfirst($schedule->status) }}</span>
+                                                                    </td>
+                                                                    <td>
+                                                                        @if($schedule->schedule_type === 'restructured')
+                                                                            <span class="badge bg-info">
+                                                                                {{ ucfirst($schedule->restructuring_type ?? 'restructured') }}
+                                                                            </span>
+                                                                        @else
+                                                                            <span class="badge bg-primary">Original</span>
+                                                                        @endif
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                        <tfoot class="table-light">
+                                                            <tr>
+                                                                <td colspan="4" class="text-end"><strong>Totals:</strong></td>
+                                                                <td><strong>KSh {{ number_format($schedules->sum('total_amount'), 2) }}</strong></td>
+                                                                <td colspan="3">-</td>
+                                                            </tr>
+                                                        </tfoot>
+                                                    </table>
+                                                </div>
+                                                
+                                                <!-- Schedule Metadata -->
+                                                @if($schedules->first()->schedule_type === 'restructured')
+                                                    <div class="alert alert-info mt-3">
+                                                        <small>
+                                                            <strong>Restructuring Info:</strong>
+                                                            Type: {{ ucfirst($schedules->first()->restructuring_type ?? 'N/A') }} |
+                                                            Created: {{ $schedules->first()->created_at->format('M d, Y H:i') }} |
+                                                            Updated: {{ \Carbon\Carbon::parse($deletionDate)->format('M d, Y H:i') }}
+                                                        </small>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                @else
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        No previous payment schedules found. This agreement has not been restructured.
+                                    </div>
+                                @endif
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                   
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="d-flex align-items-center gap-2">
                         <span class="badge bg-info me-2">Monthly: KSh {{ number_format($agreement->monthly_payment, 0) }}</span>
                         <span class="badge bg-secondary">{{ $agreement->duration_months }} Months</span>
@@ -3216,6 +3328,151 @@ function formatDateTime(dateTimeString) {
                                                             data-bs-target="#agreementModal{{ $agreement->id }}">
                                                         <i class="fas fa-file-contract me-1"></i> Agreement
                                                     </button>
+                                                    <!-- NEW: Logbook Button -->
+    <button type="button" class="btn btn-success btn-sm logbookBtn" 
+            data-agreement-id="{{ $agreement->id }}"
+            data-bs-toggle="modal" 
+            data-bs-target="#logbookModal{{ $agreement->id }}">
+        <i class="fas fa-book me-1"></i> Logbook
+    </button>
+    <!-- Logbook Upload Modal -->
+<div class="modal fade" id="logbookModal{{ $agreement->id }}" tabindex="-1" aria-labelledby="logbookModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white;">
+                <h5 class="modal-title" id="logbookModalLabel">
+                    <i class="fas fa-book me-2"></i>Vehicle Logbook
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                <!-- Upload Section -->
+                <div id="logbookUploadSection{{ $agreement->id }}" class="mb-4">
+                    <div class="card border-success">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="fas fa-upload me-2"></i>Upload Logbook PDF</h6>
+                        </div>
+                        <div class="card-body">
+                            <form id="logbookUploadForm{{ $agreement->id }}" enctype="multipart/form-data">
+                            @csrf
+                            <input type="hidden" name="agreement_id" value="{{ $agreement->id }}">
+                            <input type="hidden" name="agreement_type" value="logbook"> <!-- Change this -->
+                            <div class="row align-items-end">
+                                <div class="col-md-8">
+                                    <label for="logbook_file{{ $agreement->id }}" class="form-label">
+                                        <i class="fas fa-file-pdf me-1"></i>Select PDF File
+                                    </label>
+                                    <input type="file" 
+                                        class="form-control" 
+                                        id="logbook_file{{ $agreement->id }}" 
+                                        name="agreement_file" 
+                                        accept=".pdf" 
+                                        required>
+                                    <div class="form-text">Maximum file size: 1GB. Only PDF files are allowed.</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="submit" 
+                                            class="btn btn-success w-100" 
+                                            id="logbookUploadBtn{{ $agreement->id }}">
+                                        <i class="fas fa-upload me-1"></i>Upload
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                            
+                            <!-- Progress Bar -->
+                            <div class="progress mt-3 d-none" id="logbookUploadProgress{{ $agreement->id }}">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                                     role="progressbar" 
+                                     style="width: 0%"></div>
+                            </div>
+                            
+                            <!-- Upload Status -->
+                            <div id="logbookUploadStatus{{ $agreement->id }}" class="mt-2"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logbook Management Section -->
+                <div id="logbookManagement{{ $agreement->id }}" class="mb-4" style="display: none;">
+                    <div class="card border-success">
+                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0"><i class="fas fa-file-check me-2"></i>Logbook Uploaded</h6>
+                            @if(in_array(Auth::user()->role, ['Accountant','Managing-Director']))
+                            <button type="button" 
+                                    class="btn btn-outline-light btn-sm" 
+                                    id="deleteLogbookBtn{{ $agreement->id }}"
+                                    title="Delete Logbook">
+                                <i class="fas fa-trash-alt"></i> Delete
+                            </button>
+                            @endif
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <p class="mb-2"><strong>Status:</strong> <span class="badge bg-success">Active</span></p>
+                                    <p class="mb-0"><strong>Actions:</strong></p>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="btn-group w-100" role="group">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="openLogbookNewTab{{ $agreement->id }}()">
+                                            <i class="fas fa-external-link-alt"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-success btn-sm" onclick="downloadLogbook{{ $agreement->id }}()">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-info btn-sm" onclick="printLogbook{{ $agreement->id }}()">
+                                            <i class="fas fa-print"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PDF Display Section -->
+                <div id="logbookContent{{ $agreement->id }}" style="min-height: 600px;">
+                    <div class="text-center py-5" id="logbookEmptyState{{ $agreement->id }}">
+                        <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No logbook uploaded yet. Please upload a PDF file above.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Close
+                </button>
+                @if(in_array(Auth::user()->role, ['Accountant','Managing-Director']))
+                <button type="button" class="btn btn-success" id="logbookReplaceBtn{{ $agreement->id }}" style="display: none;" onclick="showLogbookUploadSection{{ $agreement->id }}()">
+                    <i class="fas fa-sync-alt me-1"></i>Replace PDF
+                </button>
+                @endif
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Logbook Delete Confirmation Modal -->
+<div class="modal fade" id="deleteLogbookConfirmModal{{ $agreement->id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Confirm Delete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this logbook? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteLogbookBtn{{ $agreement->id }}">
+                    <i class="fas fa-trash-alt me-1"></i>Delete Logbook
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
            <!-- Professional Agreement Modal -->
 <div class="modal fade" id="agreementModal{{ $agreement->id }}" tabindex="-1" aria-labelledby="agreementModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl">
@@ -3322,9 +3579,11 @@ function formatDateTime(dateTimeString) {
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-1"></i>Close
                 </button>
+                 @if(in_array(Auth::user()->role, ['Accountant','Managing-Director']))
                 <button type="button" class="btn btn-success" id="replaceBtn{{ $agreement->id }}" style="display: none;" onclick="showUploadSection{{ $agreement->id }}()">
                     <i class="fas fa-sync-alt me-1"></i>Replace PDF
                 </button>
+                @endif
             </div>
         </div>
     </div>
@@ -3564,20 +3823,48 @@ $(document).ready(function() {
 // Check if agreement already exists
 function checkExistingAgreement(agreementId) {
     const agreementType = 'HirePurchase';
-    
+
     $.ajax({
         url: '/agreements/' + agreementId + '/' + agreementType,
-        type: 'HEAD', // Use HEAD request to check if file exists without downloading
-        success: function(data, status, xhr) {
-            // If successful, the agreement exists
+        type: 'HEAD', // HEAD to just check existence
+        global: false, // stop global ajax error handlers from triggering
+        timeout: 10000,
+        success: function () {
+            // File exists
             const pdfUrl = '/agreements/' + agreementId + '/' + agreementType;
             currentPdfUrl = pdfUrl;
             displayPDF(pdfUrl, agreementId);
             showAgreementManagement(agreementId);
         },
-        error: function(xhr) {
-            // If 404 or any error, assume no agreement exists
+        error: function (xhr) {
+            console.log('Agreement check error:', xhr.status, xhr.responseText);
+
+            // Always show upload section
             showUploadSection(agreementId);
+
+            // Treat both 404 and 500 as "no agreement exists"
+            if (xhr.status === 404 || xhr.status === 500) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'No Agreement Found',
+                        text: 'No agreement has been uploaded for this record yet.',
+                        confirmButtonText: 'OK'
+                    });
+                } else {
+                    alert('No agreement has been uploaded for this record yet.');
+                }
+            } else {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Server Error',
+                        text: 'A server error occurred while checking for the agreement. Please try again later.'
+                    });
+                } else {
+                    alert('A server error occurred while checking for the agreement.');
+                }
+            }
         }
     });
 }
@@ -6224,39 +6511,565 @@ Would you like to proceed to restructuring options?`;
 }
 </script>
 
-<!-- Alternative: Simple direct link button (no eligibility check) -->
-@if($agreement->status === 'approved' && $agreement->outstanding_balance > 0)
-    <a href="{{ route('loan-restructuring.options', $agreement->id) }}" 
-       class="btn btn-outline-info">
-        <i class="fas fa-sync-alt me-1"></i>
-        Restructure Loan
-    </a>
-@endif
+<script>
+$(document).ready(function() {
+    const agreementId = {{ $agreement->id }};
+    let currentLogbookUrl = null;
+    
+    // Check if logbook already exists when modal opens
+    $('#logbookModal' + agreementId).on('shown.bs.modal', function() {
+        checkExistingLogbook(agreementId);
+    });
+    
+    // Logbook upload form submission
+    $('#logbookUploadForm' + agreementId).on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const uploadBtn = $('#logbookUploadBtn' + agreementId);
+        const uploadProgress = $('#logbookUploadProgress' + agreementId);
+        const uploadStatus = $('#logbookUploadStatus' + agreementId);
+        
+        // Reset status
+        uploadStatus.empty();
+        uploadProgress.removeClass('d-none');
+        uploadBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Uploading...');
+        
+        $.ajax({
+            url: '{{ route("logbook.upload") }}',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            timeout: 300000,
+            xhr: function() {
+                const xhr = new window.XMLHttpRequest();
+                xhr.upload.addEventListener("progress", function(evt) {
+                    if (evt.lengthComputable) {
+                        const percentComplete = Math.round((evt.loaded / evt.total) * 100);
+                        uploadProgress.find('.progress-bar').css('width', percentComplete + '%');
+                        
+                        const loaded = (evt.loaded / (1024 * 1024 * 1024)).toFixed(2);
+                        const total = (evt.total / (1024 * 1024 * 1024)).toFixed(2);
+                        uploadProgress.find('.progress-bar').text(`${loaded}GB / ${total}GB (${percentComplete}%)`);
+                    }
+                }, false);
+                return xhr;
+            },
+            success: function(response) {
+                uploadStatus.html(`
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle me-2"></i>Logbook uploaded successfully!
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `);
+                
+                currentLogbookUrl = response.pdfUrl;
+                displayLogbook(currentLogbookUrl, agreementId);
+                showLogbookManagement(agreementId);
+                $('#logbookUploadForm' + agreementId)[0].reset();
+            },
+            error: function(xhr) {
+                let errorMessage = 'Upload failed. Please try again.';
+                
+                if (xhr.status === 413) {
+                    errorMessage = 'File is too large. Maximum allowed size is 1GB.';
+                } else if (xhr.status === 408 || xhr.statusText === 'timeout') {
+                    errorMessage = 'Upload timed out. Please try again with a smaller file.';
+                } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                    const errors = xhr.responseJSON.errors;
+                    errorMessage = Object.values(errors).flat().join('<br>');
+                }
+                
+                uploadStatus.html(`
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>${errorMessage}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `);
+            },
+            complete: function() {
+                uploadProgress.addClass('d-none');
+                uploadBtn.prop('disabled', false).html('<i class="fas fa-upload me-1"></i>Upload');
+            }
+        });
+    });
+    
+    // Delete logbook functionality
+    $('#deleteLogbookBtn' + agreementId).on('click', function() {
+        $('#deleteLogbookConfirmModal' + agreementId).modal('show');
+    });
+    
+    $('#confirmDeleteLogbookBtn' + agreementId).on('click', function() {
+        deleteLogbook(agreementId);
+    });
+    
+    // File input validation
+    $('#logbook_file' + agreementId).on('change', function() {
+        const file = this.files[0];
+        const uploadStatus = $('#logbookUploadStatus' + agreementId);
+        
+        if (file) {
+            if (file.type !== 'application/pdf') {
+                uploadStatus.html(`
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Please select a PDF file only.
+                    </div>
+                `);
+                this.value = '';
+                return;
+            }
+            
+            if (file.size > 1073741824) {
+                const fileSize = (file.size / (1024 * 1024 * 1024)).toFixed(2);
+                uploadStatus.html(`
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>File size (${fileSize}GB) exceeds 1GB limit.
+                    </div>
+                `);
+                this.value = '';
+                return;
+            }
+        }
+    });
+});
 
-<!-- Enhanced button with tooltip and better styling -->
-@if($agreement->status === 'approved' && $agreement->outstanding_balance > 0)
-    <button type="button" 
-            class="btn btn-outline-info"
-            onclick="checkRestructuringEligibility({{ $agreement->id }})"
-            data-bs-toggle="tooltip" 
-            data-bs-placement="top" 
-            title="Modify your loan terms without making a lump sum payment">
-        <i class="fas fa-sync-alt me-1"></i>
-        Restructure Loan
-    </button>
-@else
-    <!-- Show disabled button with explanation -->
-    <button type="button" 
-            class="btn btn-outline-secondary" 
-            disabled
-            data-bs-toggle="tooltip" 
-            data-bs-placement="top" 
-            title="Loan must be approved and have outstanding balance to restructure">
-        <i class="fas fa-sync-alt me-1"></i>
-        Restructure Loan
-    </button>
-@endif
+// Check if logbook already exists
+function checkExistingLogbook(agreementId) {
+    $.ajax({
+        url: '/logbooks/' + agreementId,
+        type: 'HEAD',
+        success: function() {
+            const logbookUrl = '/logbooks/' + agreementId;
+            currentLogbookUrl = logbookUrl;
+            displayLogbook(logbookUrl, agreementId);
+            showLogbookManagement(agreementId);
+        },
+        error: function() {
+            showLogbookUploadSection(agreementId);
+        }
+    });
+}
 
+// Display logbook PDF
+function displayLogbook(logbookUrl, agreementId) {
+    $('#logbookEmptyState' + agreementId).hide();
+    
+    const content = `
+        <div class="text-center mb-3">
+            <h6 class="text-success">
+                <i class="fas fa-book me-2"></i>Vehicle Logbook
+            </h6>
+        </div>
+        <div class="pdf-viewer-container" id="logbookContainer${agreementId}">
+            <div class="pdf-loading-overlay" id="logbookLoading${agreementId}">
+                <div class="text-center">
+                    <div class="spinner-border text-success" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading Logbook...</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    $('#logbookContent' + agreementId).html(content);
+    
+    // Try to display PDF
+    const container = $('#logbookContainer' + agreementId);
+    const loading = $('#logbookLoading' + agreementId);
+    const embed = `<embed src="${logbookUrl}#view=FitH" type="application/pdf" class="pdf-embed">`;
+    container.append(embed);
+    
+    setTimeout(() => {
+        loading.hide();
+    }, 3000);
+}
+
+// Show/hide sections
+function showLogbookManagement(agreementId) {
+    $('#logbookUploadSection' + agreementId).slideUp();
+    $('#logbookManagement' + agreementId).slideDown();
+    $('#logbookReplaceBtn' + agreementId).show();
+}
+
+function showLogbookUploadSection(agreementId) {
+    $('#logbookManagement' + agreementId).slideUp();
+    $('#logbookUploadSection' + agreementId).slideDown();
+    $('#logbookReplaceBtn' + agreementId).hide();
+    $('#logbookContent' + agreementId).html(`
+        <div class="text-center py-5" id="logbookEmptyState${agreementId}">
+            <i class="fas fa-book fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No logbook uploaded yet. Please upload a PDF file above.</p>
+        </div>
+    `);
+}
+
+// Delete logbook
+function deleteLogbook(agreementId) {
+    const deleteBtn = $('#confirmDeleteLogbookBtn' + agreementId);
+    deleteBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Deleting...');
+    
+    $.ajax({
+        url: '/logbooks/' + agreementId,
+        type: 'DELETE',
+        data: {
+            '_token': '{{ csrf_token() }}'
+        },
+        success: function() {
+            $('#deleteLogbookConfirmModal' + agreementId).modal('hide');
+            showLogbookUploadSection(agreementId);
+            
+            $('#logbookUploadStatus' + agreementId).html(`
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>Logbook deleted successfully!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `);
+        },
+        error: function() {
+            $('#deleteLogbookConfirmModal' + agreementId).modal('hide');
+            
+            $('#logbookUploadStatus' + agreementId).html(`
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Failed to delete logbook.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `);
+        },
+        complete: function() {
+            deleteBtn.prop('disabled', false).html('<i class="fas fa-trash-alt me-1"></i>Delete Logbook');
+        }
+    });
+}
+
+// Logbook action functions
+window['openLogbookNewTab' + {{ $agreement->id }}] = function() {
+    if (currentLogbookUrl) {
+        window.open(currentLogbookUrl, '_blank');
+    }
+};
+
+window['downloadLogbook' + {{ $agreement->id }}] = function() {
+    if (currentLogbookUrl) {
+        const link = document.createElement('a');
+        link.href = currentLogbookUrl;
+        link.download = 'logbook-{{ $agreement->id }}.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+};
+
+window['printLogbook' + {{ $agreement->id }}] = function() {
+    if (currentLogbookUrl) {
+        const printWindow = window.open(currentLogbookUrl, '_blank');
+        printWindow.addEventListener('load', function() {
+            printWindow.print();
+        });
+    }
+};
+
+window['showLogbookUploadSection' + {{ $agreement->id }}] = function() {
+    showLogbookUploadSection({{ $agreement->id }});
+};
+</script>
+<script>
+    $(document).ready(function() {
+    const agreementId = {{ $agreement->id }};
+    let currentLogbookUrl = null;
+    
+    // Initialize modal
+    $('#logbookModal' + agreementId).on('shown.bs.modal', () => checkExistingLogbook(agreementId));
+    
+    // Upload form
+    $('#logbookUploadForm' + agreementId).on('submit', function(e) {
+        e.preventDefault();
+        uploadLogbook(new FormData(this), agreementId);
+    });
+    
+    // Delete handlers
+    $('#deleteLogbookBtn' + agreementId).on('click', () => confirmDelete(agreementId));
+    $('#confirmDeleteLogbookBtn' + agreementId).on('click', () => deleteLogbook(agreementId));
+    
+    // File validation
+    $('#logbook_file' + agreementId).on('change', function() {
+        validateFile(this.files[0], agreementId);
+    });
+});
+
+// Upload function matching your route pattern
+function uploadLogbook(formData, agreementId) {
+    const uploadBtn = $('#logbookUploadBtn' + agreementId);
+    const uploadProgress = $('#logbookUploadProgress' + agreementId);
+    
+    // Show loading
+    uploadBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Uploading...');
+    uploadProgress.removeClass('d-none');
+    
+    $.ajax({
+        url: '/upload-logbook', // Matches your /upload-agreement pattern
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        timeout: 300000,
+        xhr: function() {
+            const xhr = new XMLHttpRequest();
+            xhr.upload.addEventListener("progress", function(evt) {
+                if (evt.lengthComputable) {
+                    const percent = Math.round((evt.loaded / evt.total) * 100);
+                    uploadProgress.find('.progress-bar').css('width', percent + '%').text(percent + '%');
+                }
+            });
+            return xhr;
+        },
+        success: function(response) {
+            currentLogbookUrl = response.pdfUrl;
+            displayLogbook(currentLogbookUrl, agreementId);
+            showLogbookManagement(agreementId);
+            $('#logbookUploadForm' + agreementId)[0].reset();
+            
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: 'Logbook uploaded successfully',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                alert('Logbook uploaded successfully!');
+            }
+        },
+        error: function(xhr) {
+            let errorMessage = 'Upload failed. Please try again.';
+            
+            if (xhr.status === 413) errorMessage = 'File too large (max 1GB)';
+            else if (xhr.status === 408) errorMessage = 'Upload timeout. Try smaller file.';
+            else if (xhr.responseJSON?.error) errorMessage = xhr.responseJSON.error;
+            
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Upload Failed',
+                    text: errorMessage
+                });
+            } else {
+                alert('Upload Failed: ' + errorMessage);
+            }
+        },
+        complete: function() {
+            uploadProgress.addClass('d-none');
+            uploadBtn.prop('disabled', false).html('<i class="fas fa-upload me-1"></i>Upload');
+        }
+    });
+}
+
+// Check existing logbook using your route pattern
+function checkExistingLogbook(agreementId) {
+    const agreementType = 'logbook';
+
+    $.ajax({
+        url: '/logbooks/' + agreementId + '/' + agreementType,
+        type: 'HEAD',
+        global: false, // prevent global ajax error handlers
+        timeout: 10000,
+        success: function () {
+            currentLogbookUrl = `/logbooks/${agreementId}/logbook`;
+            displayLogbook(currentLogbookUrl, agreementId);
+            showLogbookManagement(agreementId);
+        },
+        error: function (xhr) {
+            console.log('Logbook check error:', xhr.status, xhr.responseText);
+
+            // Always show upload UI
+            showLogbookUploadSection(agreementId);
+
+            // Treat both 404 and 500 as "no logbook uploaded"
+            if (xhr.status === 404 || xhr.status === 500) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'No Logbook Found',
+                        text: 'No logbook has been uploaded for this agreement yet.',
+                        confirmButtonText: 'OK'
+                    });
+                } else {
+                    alert('No logbook has been uploaded for this agreement yet.');
+                }
+            } else {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Server Error',
+                        text: 'A server error occurred while checking for the logbook. Please try again later.'
+                    });
+                } else {
+                    alert('A server error occurred while checking for the logbook.');
+                }
+            }
+        }
+    });
+}
+
+// Display PDF
+function displayLogbook(logbookUrl, agreementId) {
+    const content = `
+        <div class="text-center mb-3">
+            <h6 class="text-success"><i class="fas fa-book me-2"></i>Vehicle Logbook</h6>
+        </div>
+        <div class="pdf-viewer-container">
+            <div class="pdf-loading-overlay" id="logbookLoading${agreementId}">
+                <div class="text-center">
+                    <div class="spinner-border text-success"></div>
+                    <p class="mt-2">Loading Logbook...</p>
+                </div>
+            </div>
+            <embed src="${logbookUrl}#view=FitH" type="application/pdf" class="pdf-embed">
+        </div>
+    `;
+    
+    $('#logbookContent' + agreementId).html(content);
+    setTimeout(() => $('#logbookLoading' + agreementId).hide(), 3000);
+}
+
+// Toggle sections
+function showLogbookManagement(agreementId) {
+    $('#logbookUploadSection' + agreementId).slideUp();
+    $('#logbookManagement' + agreementId).slideDown();
+    $('#logbookReplaceBtn' + agreementId).show();
+}
+
+function showLogbookUploadSection(agreementId) {
+    $('#logbookManagement' + agreementId).slideUp();
+    $('#logbookUploadSection' + agreementId).slideDown();
+    $('#logbookReplaceBtn' + agreementId).hide();
+    $('#logbookContent' + agreementId).html(`
+        <div class="text-center py-5">
+            <i class="fas fa-book fa-3x text-muted mb-3"></i>
+            <p class="text-muted">No logbook uploaded yet. Please upload a PDF file above.</p>
+        </div>
+    `);
+}
+
+// Confirm delete with SweetAlert or fallback to confirm()
+function confirmDelete(agreementId) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Delete Logbook?',
+            text: 'This action cannot be undone',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                deleteLogbook(agreementId);
+            }
+        });
+    } else {
+        if (confirm('Are you sure you want to delete this logbook? This action cannot be undone.')) {
+            deleteLogbook(agreementId);
+        }
+    }
+}
+
+// Delete logbook using your route pattern
+function deleteLogbook(agreementId) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Deleting...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+    }
+    
+    $.ajax({
+        url: `/logbooks/${agreementId}`, // Matches your /agreements/{id} delete pattern
+        type: 'DELETE',
+        data: { '_token': $('meta[name="csrf-token"]').attr('content') },
+        success: function() {
+            showLogbookUploadSection(agreementId);
+            
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Deleted!',
+                    text: 'Logbook deleted successfully',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                alert('Logbook deleted successfully!');
+            }
+        },
+        error: function(xhr) {
+            const errorMessage = xhr.responseJSON?.error || 'Failed to delete logbook';
+            
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Delete Failed',
+                    text: errorMessage
+                });
+            } else {
+                alert('Delete Failed: ' + errorMessage);
+            }
+        }
+    });
+}
+
+// File validation
+function validateFile(file, agreementId) {
+    const uploadStatus = $('#logbookUploadStatus' + agreementId);
+    
+    if (!file) return;
+    
+    if (file.type !== 'application/pdf') {
+        uploadStatus.html('<div class="alert alert-warning">Please select a PDF file only.</div>');
+        $('#logbook_file' + agreementId).val('');
+        return;
+    }
+    
+    if (file.size > 1073741824) {
+        const fileSize = (file.size / (1024**3)).toFixed(2);
+        uploadStatus.html(`<div class="alert alert-warning">File size (${fileSize}GB) exceeds 1GB limit.</div>`);
+        $('#logbook_file' + agreementId).val('');
+        return;
+    }
+    
+    uploadStatus.empty();
+}
+
+// Action functions
+window[`openLogbookNewTab${{{ $agreement->id }}}`] = function() {
+    if (currentLogbookUrl) window.open(currentLogbookUrl, '_blank');
+};
+
+window[`downloadLogbook${{{ $agreement->id }}}`] = function() {
+    if (currentLogbookUrl) {
+        const link = document.createElement('a');
+        link.href = currentLogbookUrl;
+        link.download = `logbook-{{ $agreement->id }}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+};
+
+window[`printLogbook${{{ $agreement->id }}}`] = function() {
+    if (currentLogbookUrl) {
+        const printWindow = window.open(currentLogbookUrl, '_blank');
+        printWindow.addEventListener('load', () => printWindow.print());
+    }
+};
+
+window[`showLogbookUploadSection${{{ $agreement->id }}}`] = function() {
+    showLogbookUploadSection({{ $agreement->id }});
+};
+    </script>
 <!-- CSS for enhanced button styling -->
 <style>
 .btn-outline-info:hover {
@@ -6282,6 +7095,7 @@ Would you like to proceed to restructuring options?`;
     animation: pulse 2s infinite;
 }
 </style>
+
 <style>
 /* Lump Sum Payment Button Styling */
 .lump-sum-btn {

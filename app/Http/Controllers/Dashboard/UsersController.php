@@ -26,7 +26,7 @@ class UsersController extends Controller
             'first_name'   => 'required|string|max:255',
             'last_name'    => 'required|string|max:255',
             'email'        => 'required|email|unique:users,email',
-            'phone'        => 'required|string|max:20',
+            'phone'        => 'required|string|regex:/^254[17]\d{8}$/',
             'national_id'  => 'required|string|unique:users,national_id',
             'role'         => 'required|string|in:Managing-Director,Accountant,Showroom-Manager,Salesperson,Support-Staff,HR,General-Manager',
             'gender'       => 'required|string|in:Male,Female',
@@ -218,7 +218,7 @@ class UsersController extends Controller
                 'editfirst_name' => 'required|string|max:255',
                 'editlast_name' => 'required|string|max:255',
                 'editemail' => 'required|email|unique:users,email,' . $request->id,
-                'editphone' => 'required|string|max:20',
+                'editphone' => 'required|string|regex:/^254[17]\d{8}$/',
                 'editnational_id' => 'required|string|unique:users,national_id,' . $request->id,
                 'editrole' => 'required|string|in:Managing-Director,Accountant,Showroom-Manager,Salesperson,Support-Staff,HR,General-Manager',
             ]);
