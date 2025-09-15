@@ -109,72 +109,228 @@ class LeavesController extends Controller
     }
 
     /**
-     * Get handover suggestions based on user role/department
+     * Send SMS notification to handover person when they are assigned
      */
-    private function getHandoverSuggestions()
+    private function sendHandoverNotificationToAssignee($leaveApplication, $applicantUser)
     {
-        $currentUser = Auth::user();
-        $suggestions = collect();
-
         try {
-            // Get users excluding current user
-            $query = User::where('id', '!=', $currentUser->id)
-                         ->whereNull('deleted_at'); // Exclude soft deleted users if applicable
-
-            // Role hierarchy for handover suggestions
-            $roleHierarchy = [
-                'Support-Staff' => ['Support-Staff', 'Salesperson'],
-                'Salesperson' => ['Salesperson', 'Support-Staff'],
-                'Showroom-Manager' => ['Showroom-Manager', 'Managing-Director','General-Manager', 'Accountant'],
-                'Accountant' => ['Accountant', 'Managing-Director','General-Manager', 'Showroom-Manager'],
-                'Managing-Director' => ['Managing-Director','General-Manager', 'Showroom-Manager', 'Accountant'],
-            ];
-
-            $currentUserRole = $currentUser->role ?? 'Support-Staff';
-
-            // Get suggested roles for current user
-            $suggestedRoles = $roleHierarchy[$currentUserRole] ?? ['Support-Staff', 'Salesperson'];
-
-            // Try to find users with suggested roles in order of preference
-            foreach ($suggestedRoles as $role) {
-                $roleUsers = $query->where('role', $role)
-                                  ->select('id', 'first_name', 'last_name', 'email', 'role')
-                                  ->take(10)
-                                  ->get();
-                
-                if ($roleUsers->isNotEmpty()) {
-                    // Add full name for display
-                    $roleUsers = $roleUsers->map(function($user) {
-                        $user->name = trim($user->first_name . ' ' . $user->last_name);
-                        return $user;
-                    });
+            // Try to find the handover person by name
+            $handoverPersonName = $leaveApplication->handover_person;
+            
+            // Parse the handover person name (remove email if present)
+            $cleanName = trim(explode('(', $handoverPersonName)[0]);
+            
+            // Try to find user by matching first and last name combination
+            $handoverUser = User::where(function($query) use ($cleanName) {
+                $nameParts = explode(' ', $cleanName);
+                if (count($nameParts) >= 2) {
+                    $firstName = $nameParts[0];
+                    $lastName = implode(' ', array_slice($nameParts, 1));
                     
-                    $suggestions = $suggestions->merge($roleUsers);
+                    $query->where(function($q) use ($firstName, $lastName) {
+                        $q->where('first_name', 'LIKE', "%{$firstName}%")
+                          ->where('last_name', 'LIKE', "%{$lastName}%");
+                    })->orWhere(function($q) use ($cleanName) {
+                        // Also try matching against concatenated full name
+                        $q->whereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$cleanName}%"]);
+                    });
+                } else {
+                    // Single name provided
+                    $query->where('first_name', 'LIKE', "%{$cleanName}%")
+                          ->orWhere('last_name', 'LIKE', "%{$cleanName}%");
                 }
+            })
+            ->whereNotNull('phone')
+            ->first();
+
+            if (!$handoverUser) {
+                Log::warning('Handover person not found or no phone number', [
+                    'leave_application_id' => $leaveApplication->id,
+                    'handover_person' => $handoverPersonName,
+                    'search_name' => $cleanName
+                ]);
+                return;
             }
 
-            // If no specific role matches found, get any available users
-            if ($suggestions->isEmpty()) {
-                $fallbackUsers = $query->select('id', 'first_name', 'last_name', 'email', 'role')
-                                      ->take(10)
-                                      ->get()
-                                      ->map(function($user) {
-                                          $user->name = trim($user->first_name . ' ' . $user->last_name);
-                                          return $user;
-                                      });
-                
-                $suggestions = $fallbackUsers;
-            }
+            $applicantName = trim($applicantUser->first_name . ' ' . $applicantUser->last_name);
+            $startDate = Carbon::parse($leaveApplication->start_date)->format('M d, Y');
+            $endDate = Carbon::parse($leaveApplication->end_date)->format('M d, Y');
+            $handoverUserName = trim($handoverUser->first_name . ' ' . $handoverUser->last_name);
+            
+            $message = "Hello {$handoverUserName}, you have been assigned as handover person for {$applicantName}'s {$leaveApplication->leave_type} from {$startDate} to {$endDate} ({$leaveApplication->total_days} days). Please coordinate with {$applicantName} for duty handover. Reason: {$leaveApplication->reason}";
 
-            // Remove duplicates and limit results
-            $suggestions = $suggestions->unique('id')->take(15);
+            $smsSent = SmsService::send($handoverUser->phone, $message);
+            
+            if ($smsSent) {
+                Log::info('Handover notification SMS sent to assigned person', [
+                    'leave_application_id' => $leaveApplication->id,
+                    'applicant' => $applicantName,
+                    'handover_person' => $handoverUserName,
+                    'handover_phone' => $handoverUser->phone
+                ]);
+            } else {
+                Log::warning('Handover notification SMS failed to assigned person', [
+                    'leave_application_id' => $leaveApplication->id,
+                    'applicant' => $applicantName,
+                    'handover_person' => $handoverUserName,
+                    'handover_phone' => $handoverUser->phone
+                ]);
+            }
 
         } catch (\Exception $e) {
-            Log::error('Error getting handover suggestions: ' . $e->getMessage());
+            Log::error('Error sending handover notification to assigned person: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Send notification to handover person when leave is approved
+     */
+    private function sendHandoverApprovalNotification($leave)
+    {
+        try {
+            // Try to find the handover person by name
+            $handoverPersonName = $leave->handover_person;
+            
+            // Parse the handover person name (remove email if present)
+            $cleanName = trim(explode('(', $handoverPersonName)[0]);
+            
+            // Try to find user by matching first and last name combination
+            $handoverUser = User::where(function($query) use ($cleanName) {
+                $nameParts = explode(' ', $cleanName);
+                if (count($nameParts) >= 2) {
+                    $firstName = $nameParts[0];
+                    $lastName = implode(' ', array_slice($nameParts, 1));
+                    
+                    $query->where(function($q) use ($firstName, $lastName) {
+                        $q->where('first_name', 'LIKE', "%{$firstName}%")
+                          ->where('last_name', 'LIKE', "%{$lastName}%");
+                    })->orWhere(function($q) use ($cleanName) {
+                        // Also try matching against concatenated full name
+                        $q->whereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", ["%{$cleanName}%"]);
+                    });
+                } else {
+                    // Single name provided
+                    $query->where('first_name', 'LIKE', "%{$cleanName}%")
+                          ->orWhere('last_name', 'LIKE', "%{$cleanName}%");
+                }
+            })
+            ->whereNotNull('phone')
+            ->first();
+
+            if (!$handoverUser) {
+                Log::warning('Handover person not found for approval notification', [
+                    'leave_application_id' => $leave->id,
+                    'handover_person' => $handoverPersonName
+                ]);
+                return;
+            }
+
+            $applicantName = trim($leave->user->first_name . ' ' . $leave->user->last_name);
+            $startDate = Carbon::parse($leave->start_date)->format('M d, Y');
+            $endDate = Carbon::parse($leave->end_date)->format('M d, Y');
+            $handoverUserName = trim($handoverUser->first_name . ' ' . $handoverUser->last_name);
+            
+            $message = "Hi {$handoverUserName}, {$applicantName}'s {$leave->leave_type} from {$startDate} to {$endDate} has been APPROVED. Please prepare for duty handover. Contact {$applicantName} to discuss handover details.";
+
+            $smsSent = SmsService::send($handoverUser->phone, $message);
+            
+            if ($smsSent) {
+                Log::info('Handover approval notification SMS sent', [
+                    'leave_application_id' => $leave->id,
+                    'applicant' => $applicantName,
+                    'handover_person' => $handoverUserName,
+                    'handover_phone' => $handoverUser->phone
+                ]);
+            } else {
+                Log::warning('Handover approval notification SMS failed', [
+                    'leave_application_id' => $leave->id,
+                    'applicant' => $applicantName,
+                    'handover_person' => $handoverUserName
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error sending handover approval notification: ' . $e->getMessage());
+        }
+    }
+
+/**
+ * Get handover suggestions - show only the highest priority level available
+ */
+/**
+ * Get handover suggestions - show only the first available role in priority order
+ */
+private function getHandoverSuggestions()
+{
+    $currentUser = Auth::user();
+    $suggestions = collect();
+
+    try {
+        // Role hierarchy - FLAT priority list (not grouped by levels)
+        $roleHierarchy = [
+            'Support-Staff' => ['Support-Staff', 'Salesperson', 'Showroom-Manager', 'Accountant', 'General-Manager', 'Managing-Director'],
+            'Salesperson' => ['Salesperson', 'Support-Staff', 'Showroom-Manager', 'Accountant', 'General-Manager', 'Managing-Director'],
+            'Showroom-Manager' => ['Showroom-Manager', 'General-Manager', 'Managing-Director', 'Accountant', 'Salesperson', 'Support-Staff'],
+            'Accountant' => ['Accountant', 'General-Manager', 'Managing-Director', 'Showroom-Manager', 'Salesperson', 'Support-Staff'],
+            'General-Manager' => ['General-Manager', 'Managing-Director', 'Showroom-Manager', 'Accountant', 'Salesperson', 'Support-Staff'],
+            'Managing-Director' => ['Managing-Director', 'General-Manager', 'Showroom-Manager', 'Accountant', 'Salesperson', 'Support-Staff']
+        ];
+
+        $currentUserRole = $currentUser->role ?? 'Support-Staff';
+        $priorityRoles = $roleHierarchy[$currentUserRole] ?? $roleHierarchy['Support-Staff'];
+
+        // Go through roles in priority order and STOP at the first one that has users
+        foreach ($priorityRoles as $index => $role) {
+            $roleUsers = User::where('id', '!=', $currentUser->id)
+                            ->whereNull('deleted_at')
+                            ->where('role', $role)
+                            ->select('id', 'first_name', 'last_name', 'email', 'role')
+                            ->get();
+            
+            if ($roleUsers->isNotEmpty()) {
+                // Found users in this role - use ONLY these users and stop
+                $suggestions = $roleUsers->map(function($user) use ($index) {
+                    $user->name = trim($user->first_name . ' ' . $user->last_name);
+                    // Set suggestion level based on position in priority
+                    if ($index === 0) {
+                        $user->suggestion_level = 'primary';
+                    } elseif ($index <= 2) {
+                        $user->suggestion_level = 'secondary';
+                    } else {
+                        $user->suggestion_level = 'tertiary';
+                    }
+                    return $user;
+                });
+                
+                break; // CRITICAL: Stop here - don't look at any other roles
+            }
         }
 
-        return $suggestions;
+        // Final fallback ONLY if absolutely no users found in any role
+        if ($suggestions->isEmpty()) {
+            $fallbackUsers = User::where('id', '!=', $currentUser->id)
+                                 ->whereNull('deleted_at')
+                                 ->select('id', 'first_name', 'last_name', 'email', 'role')
+                                 ->take(15)
+                                 ->get()
+                                 ->map(function($user) {
+                                     $user->name = trim($user->first_name . ' ' . $user->last_name);
+                                     $user->suggestion_level = 'fallback';
+                                     return $user;
+                                 });
+            
+            $suggestions = $fallbackUsers;
+        } else {
+            // Limit to reasonable number
+            $suggestions = $suggestions->take(15);
+        }
+
+    } catch (\Exception $e) {
+        Log::error('Error getting handover suggestions: ' . $e->getMessage());
     }
+
+    return $suggestions;
+}
 
     /**
      * Store a newly created resource in storage.
@@ -269,11 +425,19 @@ class LeavesController extends Controller
 
             DB::commit();
 
-            // Send SMS notification to General Managers
+             // Send SMS notification to General Managers
             try {
                 $this->sendLeaveApplicationNotificationToManagers($leaveApplication, $user);
             } catch (\Exception $smsException) {
                 Log::error('SMS error during leave application: ' . $smsException->getMessage());
+                // Don't fail the leave application if SMS fails
+            }
+
+            // Send SMS notification to handover person
+            try {
+                $this->sendHandoverNotificationToAssignee($leaveApplication, $user);
+            } catch (\Exception $smsException) {
+                Log::error('SMS error during handover notification: ' . $smsException->getMessage());
                 // Don't fail the leave application if SMS fails
             }
 
@@ -420,6 +584,14 @@ class LeavesController extends Controller
                 $this->sendLeaveApprovalNotificationToApplicant($leave);
             } catch (\Exception $smsException) {
                 Log::error('SMS error during leave approval: ' . $smsException->getMessage());
+                // Don't fail the approval if SMS fails
+            }
+
+            // Send SMS notification to handover person about approval
+            try {
+                $this->sendHandoverApprovalNotification($leave);
+            } catch (\Exception $smsException) {
+                Log::error('SMS error during handover approval notification: ' . $smsException->getMessage());
                 // Don't fail the approval if SMS fails
             }
 
@@ -697,8 +869,9 @@ class LeavesController extends Controller
         ]);
     }
 
+    
     /**
-     * Calculate working days between two dates (excluding weekends)
+     * Calculate working days between two dates (excluding only Sunday)
      */
     private function calculateWorkingDays(Carbon $startDate, Carbon $endDate): int
     {
@@ -706,8 +879,8 @@ class LeavesController extends Controller
         $currentDate = $startDate->copy();
 
         while ($currentDate->lte($endDate)) {
-            // Skip weekends (Saturday = 6, Sunday = 0)
-            if (!in_array($currentDate->dayOfWeek, [0, 6])) {
+            // Skip only Sunday (0) - Saturday (6) is now a working day
+            if ($currentDate->dayOfWeek !== 0) {
                 $workingDays++;
             }
             $currentDate->addDay();

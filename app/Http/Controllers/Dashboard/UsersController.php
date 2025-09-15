@@ -261,27 +261,88 @@ class UsersController extends Controller
     }
 
     /**
-     * Handle leave days when user role changes
-     */
-    private function handleLeaveOnRoleChange(User $user, string $oldRole, string $newRole)
-    {
-        $isOldRoleClient = in_array($oldRole, ['Client', 'client']);
-        $isNewRoleClient = in_array($newRole, ['Client', 'client']);
+ * Handle leave days when user role changes - preserves usage history
+ */
+private function handleLeaveOnRoleChange(User $user, string $oldRole, string $newRole)
+{
+    $isOldRoleClient = in_array($oldRole, ['Client', 'client']);
+    $isNewRoleClient = in_array($newRole, ['Client', 'client']);
 
-        if ($isOldRoleClient && !$isNewRoleClient) {
-            // Changed from client to employee - create leave days
-            // Since we don't have gender info for existing users, default to Male (14 days paternity)
-            $this->createLeaveDaysForUser($user, $newRole, 'Male');
-        } elseif (!$isOldRoleClient && $isNewRoleClient) {
-            // Changed from employee to client - remove/deactivate leave days
-            LeaveDay::where('user_id', $user->id)->delete(); // or update status to 'inactive'
-        } elseif (!$isOldRoleClient && !$isNewRoleClient && $oldRole !== $newRole) {
-            // Role changed between employee types - update leave allocation
-            // Since we don't have gender info for existing users, default to Male (14 days paternity)
-            LeaveDay::where('user_id', $user->id)->delete();
-            $this->createLeaveDaysForUser($user, $newRole, 'Male');
-        }
+    if ($isOldRoleClient && !$isNewRoleClient) {
+        // Changed from client to employee - create leave days
+        // Since we don't have gender info for existing users, default to Male (14 days paternity)
+        $this->createLeaveDaysForUser($user, $newRole, 'Male');
+    } elseif (!$isOldRoleClient && $isNewRoleClient) {
+        // Changed from employee to client - remove/deactivate leave days
+        LeaveDay::where('user_id', $user->id)->delete();
+    } elseif (!$isOldRoleClient && !$isNewRoleClient && $oldRole !== $newRole) {
+        // Role changed between employee types - UPDATE allocation while preserving usage
+        $this->updateLeaveAllocationForRoleChange($user, $newRole);
     }
+}
+
+/**
+ * Update leave allocation while preserving usage history
+ */
+private function updateLeaveAllocationForRoleChange(User $user, string $newRole)
+{
+    try {
+        // Get new role allocation (default to Male for existing users)
+        $newAllocation = $this->getLeaveAllocationByRole($newRole, 'Male');
+        
+        // Get existing leave days
+        $existingLeaveDays = LeaveDay::where('user_id', $user->id)
+            ->where('year', date('Y'))
+            ->get();
+        
+        foreach ($newAllocation as $leaveType => $newTotalDays) {
+            $existingLeave = $existingLeaveDays->where('leave_type', $leaveType)->first();
+            
+            if ($existingLeave) {
+                // Update existing leave type - preserve used days
+                $newRemainingDays = max(0, $newTotalDays - $existingLeave->used_days);
+                
+                $existingLeave->update([
+                    'total_days' => $newTotalDays,
+                    'remaining_days' => $newRemainingDays,
+                    'updated_at' => now()
+                ]);
+                
+                Log::info("Updated leave allocation for user {$user->id}: {$leaveType} - " .
+                         "Total: {$newTotalDays}, Used: {$existingLeave->used_days}, Remaining: {$newRemainingDays}");
+            } else {
+                // Create new leave type that didn't exist before
+                LeaveDay::create([
+                    'user_id' => $user->id,
+                    'leave_type' => $leaveType,
+                    'total_days' => $newTotalDays,
+                    'used_days' => 0,
+                    'remaining_days' => $newTotalDays,
+                    'year' => date('Y'),
+                    'status' => 'active',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                
+                Log::info("Created new leave type for user {$user->id}: {$leaveType} - {$newTotalDays} days");
+            }
+        }
+        
+        // Handle leave types that exist in old role but not in new role
+        $newLeaveTypes = array_keys($newAllocation);
+        $existingLeaveDays->whereNotIn('leave_type', $newLeaveTypes)->each(function($leaveDay) {
+            Log::info("Removing obsolete leave type for user {$leaveDay->user_id}: {$leaveDay->leave_type}");
+            $leaveDay->delete();
+        });
+        
+    } catch (\Exception $e) {
+        Log::error("Error updating leave allocation for user {$user->id}: " . $e->getMessage());
+        
+        // Fallback to old method if update fails
+        LeaveDay::where('user_id', $user->id)->delete();
+        $this->createLeaveDaysForUser($user, $newRole, 'Male');
+    }
+}
 
     public function show($id)
     {

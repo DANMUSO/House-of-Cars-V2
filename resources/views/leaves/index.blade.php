@@ -106,7 +106,7 @@
         <tr data-status="{{ $application->status }}" id="application-row-{{ $application->id }}">
             <td>{{ $application->id }}</td>
             <td>
-                <div class="fw-semibold">{{ $application->user->name }}</div>
+                <div class="fw-semibold">{{ $application->user->first_name }} {{ $application->user->last_name }}</div>
                 <small class="text-muted">{{ $application->user->email }}</small>
             </td>
             <td>
@@ -251,33 +251,38 @@
                                         <option value="">Select Handover Person</option>
                                         @if(isset($handoverSuggestions) && $handoverSuggestions->count() > 0)
                                             @php
-                                                $user = auth()->user();
-                                                $userRole = $user->role ?? 'Support-Staff';
+                                                // Since controller now returns only one level, we can group by role for display
+                                                $roleGroups = $handoverSuggestions->groupBy('role');
                                                 
-                                                // Group suggestions by role for better organization
-                                                $groupedSuggestions = $handoverSuggestions->groupBy('role');
+                                                // Get the suggestion level (all will be the same now)
+                                                $currentLevel = $handoverSuggestions->first()->suggestion_level ?? 'primary';
                                                 
-                                                // Define role priority based on current user's role
-                                                $rolePriority = [
-                                                    'Support-Staff' => ['Support-Staff', 'Salesperson', 'Showroom-Manager', 'Managing-Director','General-Manager', 'Accountant'],
-                                                    'Salesperson' => ['Salesperson', 'Support-Staff', 'Showroom-Manager', 'Managing-Director','General-Manager', 'Accountant'],
-                                                    'Showroom-Manager' => ['Showroom-Manager', 'Managing-Director','General-Manager', 'Accountant', 'Salesperson', 'Support-Staff'],
-                                                    'Accountant' => ['Accountant', 'Managing-Director','General-Manager', 'Showroom-Manager', 'Salesperson', 'Support-Staff'],
-                                                    'Managing-Director' => ['Managing-Director','General-Manager', 'Showroom-Manager', 'Accountant', 'Salesperson', 'Support-Staff']
+                                                // Level labels for user info
+                                                $levelLabels = [
+                                                    'primary' => 'Same Role',
+                                                    'secondary' => 'Related Roles', 
+                                                    'tertiary' => 'Other Roles',
+                                                    'fallback' => 'Available Users'
                                                 ];
-                                                
-                                                $orderedRoles = $rolePriority[$userRole] ?? ['Support-Staff', 'Salesperson', 'Showroom-Manager', 'Managing-Director','General-Manager', 'Accountant'];
                                             @endphp
                                             
-                                            @foreach($orderedRoles as $role)
-                                                @if(isset($groupedSuggestions[$role]) && $groupedSuggestions[$role]->count() > 0)
+                                            @foreach($roleGroups as $role => $users)
+                                                @if($roleGroups->count() > 1)
+                                                    {{-- Show role optgroup only if multiple roles in this level --}}
                                                     <optgroup label="{{ str_replace('-', ' ', $role) }}">
-                                                        @foreach($groupedSuggestions[$role] as $suggestion)
+                                                        @foreach($users as $suggestion)
                                                             <option value="{{ $suggestion->name }}" data-role="{{ $suggestion->role }}" data-email="{{ $suggestion->email }}">
                                                                 {{ $suggestion->name }} ({{ $suggestion->email }})
                                                             </option>
                                                         @endforeach
                                                     </optgroup>
+                                                @else
+                                                    {{-- Single role, no optgroup needed --}}
+                                                    @foreach($users as $suggestion)
+                                                        <option value="{{ $suggestion->name }}" data-role="{{ $suggestion->role }}" data-email="{{ $suggestion->email }}">
+                                                            {{ $suggestion->name }} ({{ $suggestion->email }})
+                                                        </option>
+                                                    @endforeach
                                                 @endif
                                             @endforeach
                                         @else
@@ -286,17 +291,21 @@
                                     </select>
                                     
                                     <div class="form-text" id="handover_suggestion_text">
-                                        @php
-                                            $user = auth()->user();
-                                            $userRole = $user->role ?? 'Support-Staff';
-                                        @endphp
-                                        
-                                        @if($userRole === 'Support-Staff')
-                                            <i class="fas fa-info-circle me-1"></i>Recommended: Other Support Staff members{{ isset($handoverSuggestions) && $handoverSuggestions->where('role', 'Support-Staff')->isEmpty() ? ' or Salesperson' : '' }}
-                                        @elseif($userRole === 'Salesperson')
-                                            <i class="fas fa-info-circle me-1"></i>Recommended: Other Salesperson or Support Staff members
-                                        @elseif(in_array($userRole, ['Managing-Director','General-Manager', 'Showroom-Manager', 'Accountant']))
-                                            <i class="fas fa-info-circle me-1"></i>Recommended: Management team members
+                                        @if(isset($handoverSuggestions) && $handoverSuggestions->count() > 0)
+                                            @php
+                                                $currentLevel = $handoverSuggestions->first()->suggestion_level ?? 'primary';
+                                                $userRole = auth()->user()->role ?? 'Support-Staff';
+                                            @endphp
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            @if($currentLevel === 'primary')
+                                                Showing colleagues with your same role ({{ str_replace('-', ' ', $userRole) }})
+                                            @elseif($currentLevel === 'secondary') 
+                                                No same-role colleagues available. Showing related roles
+                                            @elseif($currentLevel === 'tertiary')
+                                                No primary/secondary colleagues available. Showing other roles
+                                            @else
+                                                Showing all available users
+                                            @endif
                                         @else
                                             <i class="fas fa-info-circle me-1"></i>Select the person who will handle your duties
                                         @endif
@@ -335,8 +344,8 @@
                         <div id="balance_warning_container"></div>
                         
                         <div class="mb-3">
-                            <label for="reason" class="form-label">Reason <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="reason" name="reason" rows="4" placeholder="Please provide reason for leave..." required maxlength="1000"></textarea>
+                            <label for="reason" class="form-label">Duties/Tasks handed over <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="reason" name="reason" rows="4" placeholder="Duties/Tasks handed over" required maxlength="1000"></textarea>
                             <div class="form-text">Maximum 1000 characters</div>
                         </div>
                     </form>
@@ -1112,19 +1121,20 @@
         }
 
         function getWorkingDaysBetween(startDate, endDate) {
-            let count = 0;
-            let currentDate = new Date(startDate);
-            
-            while (currentDate <= endDate) {
-                const dayOfWeek = currentDate.getDay();
-                if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not Sunday (0) or Saturday (6)
-                    count++;
-                }
-                currentDate.setDate(currentDate.getDate() + 1);
-            }
-            
-            return count;
+    let count = 0;
+    let currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+        const dayOfWeek = currentDate.getDay();
+        // Only exclude Sunday (0) - Saturday (6) is now a working day
+        if (dayOfWeek !== 0) {
+            count++;
         }
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return count;
+}
 
         function checkLeaveBalance(requestedDays) {
             const leaveTypeSelect = document.getElementById('leave_type');

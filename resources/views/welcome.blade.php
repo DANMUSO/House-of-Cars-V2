@@ -16,41 +16,22 @@
 
         body {
             font-family: 'Poppins', sans-serif;
+            background: #ffffff;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
-            overflow: hidden;
-        }
-
-        /* Animated Background Elements */
-        body::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
-            background-size: 50px 50px;
-            animation: backgroundMove 20s linear infinite;
-        }
-
-        @keyframes backgroundMove {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(50px, 50px) rotate(360deg); }
         }
 
         .login-container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border-radius: 24px;
+            background: #ffffff;
+            border-radius: 20px;
             padding: 3rem 2.5rem;
             width: 100%;
             max-width: 420px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+            border: 1px solid #f1f1f1;
             position: relative;
             z-index: 1;
             animation: slideUp 0.8s ease-out;
@@ -75,13 +56,13 @@
         .logo-icon {
             width: 70px;
             height: 70px;
-            background: linear-gradient(135deg, #e53e3e, #764ba2);
+            background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 1.5rem;
-            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 15px 35px rgba(239, 68, 68, 0.3);
             animation: logoFloat 3s ease-in-out infinite;
         }
 
@@ -96,14 +77,14 @@
         }
 
         .login-title {
-            color: #2d3748;
+            color: #1f2937;
             font-size: 1.75rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
         }
 
         .login-subtitle {
-            color: #718096;
+            color: #6b7280;
             font-size: 0.95rem;
             font-weight: 400;
         }
@@ -116,24 +97,24 @@
         .form-control {
             width: 100%;
             padding: 1rem 1rem 1rem 3rem;
-            border: 2px solid #e2e8f0;
+            border: 2px solid #f3f4f6;
             border-radius: 16px;
             font-size: 1rem;
             font-family: inherit;
-            background: rgba(255, 255, 255, 0.8);
+            background: #fafafa;
             transition: all 0.3s ease;
             outline: none;
         }
 
         .form-control:focus {
-            border-color: #667eea;
+            border-color: #ef4444;
             background: white;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
             transform: translateY(-2px);
         }
 
         .form-control.is-invalid {
-            border-color: #e53e3e;
+            border-color: #ef4444;
         }
 
         .form-icon {
@@ -141,20 +122,20 @@
             left: 1rem;
             top: 50%;
             transform: translateY(-50%);
-            color: #a0aec0;
+            color: #9ca3af;
             font-size: 1.1rem;
             transition: color 0.3s ease;
         }
 
         .form-control:focus + .form-icon {
-            color: #667eea;
+            color: #ef4444;
         }
 
         .login-btn {
             width: 100%;
             padding: 1rem;
-            background: linear-gradient(135deg, #fff 0%, #fff 100%);
-            color: #000;
+            background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+            color: white;
             border: none;
             border-radius: 16px;
             font-size: 1.1rem;
@@ -173,7 +154,7 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
             transition: left 0.5s;
         }
 
@@ -183,31 +164,17 @@
 
         .login-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 15px 35px rgba(239, 68, 68, 0.4);
         }
 
         .login-btn:active {
             transform: translateY(0);
         }
 
-        .divider {
-            display: flex;
-            align-items: center;
-            margin: 1.5rem 0;
-            color: #a0aec0;
-            font-size: 0.9rem;
-        }
-
-        .divider::before,
-        .divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: #f3f4f6;
-        }
-
-        .divider span {
-            padding: 0 1rem;
+        .login-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .forgot-password {
@@ -216,7 +183,7 @@
         }
 
         .forgot-password a {
-            color: #dc2626;
+            color: #ef4444;
             text-decoration: none;
             font-size: 0.9rem;
             font-weight: 500;
@@ -230,9 +197,9 @@
         }
 
         .forgot-password a:hover {
-            background: rgba(220, 38, 38, 0.1);
+            background: rgba(239, 68, 68, 0.1);
             transform: translateY(-1px);
-            color: #b91c1c;
+            color: #dc2626;
         }
 
         .forgot-password a i {
@@ -240,7 +207,7 @@
         }
 
         .invalid-feedback {
-            color: #e53e3e;
+            color: #ef4444;
             font-size: 0.85rem;
             margin-top: 0.5rem;
             display: flex;
@@ -252,6 +219,7 @@
             content: '\f071';
             font-family: 'Font Awesome 6 Free';
             font-weight: 900;
+            color: #ef4444;
         }
 
         /* Loading animation */
