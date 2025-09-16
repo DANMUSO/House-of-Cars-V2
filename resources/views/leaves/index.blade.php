@@ -86,7 +86,7 @@
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                           <table id="leaveTable" class="table table-bordered table-hover nowrap w-100">
+                           <table id="responsive-datatable" class="table table-bordered table-hover nowrap w-100">
     <thead class="table-light">
         <tr>
             <th>ID</th>
@@ -336,7 +336,7 @@
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle me-1"></i>
                                 <strong>Calculated Working Days:</strong> <span id="calculated_days" class="fw-bold text-primary">0</span>
-                                <small class="d-block mt-1 text-muted">Weekends are automatically excluded from the calculation</small>
+                                <small class="d-block mt-1 text-muted">Sundays are automatically excluded from the calculation</small>
                             </div>
                         </div>
                         

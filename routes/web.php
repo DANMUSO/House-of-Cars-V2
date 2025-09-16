@@ -115,8 +115,27 @@ Route::get('/password/reset/sms', [App\Http\Controllers\Dashboard\UsersControlle
 Route::post('/password/reset/sms', [App\Http\Controllers\Dashboard\UsersController::class, 'sendPasswordViaSms'])
     ->name('password.sms.send')
     ->middleware('guest');
-Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Suppport-Staff,HR,General-Manager'])->group(function () {
-
+Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Support-Staff,HR,General-Manager'])->group(function () {
+// Logbook Management Routes
+Route::prefix('logbooks')->name('logbooks.')->group(function () {
+    // Main logbook routes
+    Route::get('/', [App\Http\Controllers\Dashboard\LogbookController::class, 'index'])->name('index');
+    Route::post('/', [App\Http\Controllers\Dashboard\LogbookController::class, 'store'])->name('store');
+    Route::get('/{logbook}', [App\Http\Controllers\Dashboard\LogbookController::class, 'show'])->name('show');
+    Route::get('/{logbook}/edit', [App\Http\Controllers\Dashboard\LogbookController::class, 'edit'])->name('edit'); // NEW
+    Route::put('/{logbook}', [App\Http\Controllers\Dashboard\LogbookController::class, 'update'])->name('update'); // FIXED
+    Route::delete('/{logbook}', [App\Http\Controllers\Dashboard\LogbookController::class, 'destroy'])->name('destroy');
+    
+    // Document management routes
+    Route::post('/{logbook}/upload-documents', [App\Http\Controllers\Dashboard\LogbookController::class, 'uploadDocuments'])->name('upload-documents');
+    Route::delete('/{logbook}/documents/{documentIndex}', [App\Http\Controllers\Dashboard\LogbookController::class, 'deleteDocument'])->name('delete-document');
+    Route::get('/{logbook}/documents', [App\Http\Controllers\Dashboard\LogbookController::class, 'getDocuments'])->name('get-documents');
+    
+    // Additional utility routes
+    Route::get('/{logbook}/download/{documentIndex}', [App\Http\Controllers\Dashboard\LogbookController::class, 'downloadDocument'])->name('download-document');
+    Route::post('/{logbook}/archive', [App\Http\Controllers\Dashboard\LogbookController::class, 'archive'])->name('archive');
+    Route::post('/{logbook}/restore', [App\Http\Controllers\Dashboard\LogbookController::class, 'restore'])->name('restore');
+});
       // Gentleman Agreement Loan Restructuring Routes
 Route::prefix('gentleman-loan-restructuring')->name('gentleman-loan-restructuring.')->group(function () {
     

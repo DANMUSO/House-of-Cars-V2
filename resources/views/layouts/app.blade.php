@@ -1254,12 +1254,12 @@
                             </li>
                              @endif
                             <li>
-                                <a href="#sidebarAdvancedUI" data-bs-toggle="collapse">
+                                <a href="#sidebarAdvancedUIs" data-bs-toggle="collapse">
                                 <i class="fa-solid fa-people-carry-box"></i>
                                     <span>Facilitation Requests</span>
                                     <span class="menu-arrow"></span>
                                 </a>
-                                <div class="collapse" id="sidebarAdvancedUI">
+                                <div class="collapse" id="sidebarAdvancedUIs">
                                     <ul class="nav-second-level">
                                         <li>
                                             <a class='tp-link' href="{{url('/Facilitation/requests')}}">Requests</a>
@@ -1281,6 +1281,22 @@
                                     </ul>
                                 </div>
                             </li>
+                             @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director','General-Manager']))
+                            <li>
+                                <a href="#sidebarForm" data-bs-toggle="collapse">
+                                <i class="fa-solid fa-chart-column"></i>
+                                    <span> Docs Management </span>
+                                    <span class="menu-arrow"></span>
+                                </a>
+                                <div class="collapse" id="sidebarForm">
+                                    <ul class="nav-second-level">
+                                        <li>
+                                            <a class='tp-link' href="{{url('/logbooks')}}">Docs Management</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </li>
+                            @endif
                             @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director','General-Manager']))
                             <li>
                                 <a href="#sidebarForms" data-bs-toggle="collapse">
