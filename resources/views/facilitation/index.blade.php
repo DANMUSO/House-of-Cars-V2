@@ -309,6 +309,7 @@
             <th><i class="fas fa-tag me-1"></i>Request Type</th>
             <th><i class="fas fa-money-bill me-1"></i>Amount</th>
             <th><i class="fas fa-info-circle me-1"></i>Status</th>
+            <th><i class="fas fa-receipt me-1"></i>Receipt</th>
             <th><i class="fas fa-calendar me-1"></i>Date</th>
             @if(in_array(Auth::user()->role, ['Managing-Director', 'Accountant']))
                 <th><i class="fas fa-cog me-1"></i>Actions</th>
@@ -384,6 +385,32 @@
                     @endif
                 </td>
                 <td>
+@if($facilitation->receipt_documents && count($facilitation->receipt_documents) > 0)
+    
+    @if($facilitation->request_id == Auth::id())
+    <a href="{{ $facilitation->receipt_url }}" target="_blank" class="btn btn-sm btn-success">
+        <i class="fas fa-eye me-1"></i>View Receipt
+    </a>
+    <small class="d-block text-muted mt-1">{{ $facilitation->receipt_file_size }}</small>
+    <small class="d-block text-muted">{{ $facilitation->receipt_uploaded_at->diffForHumans() }}</small>
+    
+        <button class="btn btn-sm btn-outline-danger mt-1 delete-receipt-btn" data-id="{{ $facilitation->id }}">
+            <i class="fas fa-trash me-1"></i>Delete
+        </button>
+    @endif
+@else
+    @if($facilitation->status == 2)
+        <button class="btn btn-sm btn-outline-primary upload-receipt-btn" data-id="{{ $facilitation->id }}">
+            <i class="fas fa-upload me-1"></i>Upload Receipt
+        </button>
+    @else
+        <span class="text-muted">
+            <i class="fas fa-minus"></i>No receipt
+        </span>
+    @endif
+@endif
+            </td>
+                <td>
                     <strong>{{ $facilitation->created_at->format('M d, Y') }}</strong>
                     <br><small class="text-muted">{{ $facilitation->created_at->diffForHumans() }}</small>
                     <br><small class="text-muted">{{ $facilitation->created_at->format('Y-m-d H:i:s') }}</small>
@@ -411,7 +438,7 @@
             </tr>
         @empty
         <tr>
-            <td colspan="@if(in_array(Auth::user()->role, ['Managing-Director', 'Accountant'])) 6 @else 5 @endif" class="text-center py-4">
+            <td colspan="@if(in_array(Auth::user()->role, ['Managing-Director', 'Accountant'])) 7 @else 6 @endif" class="text-center py-4">
                 <div class="text-muted">
                     <i class="fas fa-inbox fa-3x mb-3"></i>
                     <h5>No facilitation requests found</h5>
@@ -427,7 +454,56 @@
                 </div>
             </div>
         </div>
-
+        <!-- Universal Modal for Receipts and Actions -->
+        <div class="modal fade" id="universal-modal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modal-title">
+                            <i class="fas fa-receipt me-2"></i>Modal Title
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" id="modal-body">
+                        <!-- Dynamic content will be loaded here -->
+                    </div>
+                    <div class="modal-footer" id="modal-footer">
+                        <!-- Dynamic footer will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Receipt Upload Modal -->
+<div class="modal fade" id="receipt-upload-modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-receipt me-2"></i>Upload Receipt
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="receipt-upload-form" enctype="multipart/form-data">
+                    <input type="hidden" id="facilitation-id" name="facilitation_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Receipt Document <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" name="receipt" accept=".pdf,.jpg,.jpeg,.png,.gif" required>
+                        <small class="text-muted">Accepted formats: PDF, JPG, PNG, GIF (Max: 10MB)</small>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload me-1"></i>Upload Receipt
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
         <!-- Edit Modals for each facilitation -->
         @foreach($facilitations as $facilitation)
             @if($facilitation->user_id == Auth::id() && $facilitation->status == 1)
@@ -612,5 +688,210 @@
             }
         }
     </style>
+    <script>
+$(document).ready(function() {
     
+    // Universal modal handler
+    function showModal(title, bodyContent, footerContent = '') {
+        $('#modal-title').html(title);
+        $('#modal-body').html(bodyContent);
+        $('#modal-footer').html(footerContent);
+        $('#universal-modal').modal('show');
+    }
+
+    // Handle upload receipt button clicks
+    $(document).on('click', '.upload-receipt-btn', function() {
+        const facilitationId = $(this).data('id');
+        $('#facilitation-id').val(facilitationId);
+        $('#receipt-upload-modal').modal('show');
+    });
+
+    // Handle receipt upload form submission
+    $('#receipt-upload-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const facilitationId = $('#facilitation-id').val();
+        const submitBtn = $(this).find('button[type="submit"]');
+        const originalText = submitBtn.html();
+        
+        // Show loading state
+        submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i>Uploading...');
+        
+        $.ajax({
+            url: `/facilitation/${facilitationId}/receipt`,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: response.message,
+                        timer: 2000,
+                        showConfirmButton: false,
+                        timerProgressBar: true
+                    }).then(() => {
+                        $('#receipt-upload-modal').modal('hide');
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Upload Failed',
+                        text: response.message || 'Upload failed',
+                        confirmButtonColor: '#d33'
+                    });
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'Upload failed';
+                
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                    errorMessage = Object.values(xhr.responseJSON.errors).flat().join(', ');
+                }
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Upload Failed',
+                    text: errorMessage,
+                    confirmButtonColor: '#d33'
+                });
+            },
+            complete: function() {
+                submitBtn.prop('disabled', false).html(originalText);
+            }
+        });
+    });
+
+    // Handle view receipt button clicks - Use universal modal for viewing
+    $(document).on('click', '.btn-success[href]', function(e) {
+        e.preventDefault();
+        const receiptUrl = $(this).attr('href');
+        const fileName = receiptUrl.split('/').pop();
+        
+        const title = '<i class="fas fa-eye me-2"></i>View Receipt';
+        const bodyContent = `
+            <div class="text-center">
+                <div class="mb-3">
+                    <h6>Receipt: ${fileName}</h6>
+                </div>
+                ${receiptUrl.toLowerCase().endsWith('.pdf') ? 
+                    `<iframe src="${receiptUrl}" style="width: 100%; height: 500px;" frameborder="0"></iframe>` :
+                    `<img src="${receiptUrl}" class="img-fluid" style="max-height: 500px;" alt="Receipt">`
+                }
+            </div>
+        `;
+        const footerContent = `
+            <a href="${receiptUrl}" target="_blank" class="btn btn-primary">
+                <i class="fas fa-external-link-alt me-1"></i>Open in New Tab
+            </a>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        `;
+        
+        showModal(title, bodyContent, footerContent);
+    });
+
+    // Handle delete receipt button clicks
+    $(document).on('click', '.delete-receipt-btn', function() {
+        const facilitationId = $(this).data('id');
+        
+        Swal.fire({
+            title: 'Delete Receipt?',
+            text: 'Are you sure you want to delete this receipt?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes, Delete',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                deleteReceipt(facilitationId);
+            }
+        });
+    });
+
+    // Function to delete receipt
+    function deleteReceipt(id) {
+        $.ajax({
+            url: `/facilitation/${id}/receipt`,
+            type: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Deleted!',
+                    text: 'Receipt has been deleted',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    timerProgressBar: true
+                }).then(() => {
+                    location.reload();
+                });
+            },
+            error: function(xhr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to delete receipt. Please try again.',
+                    confirmButtonColor: '#d33'
+                });
+            }
+        });
+    }
+
+    // File validation
+    $('input[name="receipt"]').on('change', function() {
+        const file = this.files[0];
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        
+        if (file) {
+            if (file.size > maxSize) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'File Too Large',
+                    text: 'File size must be less than 10MB',
+                    confirmButtonColor: '#d33'
+                });
+                $(this).val('');
+                return;
+            }
+            
+            if (!allowedTypes.includes(file.type)) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid File Type',
+                    text: 'Only PDF, JPG, PNG, and GIF files are allowed',
+                    confirmButtonColor: '#d33'
+                });
+                $(this).val('');
+                return;
+            }
+        }
+    });
+
+    // Reset forms when modals close
+    $('#receipt-upload-modal').on('hidden.bs.modal', function() {
+        $('#receipt-upload-form')[0].reset();
+        $('#facilitation-id').val('');
+    });
+
+    $('#universal-modal').on('hidden.bs.modal', function() {
+        $('#modal-title').html('');
+        $('#modal-body').html('');
+        $('#modal-footer').html('');
+    });
+});
+</script>
 </x-app-layout>

@@ -52,7 +52,180 @@ class FacilitationController extends Controller
             'message' => 'Request submitted successfully!',
         ]);
     }
+/**
+ * Upload receipt for facilitation request (aligned with database schema)
+ */
+public function uploadReceipt(Request $request, $id)
+{
+    $request->validate([
+        'receipt' => 'required|file|mimes:pdf,jpg,jpeg,png,gif|max:10240' // 10MB max
+    ]);
 
+    try {
+        $facilitation = Facilitation::findOrFail($id);
+        
+        // Only allow receipt upload for approved requests
+        if ($facilitation->status != 2) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Receipts can only be uploaded for approved requests!'
+            ], 400);
+        }
+
+        // Get existing receipts or initialize empty array
+        $existingReceipts = $facilitation->receipt_documents ?? [];
+        
+        // For single receipt, replace existing one
+        if (!empty($existingReceipts)) {
+            try {
+                $this->deleteReceiptFromS3($existingReceipts[0]);
+            } catch (\Exception $e) {
+                Log::warning('Failed to delete old receipt', [
+                    'facilitation_id' => $facilitation->id,
+                    'old_receipt' => $existingReceipts[0]
+                ]);
+            }
+        }
+
+        $document = $request->file('receipt');
+        $originalName = pathinfo($document->getClientOriginalName(), PATHINFO_FILENAME);
+        $extension = $document->getClientOriginalExtension();
+        $filename = 'receipt_' . $facilitation->id . '_' . $originalName . '_' . time() . '.' . $extension;
+        
+        $documentPath = $this->uploadReceiptToS3($document, $filename);
+        
+        // Store as single item array
+        $facilitation->update([
+            'receipt_documents' => [$documentPath],
+            'receipt_count' => 1,
+            'receipt_file_size' => $this->formatFileSize($document->getSize())
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Receipt uploaded successfully!'
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Receipt upload failed', [
+            'facilitation_id' => $id,
+            'error' => $e->getMessage()
+        ]);
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to upload receipt: ' . $e->getMessage()
+        ], 500);
+    }
+}
+/**
+ * Delete receipt for facilitation request
+ */
+public function deleteReceipt($id)
+{
+    try {
+        $facilitation = Facilitation::findOrFail($id);
+        
+        if (empty($facilitation->receipt_documents)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No receipt found!'
+            ], 404);
+        }
+
+        // Delete from S3
+        foreach ($facilitation->receipt_documents as $receiptPath) {
+            $this->deleteReceiptFromS3($receiptPath);
+        }
+
+        $facilitation->update([
+            'receipt_documents' => null,
+            'receipt_count' => 0,
+            'receipt_file_size' => null
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Receipt deleted successfully!'
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to delete receipt: ' . $e->getMessage()
+        ], 500);
+    }
+}
+/**
+ * S3 helper methods
+ */
+private function uploadReceiptToS3($document, $filename)
+{
+    try {
+        $s3Client = new \Aws\S3\S3Client([
+            'version' => 'latest',
+            'region'  => config('filesystems.disks.s3.region'),
+            'credentials' => [
+                'key'    => config('filesystems.disks.s3.key'),
+                'secret' => config('filesystems.disks.s3.secret'),
+            ],
+            'http' => [
+                'verify' => false
+            ]
+        ]);
+
+        $key = "facilitation_receipts/" . $filename;
+        
+        $s3Client->putObject([
+            'Bucket' => config('filesystems.disks.s3.bucket'),
+            'Key'    => $key,
+            'Body'   => fopen($document->getPathname(), 'r'),
+            'ContentType' => $document->getMimeType(),
+            'CacheControl' => 'max-age=31536000',
+        ]);
+
+        return $key;
+
+    } catch (\Exception $e) {
+        throw new \Exception('S3 receipt upload failed: ' . $e->getMessage());
+    }
+}
+
+private function deleteReceiptFromS3($documentPath)
+{
+    try {
+        $s3Client = new \Aws\S3\S3Client([
+            'version' => 'latest',
+            'region'  => config('filesystems.disks.s3.region'),
+            'credentials' => [
+                'key'    => config('filesystems.disks.s3.key'),
+                'secret' => config('filesystems.disks.s3.secret'),
+            ],
+            'http' => [
+                'verify' => false
+            ]
+        ]);
+
+        $s3Client->deleteObject([
+            'Bucket' => config('filesystems.disks.s3.bucket'),
+            'Key' => $documentPath
+        ]);
+
+    } catch (\Exception $e) {
+        throw $e;
+    }
+}
+
+private function formatFileSize($bytes)
+{
+    if ($bytes >= 1048576) {
+        return number_format($bytes / 1048576, 2) . ' MB';
+    } elseif ($bytes >= 1024) {
+        return number_format($bytes / 1024, 2) . ' KB';
+    } else {
+        return $bytes . ' bytes';
+    }
+}
     /**
      * Send SMS notification to Accountants when facilitation is requested
      */

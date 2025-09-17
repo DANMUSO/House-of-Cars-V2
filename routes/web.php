@@ -116,7 +116,10 @@ Route::post('/password/reset/sms', [App\Http\Controllers\Dashboard\UsersControll
     ->name('password.sms.send')
     ->middleware('guest');
 Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Support-Staff,HR,General-Manager'])->group(function () {
-// Logbook Management Routes
+//Receipt Routes
+Route::post('/facilitation/{id}/receipt', [App\Http\Controllers\Dashboard\FacilitationController::class, 'uploadReceipt'])->name('facilitation.receipt.upload');
+Route::delete('/facilitation/{id}/receipt', [App\Http\Controllers\Dashboard\FacilitationController::class, 'deleteReceipt'])->name('facilitation.receipt.delete');
+    // Logbook Management Routes
 Route::prefix('logbooks')->name('logbooks.')->group(function () {
     // Main logbook routes
     Route::get('/', [App\Http\Controllers\Dashboard\LogbookController::class, 'index'])->name('index');
