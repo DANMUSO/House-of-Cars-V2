@@ -127,7 +127,7 @@
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">Interest Rate (% per month)</label>
-                                            <input type="number" class="form-control" id="std_interest_rate" step="0.01" placeholder="e.g., 4.29" required>
+                                            <input type="number" class="form-control" id="std_interest_rate" step="0.00001" placeholder="e.g., 4.29" required>
                                             <small class="form-text text-muted">Current standard rate: 4.29%</small>
                                         </div>
                                         <div class="mb-3">
@@ -181,7 +181,7 @@
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">Interest Rate (% per month)</label>
-                                            <input type="number" class="form-control" id="below_interest_rate" step="0.01" placeholder="e.g., 4.50" required>
+                                            <input type="number" class="form-control" id="below_interest_rate" step="0.00001" placeholder="e.g., 4.50" required>
                                             <small class="form-text text-muted">Current higher rate: 4.50%</small>
                                         </div>
                                         <div class="mb-3">
@@ -403,7 +403,7 @@
                         
                         <div class="col-md-6">
                             <label class="form-label">Interest Rate (% per month)</label>
-                            <input type="number" class="form-control" id="interest_rate" name="interest_rate" step="0.01" placeholder="e.g., 4.29">
+                            <input type="number" class="form-control" id="interest_rate" name="interest_rate" step="0.00001" placeholder="e.g., 4.29">
                             <small class="form-text text-muted">Enter custom rate or leave blank for auto-calculation based on deposit</small>
                         </div>
                         

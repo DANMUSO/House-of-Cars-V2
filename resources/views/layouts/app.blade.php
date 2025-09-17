@@ -1252,6 +1252,24 @@
                                     </ul>
                                 </div>
                             </li>
+                            @endif
+                            @if(in_array(Auth::user()->role, ['Salesperson']))
+                            <li>
+                                <a href="#sidebarBaseui" data-bs-toggle="collapse">
+                                <i class="fa-solid fa-tag"></i>
+                                    <span> Leads Mgt </span>
+                                    <span class="menu-arrow"></span>
+                                </a>
+                                <div class="collapse" id="sidebarBaseui">
+                                    <ul class="nav-second-level">
+                    
+                                        <li>
+                                            <a class='tp-link' href="{{url('leads')}}">Leads</a>
+                                        </li>
+
+                                    </ul>
+                                </div>
+                            </li>
                              @endif
                             <li>
                                 <a href="#sidebarAdvancedUIs" data-bs-toggle="collapse">
