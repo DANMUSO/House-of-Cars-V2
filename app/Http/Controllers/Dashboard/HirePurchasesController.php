@@ -4540,7 +4540,7 @@ public function store(Request $request)
             'TradeInnAmount' => 'nullable|numeric|min:1',
             'deposit_amount' => 'required|numeric|min:1',
             'tracking_fees' => 'required|numeric|min:0',
-            'interest_rate' => 'required|numeric|min:0.1|max:20', 
+            'interest_rate' => 'required|numeric|min:0.00001|max:20', 
             'duration_months' => 'required|integer|min:6|max:72',
             'first_due_date' => 'required|date',
         ], [
