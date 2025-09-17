@@ -52,11 +52,6 @@ class LogbookController extends Controller
 
         \Log::info('Validation passed', ['validated_data' => $validated]);
 
-        // Additional validation to ensure at least one ID is provided
-        $request->validate([
-            'customer_id' => 'required_without:imported_id',
-            'imported_id' => 'required_without:customer_id',
-        ]);
 
         // Handle conditional ID logic
         if (!empty($validated['customer_id'])) {
@@ -284,12 +279,6 @@ private function getFileType($path)
             // Car IDs
             'customer_id' => 'nullable|integer',
             'imported_id' => 'nullable|integer',
-        ]);
-
-        // Validate that at least one ID is provided
-        $request->validate([
-            'customer_id' => 'required_without:imported_id',
-            'imported_id' => 'required_without:customer_id',
         ]);
 
         // Handle conditional ID logic

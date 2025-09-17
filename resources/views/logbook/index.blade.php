@@ -59,9 +59,9 @@
                     <table class="table table-hover mb-0" id="responsive-datatable">
                         <thead class="table-light">
                             <tr>
-                                <th>Car</th>
+                                <th>Title/Car</th>
                                 <th>Document Type</th>
-                                <th>Title</th>
+                               
                                 <th>Expiry Date</th>
                                 <th>Status</th>
                                 <th>Documents</th>
@@ -72,17 +72,15 @@
                             @forelse($logbooks as $logbook)
                             <tr id="logbook-{{ $logbook->id }}">
                                 <td>
+                                    <div class="fw-semibold">{{ $logbook->title }}</div>
+                                    @if($logbook->reference_number)
+                                        <small class="text-muted">{{ $logbook->reference_number }}</small>
+                                    @endif
                                     <div class="fw-semibold">{{ $logbook->car_details ?? 'N/A' }}</div>
                                     <small class="text-muted">{{ ucfirst($logbook->car_type ?? 'unknown') }}</small>
                                 </td>
                                 <td>
                                     <span class="badge bg-info">{{ ucfirst(str_replace('_', ' ', $logbook->document_type)) }}</span>
-                                </td>
-                                <td>
-                                    <div class="fw-semibold">{{ $logbook->title }}</div>
-                                    @if($logbook->reference_number)
-                                        <small class="text-muted">{{ $logbook->reference_number }}</small>
-                                    @endif
                                 </td>
                                 <td>
                                     @if($logbook->expiry_date)
@@ -151,24 +149,8 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Car <span class="text-danger">*</span></label>
-                                    <select class="form-select" id="carSelection" required>
-                                        <option value="">Choose a car...</option>
-                                        <optgroup label="Imported Cars">
-                                            @foreach($importedCars as $car)
-                                                <option value="imported_{{ $car->id }}">
-                                                    {{ $car->make }} {{ $car->model }} ({{ $car->year }}) - {{ $car->chassis_number }}
-                                                </option>
-                                            @endforeach
-                                        </optgroup>
-                                        <optgroup label="Trade-in Cars">
-                                            @foreach($tradeInCars as $car)
-                                                <option value="tradein_{{ $car->id }}">
-                                                    {{ $car->make }} {{ $car->model }} ({{ $car->year }}) - {{ $car->registration_number }}
-                                                </option>
-                                            @endforeach
-                                        </optgroup>
-                                    </select>
+                                    <label class="form-label">Title <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="title" name="title" required> 
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -189,8 +171,25 @@
                         <div class="row">
                             <div class="col-md-8">
                                 <div class="mb-3">
-                                    <label class="form-label">Title <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control" id="title" name="title" required>
+                                    <label class="form-label">Car </label>
+                                    <select class="form-select" id="carSelection">
+                                        <option value="">Choose a car...</option>
+                                        <optgroup label="Imported Cars">
+                                            @foreach($importedCars as $car)
+                                                <option value="imported_{{ $car->id }}">
+                                                    {{ $car->make }} {{ $car->model }} ({{ $car->year }}) - {{ $car->chassis_number }}
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
+                                        <optgroup label="Trade-in Cars">
+                                            @foreach($tradeInCars as $car)
+                                                <option value="tradein_{{ $car->id }}">
+                                                    {{ $car->make }} {{ $car->model }} ({{ $car->year }}) - {{ $car->registration_number }}
+                                                </option>
+                                            @endforeach
+                                        </optgroup>
+                                    </select>
+                                   
                                 </div>
                             </div>
                             <div class="col-md-4">
