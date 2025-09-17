@@ -11,7 +11,7 @@
                     <h4 class="fs-18 fw-semibold m-0">
                         <i class="fas fa-car me-2"></i>
                         @if($agreement->customerVehicle)
-                            {{ $agreement->customerVehicle->vehicle_make }} ({{ $agreement->customerVehicle->year ?? 'N/A' }})
+                            {{ $agreement->customerVehicle->vehicle_make }} ({{ $agreement->customerVehicle->number_plate ?? 'N/A' }})
                         @elseif($agreement->carImport)
                             {{ $agreement->carImport->make }} {{ $agreement->carImport->model }} ({{ $agreement->carImport->year ?? 'N/A' }})
                         @else

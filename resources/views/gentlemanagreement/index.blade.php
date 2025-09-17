@@ -221,62 +221,74 @@
                         
                         <div class="col-md-6">
                             <label class="form-label">Vehicle Selection *</label>
-                            <select class="form-select" name="vehicle_id" id="vehicle_select" required>
-                                <option value="">Choose Vehicle</option>
-                                
-                                @if($cars->whereNotNull('carsImport')->count() > 0)
-                                    <optgroup label="Imported Vehicles ({{ $cars->whereNotNull('carsImport')->count() }})">
-                                        @foreach ($cars->whereNotNull('carsImport') as $inspection)
-                                            @if($inspection->carsImport)
-                                                @php
-                                                    $import = $inspection->carsImport;
-                                                    $price = $import->selling_price ?? $import->purchase_price ?? $import->price ?? 0;
-                                                @endphp
-                                                <option value="import-{{ $import->id }}" 
-                                                        data-price="{{ $price }}"
-                                                        data-make="{{ $import->make ?? 'Unknown' }}"
-                                                        data-model="{{ $import->model ?? 'Unknown' }}"
-                                                        data-year="{{ $import->year ?? '' }}">
-                                                    {{ $import->make ?? 'Unknown' }} {{ $import->model ?? 'Unknown' }} 
-                                                    @if($import->year) ({{ $import->year }}) @endif
-                                                    @if($price > 0) - KSh {{ number_format($price) }} @endif
-                                                </option>
-                                            @endif
-                                        @endforeach
-                                    </optgroup>
-                                @endif
-                                
-                                @if($cars->whereNotNull('customerVehicle')->count() > 0)
-                                    <optgroup label="Trade-In Vehicles ({{ $cars->whereNotNull('customerVehicle')->count() }})">
-                                        @foreach ($cars->whereNotNull('customerVehicle') as $inspection)
-                                            @if($inspection->customerVehicle)
-                                                @php
-                                                    $customer = $inspection->customerVehicle;
-                                                    $price = $customer->agreed_selling_price ?? $customer->selling_price ?? $customer->evaluated_price ?? $customer->price ?? 0;
-                                                @endphp
-                                                  <option value="customer-{{ $customer->id }}" 
-                                                        data-price="{{ $price }}"
-                                                        data-make="{{ $customer->vehicle_make ?? 'Unknown' }}"
-                                                        data-model="{{ $customer->vehicle_model ?? '' }}"
-                                                        data-plate="{{ $customer->number_plate ?? '' }}"
-                                                        data-variant="{{ $customer->model ?? '' }}">
-                                                    {{ $customer->vehicle_make ?? 'Unknown' }}
-                                                    @if($customer->vehicle_model) - {{ $customer->vehicle_model }} @endif
-                                                    @if($customer->model) - {{ $customer->model }} @endif
-                                                    @if($customer->number_plate) ({{ $customer->number_plate }}) @endif
-                                                    @if($price > 0) - KSh {{ number_format($price) }} @endif
-                                                </option>
-                                            @endif
-                                        @endforeach
-                                    </optgroup>
-                                @endif
-                                
-                                @if($cars->count() == 0)
-                                    <option disabled>No vehicles available</option>
-                                @elseif($cars->whereNotNull('carsImport')->count() == 0 && $cars->whereNotNull('customerVehicle')->count() == 0)
-                                    <option disabled>No vehicles with proper relationships found</option>
-                                @endif
-                            </select>
+       <select class="form-select" name="vehicle_id" id="vehicle_select" required>
+    <option value="">Choose Vehicle</option>
+    
+    {{-- Debug info --}}
+    {{-- Total available cars: {{ $cars->count() }} --}}
+    
+    @if($cars->whereNotNull('carsImport')->count() > 0)
+        <optgroup label="Imported Vehicles ({{ $cars->whereNotNull('carsImport')->count() }})">
+            @foreach ($cars->whereNotNull('carsImport')->sortBy(function($inspection) {
+                $import = $inspection->carsImport;
+                return ($import->make ?? 'Unknown') . ' ' . ($import->model ?? 'Unknown');
+            }) as $inspection)
+                @if($inspection->carsImport)
+                    @php
+                        $import = $inspection->carsImport;
+                        // Try different price fields that might exist
+                        $price = $import->selling_price ?? $import->purchase_price ?? $import->price ?? 0;
+                    @endphp
+                    <option value="import-{{ $import->id }}" 
+                            data-price="{{ $price }}"
+                            data-make="{{ $import->make ?? 'Unknown' }}"
+                            data-model="{{ $import->model ?? 'Unknown' }}"
+                            data-year="{{ $import->year ?? '' }}">
+                        {{ $import->make ?? 'Unknown' }} {{ $import->model ?? 'Unknown' }} 
+                        @if($import->year) ({{ $import->year }}) @endif
+                        @if($price > 0) - KSh {{ number_format($price) }} @endif
+                    </option>
+                @endif
+            @endforeach
+        </optgroup>
+    @endif
+    
+    @if($cars->whereNotNull('customerVehicle')->count() > 0)
+        <optgroup label="Trade-In Vehicles ({{ $cars->whereNotNull('customerVehicle')->count() }})">
+            @foreach ($cars->whereNotNull('customerVehicle')->sortBy(function($inspection) {
+                $customer = $inspection->customerVehicle;
+                return ($customer->vehicle_make ?? 'Unknown') . ' ' . ($customer->vehicle_model ?? '') . ' ' . ($customer->model ?? '');
+            }) as $inspection)
+                @if($inspection->customerVehicle)
+                    @php
+                        $customer = $inspection->customerVehicle;
+                        // Try different price fields that might exist
+                        $price = $customer->agreed_selling_price ?? $customer->selling_price ?? $customer->evaluated_price ?? $customer->price ?? 0;
+                    @endphp
+                    <option value="customer-{{ $customer->id }}" 
+                            data-price="{{ $price }}"
+                            data-make="{{ $customer->vehicle_make ?? 'Unknown' }}"
+                            data-model="{{ $customer->vehicle_model ?? '' }}"
+                            data-plate="{{ $customer->number_plate ?? '' }}"
+                            data-variant="{{ $customer->model ?? '' }}">
+                        {{ $customer->vehicle_make ?? 'Unknown' }}
+                        @if($customer->vehicle_model) - {{ $customer->vehicle_model }} @endif
+                        @if($customer->model) - {{ $customer->model }} @endif
+                        @if($customer->number_plate) ({{ $customer->number_plate }}) @endif
+                        @if($price > 0) - KSh {{ number_format($price) }} @endif
+                    </option>
+                @endif
+            @endforeach
+        </optgroup>
+    @endif
+    
+    {{-- If no vehicles found, show message --}}
+    @if($cars->count() == 0)
+        <option disabled>No vehicles available for hire purchase</option>
+    @elseif($cars->whereNotNull('carsImport')->count() == 0 && $cars->whereNotNull('customerVehicle')->count() == 0)
+        <option disabled>No vehicles with proper relationships found</option>
+    @endif
+</select>
                             
                             <small class="text-muted">
                                 Total: {{ $cars->count() }} | 
