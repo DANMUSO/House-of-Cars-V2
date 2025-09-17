@@ -1281,7 +1281,7 @@
                                     </ul>
                                 </div>
                             </li>
-                             @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director','General-Manager']))
+                             @if(in_array(Auth::user()->role, ['Accountant','Managing-Director','General-Manager']))
                             <li>
                                 <a href="#sidebarForm" data-bs-toggle="collapse">
                                 <i class="fa-solid fa-chart-column"></i>
