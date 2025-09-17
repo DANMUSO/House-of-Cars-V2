@@ -1694,38 +1694,74 @@ window.testLumpSumModal = function() {
     </div>
 
 @else
-    <!-- Enhanced No payment schedule message -->
-    <div class="alert alert-warning border-warning mt-3">
-        <div class="d-flex align-items-start">
-            <div class="me-3">
-                <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
-            </div>
-            <div class="flex-grow-1">
-                <h6 class="alert-heading mb-2 text-warning">
-                    📋 Payment Schedule Missing
-                </h6>
-                <p class="mb-1">
-                    A payment schedule needs to be generated for this loan agreement.
-                </p>
-                @if($agreement->paymentSchedule)
+    @php
+        // Calculate payment progress to check for completion
+        $totalAmountPaid = $agreement->deposit_amount + $agreement->amount_paid;
+        $paymentProgress = $agreement->total_amount > 0 ? 
+            (($totalAmountPaid) / $agreement->total_amount) * 100 : 0;
+        
+        // Check if loan is completed based on percentage
+        $isCompleted = ($paymentProgress >= 100) || ($agreement->status === 'completed');
+    @endphp
+
+    @if($isCompleted)
+        <!-- Enhanced Completed loan message -->
+        <div class="alert alert-success border-success mt-3 shadow-sm">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="fas fa-check-circle fa-3x text-success"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h5 class="alert-heading mb-2 text-success">
+                        🎉 Loan Successfully Completed!
+                    </h5>
+                    <p class="mb-1">All payments have been successfully completed and processed.</p>
                     <small class="text-muted">
-                        <i class="fas fa-info-circle me-1"></i>
-                        Found {{ $agreement->paymentSchedule->count() }} schedule entries, but none qualify as the next payment due.
+                        <i class="fas fa-calendar-check me-1"></i>
+                        Account is in good standing
                     </small>
-                @else
-                    <small class="text-muted">
-                        <i class="fas fa-calendar-plus me-1"></i>
-                        Please contact administration to set up payment schedule.
-                    </small>
-                @endif
-            </div>
-            <div class="ms-3">
-                <button class="btn btn-outline-warning btn-sm">
-                    <i class="fas fa-plus"></i> Generate Schedule
-                </button>
+                </div>
+                <div class="ms-3">
+                    <span class="badge bg-success fs-6">
+                        <i class="fas fa-star"></i> PAID IN FULL
+                    </span>
+                </div>
             </div>
         </div>
-    </div>
+    @else
+        <!-- Enhanced No payment schedule message -->
+        <div class="alert alert-warning border-warning mt-3">
+            <div class="d-flex align-items-start">
+                <div class="me-3">
+                    <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="alert-heading mb-2 text-warning">
+                        📋 Payment Schedule Missing
+                    </h6>
+                    <p class="mb-1">
+                        A payment schedule needs to be generated for this loan agreement.
+                    </p>
+                    @if($agreement->paymentSchedule)
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Found {{ $agreement->paymentSchedule->count() }} schedule entries, but none qualify as the next payment due.
+                        </small>
+                    @else
+                        <small class="text-muted">
+                            <i class="fas fa-calendar-plus me-1"></i>
+                            Please contact administration to set up payment schedule.
+                        </small>
+                    @endif
+                </div>
+                <div class="ms-3">
+                    <button class="btn btn-outline-warning btn-sm">
+                        <i class="fas fa-plus"></i> Generate Schedule
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 @endif
 
 <script>
