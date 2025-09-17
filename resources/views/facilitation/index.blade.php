@@ -384,22 +384,25 @@
                         <span class="badge bg-secondary">Unknown</span>
                     @endif
                 </td>
-                <td>
+                 <td>
 @if($facilitation->receipt_documents && count($facilitation->receipt_documents) > 0)
-    
-    @if($facilitation->request_id == Auth::id())
+    {{-- Receipt exists - everyone can view --}}
     <a href="{{ $facilitation->receipt_url }}" target="_blank" class="btn btn-sm btn-success">
         <i class="fas fa-eye me-1"></i>View Receipt
     </a>
     <small class="d-block text-muted mt-1">{{ $facilitation->receipt_file_size }}</small>
     <small class="d-block text-muted">{{ $facilitation->receipt_uploaded_at->diffForHumans() }}</small>
     
+    {{-- Only owner can delete --}}
+    @if($facilitation->request_id == Auth::id())
         <button class="btn btn-sm btn-outline-danger mt-1 delete-receipt-btn" data-id="{{ $facilitation->id }}">
             <i class="fas fa-trash me-1"></i>Delete
         </button>
     @endif
 @else
-    @if($facilitation->status == 2)
+    {{-- No receipt exists --}}
+    @if($facilitation->status == 2 && $facilitation->request_id == Auth::id())
+        {{-- Only owner can upload if approved --}}
         <button class="btn btn-sm btn-outline-primary upload-receipt-btn" data-id="{{ $facilitation->id }}">
             <i class="fas fa-upload me-1"></i>Upload Receipt
         </button>
@@ -409,7 +412,7 @@
         </span>
     @endif
 @endif
-            </td>
+</td>
                 <td>
                     <strong>{{ $facilitation->created_at->format('M d, Y') }}</strong>
                     <br><small class="text-muted">{{ $facilitation->created_at->diffForHumans() }}</small>

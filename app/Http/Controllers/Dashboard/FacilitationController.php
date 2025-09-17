@@ -64,14 +64,7 @@ public function uploadReceipt(Request $request, $id)
     try {
         $facilitation = Facilitation::findOrFail($id);
         
-        // Only allow receipt upload for approved requests
-        if ($facilitation->status != 2) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Receipts can only be uploaded for approved requests!'
-            ], 400);
-        }
-
+        
         // Get existing receipts or initialize empty array
         $existingReceipts = $facilitation->receipt_documents ?? [];
         
