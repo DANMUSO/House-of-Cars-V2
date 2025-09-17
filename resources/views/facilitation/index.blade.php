@@ -401,8 +401,8 @@
     @endif
 @else
     {{-- No receipt exists --}}
-    @if($facilitation->status == 2 && $facilitation->request_id == Auth::id())
-        {{-- Only owner can upload if approved --}}
+    @if($facilitation->request_id == Auth::id())
+        {{-- Owner can upload receipt --}}
         <button class="btn btn-sm btn-outline-primary upload-receipt-btn" data-id="{{ $facilitation->id }}">
             <i class="fas fa-upload me-1"></i>Upload Receipt
         </button>
@@ -412,7 +412,6 @@
         </span>
     @endif
 @endif
-</td>
                 <td>
                     <strong>{{ $facilitation->created_at->format('M d, Y') }}</strong>
                     <br><small class="text-muted">{{ $facilitation->created_at->diffForHumans() }}</small>
