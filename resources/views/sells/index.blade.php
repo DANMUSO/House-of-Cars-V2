@@ -83,8 +83,8 @@
         <div class="company-details">
             <br>
             <div style="color:#000">
-                <span>📞 +254 715 400 709</span><br>
-                <span>📧 Email: info@kelmercars.co.ke</span><br>
+                <span>📞 +254 715 400 709 | +254735 400 709</span><br>
+                <span>📧 Email: houseofcarske@gmail.com</span><br>
                 <span>🌐 houseofcars.co.ke</span><br>
                 <span>📍 Jabavu Lane, Hurlingham<br>
                     P.O Box 9215 - 00100, Nairobi - Kenya
@@ -487,7 +487,7 @@
                 <div class="company-details">
                     <br>
                     <div style="color:#000">
-                        <span>📞 +254 715 400 709</span><br>
+                        <span>📞 +254 715 400 709 | +254735 400 709</span><br>
                         <span>📧 Email: info@kelmercars.co.ke</span><br>
                         <span>🌐 houseofcars.co.ke</span><br>
                         <span>📍 Jabavu Lane, Hurlingham<br>

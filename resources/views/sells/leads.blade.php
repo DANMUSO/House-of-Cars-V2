@@ -227,15 +227,17 @@
                                     <input type="number" class="form-control" id="commitment_amount" name="commitment_amount" placeholder="0.00" required>
                                 </div>
                             </div>
+                            <!--
                             <div class="col-md-6">
-                                <label class="form-label">Salesperson <span class="text-danger">*</span></label>
-                                <select class="form-select" id="salesperson_id" name="salesperson_id" required>
-                                    <option value="">Select Salesperson</option>
+                                <label class="form-label">Salesperson <span class="text-danger"></span></label>
+                                <select class="form-select" id="salesperson_id" name="salesperson_id">
+                                    <option value="1">Select Salesperson</option>
                                     @foreach($salespeople as $salesperson)
                                         <option value="{{ $salesperson->id }}">{{ $salesperson->first_name }} {{ $salesperson->last_name }}</option>
                                     @endforeach
                                 </select>
                             </div>
+                            -->
                             <div class="col-md-6">
                                 <label class="form-label">Status <span class="text-danger">*</span></label>
                                 <select class="form-select" id="status" name="status" required>
@@ -389,7 +391,7 @@
                                             </td>
                                             <td>
                                                 <div class="btn-group-vertical" role="group">
-                                                    <button class="btn btn-warning btn-sm editBtn mb-1"
+                                                    <!-- <button class="btn btn-warning btn-sm editBtn mb-1"
                                                         data-id="{{ $lead->id }}"
                                                         data-client-name="{{ $lead->client_name }}"
                                                         data-client-phone="{{ $lead->client_phone }}"
@@ -403,7 +405,7 @@
                                                         data-commitment-amount="{{ $lead->commitment_amount }}"
                                                         data-notes="{{ $lead->notes }}">
                                                         <i class="fas fa-edit me-1"></i> Edit
-                                                    </button>
+                                                    </button> -->
                                                     <button class="btn btn-danger btn-sm deleteBtn mb-1" data-id="{{ $lead->id }}">
                                                         <i class="fas fa-trash me-1"></i> Delete
                                                     </button>
@@ -494,6 +496,7 @@
                             </div>
                             </div>
                             <div class="row mb-3">
+                                <!--
                                 <div class="col-md-6">
                                     <label for="editSalesperson" class="form-label">Salesperson</label>
                                     <select class="form-select" name="salesperson_id" id="editSalesperson" required>
@@ -501,7 +504,7 @@
                                             <option value="{{ $salesperson->id }}">{{ $salesperson->first_name }} {{ $salesperson->last_name }}</option>
                                         @endforeach
                                     </select>
-                                </div>
+                                </div>-->
                                 <div class="col-md-6">
                                     <label for="editStatus" class="form-label">Status</label>
                                     <select class="form-select" name="status" id="editStatus" required>

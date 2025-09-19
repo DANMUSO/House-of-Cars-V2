@@ -9,90 +9,125 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+
 class LeadsController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-public function index(Request $request)
-{
-    try {
-        // Now you can use either 'user' or 'users' - both will work
-        $query = Lead::with('users'); // This will now work!
-        
-        // Apply filters
-        if ($request->filled('search')) {
-            $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('client_name', 'LIKE', "%{$search}%")
-                  ->orWhere('car_model', 'LIKE', "%{$search}%")
-                  ->orWhere('client_phone', 'LIKE', "%{$search}%")
-                  ->orWhere('client_email', 'LIKE', "%{$search}%");
-            });
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
-        }
-
-        if ($request->filled('purchase_type')) {
-            $query->where('purchase_type', $request->input('purchase_type'));
-        }
-
-        if ($request->filled('salesperson_id')) {
-            $query->where('salesperson_id', $request->input('salesperson_id'));
-        }
-
-        if ($request->filled('follow_up')) {
-            $followUp = $request->input('follow_up') === 'yes';
-            $query->where('follow_up_required', $followUp);
-        }
-
-        $leads = $query->with('users')->orderBy('created_at', 'desc')->paginate(15);
-        $salespeople = User::select('id','last_name','first_name')->get(); 
-        
-        // Use the model's static method for statistics
-        $statistics = Lead::getStatistics();
-
-        if ($request->ajax()) {
-            return response()->json([
-                'leads' => $leads,
-                'statistics' => $statistics,
-            ]);
-        }
-        return view('sells.leads', compact('leads', 'salespeople', 'statistics'));
-        
-    } catch (\Exception $e) {
-        \Log::error('Error in LeadsController@index: ' . $e->getMessage());
-        
-        // Return default values in case of error
-        $leads = Lead::paginate(15);
-        $salespeople = User::select('id','last_name','first_name')->get();
-        $statistics = Lead::getStatistics(); // This will return safe defaults
-        
-        return view('sells.leads', compact('leads', 'salespeople', 'statistics'))
-               ->with('error', 'Error loading leads data. Please try again.');
-    }
-}
-
-    /**
-     * Calculate and return statistics for the leads dashboard
-     */
-    private function getStatistics()
+    public function index(Request $request)
     {
         try {
+            $userRole = Auth::user()->role;
+            
+            // Initialize the query based on user role
+            if (in_array($userRole, ['Managing-Director', 'Accountant', 'Sales-Manager'])) {
+                // Show all leads for Managing Director, Accountant, and Sales Manager
+                $query = Lead::with('users');
+            } else {
+                // Show only leads assigned to the current user (salesperson)
+                $query = Lead::with('users')->where('salesperson_id', Auth::id());
+            }
+            
+            // Apply filters
+            if ($request->filled('search')) {
+                $search = $request->input('search');
+                $query->where(function ($q) use ($search) {
+                    $q->where('client_name', 'LIKE', "%{$search}%")
+                      ->orWhere('car_model', 'LIKE', "%{$search}%")
+                      ->orWhere('client_phone', 'LIKE', "%{$search}%")
+                      ->orWhere('client_email', 'LIKE', "%{$search}%");
+                });
+            }
+
+            if ($request->filled('status')) {
+                $query->where('status', $request->input('status'));
+            }
+
+            if ($request->filled('purchase_type')) {
+                $query->where('purchase_type', $request->input('purchase_type'));
+            }
+
+            // Only allow filtering by salesperson for privileged roles
+            if ($request->filled('salesperson_id') && in_array($userRole, ['Managing-Director', 'Accountant', 'Sales-Manager'])) {
+                $query->where('salesperson_id', $request->input('salesperson_id'));
+            }
+
+            if ($request->filled('follow_up')) {
+                $followUp = $request->input('follow_up') === 'yes';
+                $query->where('follow_up_required', $followUp);
+            }
+
+            $leads = $query->orderBy('created_at', 'desc')->paginate(15);
+            
+            // Get salespeople list (only for privileged roles)
+            if (in_array($userRole, ['Managing-Director', 'Accountant', 'Sales-Manager'])) {
+                $salespeople = User::select('id','last_name','first_name')->get();
+            } else {
+                $salespeople = collect(); // Empty collection for regular users
+            }
+            
+            // Use the model's static method for statistics
+            $statistics = $this->getStatisticsBasedOnRole();
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'leads' => $leads,
+                    'statistics' => $statistics,
+                ]);
+            }
+            return view('sells.leads', compact('leads', 'salespeople', 'statistics'));
+            
+        } catch (\Exception $e) {
+            \Log::error('Error in LeadsController@index: ' . $e->getMessage());
+            
+            // Return default values in case of error based on role
+            $userRole = Auth::user()->role;
+            if (in_array($userRole, ['Managing-Director', 'Accountant', 'Sales-Manager'])) {
+                $leads = Lead::paginate(15);
+                $salespeople = User::select('id','last_name','first_name')->get();
+            } else {
+                $leads = Lead::where('salesperson_id', Auth::id())->paginate(15);
+                $salespeople = collect();
+            }
+            
+            $statistics = $this->getStatisticsBasedOnRole();
+            
+            return view('sells.leads', compact('leads', 'salespeople', 'statistics'))
+                   ->with('error', 'Error loading leads data. Please try again.');
+        }
+    }
+
+    /**
+     * Calculate and return statistics based on user role
+     */
+    private function getStatisticsBasedOnRole()
+    {
+        try {
+            $userRole = Auth::user()->role;
+            
+            // Build base query based on role
+            if (in_array($userRole, ['Managing-Director', 'Accountant', 'Sales-Manager'])) {
+                // Show statistics for all leads
+                $baseQuery = Lead::query();
+            } else {
+                // Show statistics only for user's own leads
+                $baseQuery = Lead::where('salesperson_id', Auth::id());
+            }
+            
             // Get all counts
-            $activeCount = Lead::where('status', 'Active')->count();
-            $closedCount = Lead::where('status', 'Closed')->count();
-            $unsuccessfulCount = Lead::where('status', 'Unsuccessful')->count();
-            $followUpCount = Lead::where('follow_up_required', true)->count();
-            $financeCount = Lead::where('purchase_type', 'Finance')->count();
-            $cashCount = Lead::where('purchase_type', 'Cash')->count();
+            $activeCount = (clone $baseQuery)->where('status', 'Active')->count();
+            $closedCount = (clone $baseQuery)->where('status', 'Closed')->count();
+            $unsuccessfulCount = (clone $baseQuery)->where('status', 'Unsuccessful')->count();
+            $followUpCount = (clone $baseQuery)->where('follow_up_required', true)->count();
+            $financeCount = (clone $baseQuery)->where('purchase_type', 'Finance')->count();
+            $cashCount = (clone $baseQuery)->where('purchase_type', 'Cash')->count();
             
             // Calculate budget statistics
-            $avgBudget = Lead::avg('client_budget') ?: 0;
-            $totalBudget = Lead::sum('client_budget') ?: 0;
-            $totalLeads = Lead::count();
+            $avgBudget = (clone $baseQuery)->avg('client_budget') ?: 0;
+            $totalBudget = (clone $baseQuery)->sum('client_budget') ?: 0;
+            $totalLeads = (clone $baseQuery)->count();
             
             // Calculate conversion rate (closed leads vs total completed leads)
             $totalCompleted = $closedCount + $unsuccessfulCount;
@@ -141,6 +176,8 @@ public function index(Request $request)
      */
     public function store(Request $request)
     {
+        $userRole = Auth::user()->role;
+        
         $validated = $request->validate([
             'car_model' => 'required|string|max:255',
             'client_name' => 'required|string|max:255',
@@ -149,11 +186,16 @@ public function index(Request $request)
             'purchase_type' => ['required', Rule::in(['Cash', 'Finance'])],
             'client_budget' => 'required|numeric|min:0',
             'status' => ['required', Rule::in(['Active', 'Closed', 'Unsuccessful'])],
-            'salesperson_id' => 'required|exists:users,id',
             'follow_up_required' => 'boolean',
             'notes' => 'nullable|string|max:1000',
             'commitment_amount' => 'required|numeric|min:0',
         ]);
+        // Add the salesperson_id manually
+        $validated['salesperson_id'] = auth()->id();
+        // For regular users, force the salesperson_id to be their own ID
+        if (!in_array($userRole, ['Managing-Director', 'Accountant', 'Sales-Manager'])) {
+            $validated['salesperson_id'] = Auth::id();
+        }
 
         $validated['follow_up_required'] = $request->has('follow_up_required');
 
@@ -164,7 +206,7 @@ public function index(Request $request)
                 'success' => true,
                 'message' => 'Lead created successfully!',
                 'lead' => $lead->load('users'),
-                'statistics' => $this->getStatistics(),
+                'statistics' => $this->getStatisticsBasedOnRole(),
             ]);
         }
   
@@ -176,6 +218,9 @@ public function index(Request $request)
      */
     public function show(Lead $lead)
     {
+        // Check if user can view this lead
+        $this->authorizeLeadAccess($lead);
+        
         $lead->load('users');
 
         if (request()->ajax()) {
@@ -192,6 +237,11 @@ public function index(Request $request)
      */
     public function update(Request $request, Lead $lead)
     {
+        // Check if user can update this lead
+        $this->authorizeLeadAccess($lead);
+        
+        $userRole = Auth::user()->role;
+        
         $validated = $request->validate([
             'car_model' => 'required|string|max:255',
             'client_name' => 'required|string|max:255',
@@ -206,6 +256,11 @@ public function index(Request $request)
             'commitment_amount' => 'required|numeric|min:0',
         ]);
 
+        // For regular users, don't allow changing the salesperson
+        if (!in_array($userRole, ['Managing-Director', 'Accountant', 'Sales-Manager'])) {
+            unset($validated['salesperson_id']);
+        }
+
         $validated['follow_up_required'] = $request->has('follow_up_required');
 
         $lead->update($validated);
@@ -215,7 +270,7 @@ public function index(Request $request)
                 'success' => true,
                 'message' => 'Lead updated successfully!',
                 'lead' => $lead->load('users'),
-                'statistics' => $this->getStatistics(),
+                'statistics' => $this->getStatisticsBasedOnRole(),
             ]);
         }
 
@@ -227,14 +282,19 @@ public function index(Request $request)
      */
     public function destroy(Lead $lead)
     {
-        return $lead;
+        // Check if user can delete this lead (only privileged roles)
+        $userRole = Auth::user()->role;
+        if (!in_array($userRole, ['Managing-Director', 'Accountant','Salesperson', 'Sales-Manager'])) {
+            abort(403, 'Unauthorized action.');
+        }
+        
         $lead->delete();
 
         if (request()->ajax()) {
             return response()->json([
                 'success' => true,
                 'message' => 'Lead deleted successfully!',
-                'statistics' => $this->getStatistics(),
+                'statistics' => $this->getStatisticsBasedOnRole(),
             ]);
         }
 
@@ -252,13 +312,22 @@ public function index(Request $request)
             'status' => ['required', Rule::in(['Active', 'Closed', 'Unsuccessful'])],
         ]);
 
-        $count = Lead::whereIn('id', $request->lead_ids)
-                    ->update(['status' => $request->status]);
+        $userRole = Auth::user()->role;
+        
+        // Build the update query based on role
+        $query = Lead::whereIn('id', $request->lead_ids);
+        
+        // For regular users, only allow updating their own leads
+        if (!in_array($userRole, ['Managing-Director', 'Accountant', 'Sales-Manager'])) {
+            $query->where('salesperson_id', Auth::id());
+        }
+
+        $count = $query->update(['status' => $request->status]);
 
         return response()->json([
             'success' => true,
             'message' => "{$count} leads updated successfully!",
-            'statistics' => $this->getStatistics(),
+            'statistics' => $this->getStatisticsBasedOnRole(),
         ]);
     }
 
@@ -267,7 +336,14 @@ public function index(Request $request)
      */
     public function export(Request $request)
     {
-        $query = Lead::with('users');
+        $userRole = Auth::user()->role;
+        
+        // Initialize query based on role
+        if (in_array($userRole, ['Managing-Director', 'Accountant', 'Sales-Manager'])) {
+            $query = Lead::with('users');
+        } else {
+            $query = Lead::with('users')->where('salesperson_id', Auth::id());
+        }
 
         // Apply same filters as index
         if ($request->filled('search')) {
@@ -288,7 +364,8 @@ public function index(Request $request)
             $query->where('purchase_type', $request->input('purchase_type'));
         }
 
-        if ($request->filled('salesperson_id')) {
+        // Only allow filtering by salesperson for privileged roles
+        if ($request->filled('salesperson_id') && in_array($userRole, ['Managing-Director', 'Accountant', 'Sales-Manager'])) {
             $query->where('salesperson_id', $request->input('salesperson_id'));
         }
 
@@ -338,15 +415,20 @@ public function index(Request $request)
         }, 200, $headers);
     }
 
-    
-
     /**
-     * Calculate conversion rate.
+     * Calculate conversion rate based on role.
      */
     protected function calculateConversionRate()
     {
-        $totalLeads = Lead::count();
-        $closedLeads = Lead::closed()->count();
+        $userRole = Auth::user()->role;
+        
+        if (in_array($userRole, ['Managing-Director', 'Accountant', 'Sales-Manager'])) {
+            $totalLeads = Lead::count();
+            $closedLeads = Lead::where('status', 'Closed')->count();
+        } else {
+            $totalLeads = Lead::where('salesperson_id', Auth::id())->count();
+            $closedLeads = Lead::where('salesperson_id', Auth::id())->where('status', 'Closed')->count();
+        }
         
         if ($totalLeads === 0) {
             return 0;
@@ -356,11 +438,18 @@ public function index(Request $request)
     }
 
     /**
-     * Get leads data for API/AJAX requests.
+     * Get leads data for API/AJAX requests based on role.
      */
     public function getData(Request $request)
     {
-        $query = Lead::with('users');
+        $userRole = Auth::user()->role;
+        
+        // Initialize query based on role
+        if (in_array($userRole, ['Managing-Director', 'Accountant', 'Sales-Manager'])) {
+            $query = Lead::with('users');
+        } else {
+            $query = Lead::with('users')->where('salesperson_id', Auth::id());
+        }
 
         // Apply filters (same as index method)
         if ($request->filled('search')) {
@@ -381,7 +470,8 @@ public function index(Request $request)
             $query->where('purchase_type', $request->input('purchase_type'));
         }
 
-        if ($request->filled('salesperson_id')) {
+        // Only allow filtering by salesperson for privileged roles
+        if ($request->filled('salesperson_id') && in_array($userRole, ['Managing-Director', 'Accountant', 'Sales-Manager'])) {
             $query->where('salesperson_id', $request->input('salesperson_id'));
         }
 
@@ -391,11 +481,31 @@ public function index(Request $request)
         }
 
         $leads = $query->orderBy('created_at', 'desc')->paginate(15);
-        $statistics = $this->getStatistics();
+        $statistics = $this->getStatisticsBasedOnRole();
 
         return response()->json([
             'leads' => $leads,
             'statistics' => $statistics,
         ]);
+    }
+
+    /**
+     * Check if the current user can access the given lead
+     */
+    private function authorizeLeadAccess(Lead $lead)
+    {
+        $userRole = Auth::user()->role;
+        
+        // Privileged roles can access all leads
+        if (in_array($userRole, ['Managing-Director', 'Accountant', 'Sales-Manager'])) {
+            return true;
+        }
+        
+        // Regular users can only access their own leads
+        if ($lead->salesperson_id !== Auth::id()) {
+            abort(403, 'Unauthorized access to this lead.');
+        }
+        
+        return true;
     }
 }
