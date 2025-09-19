@@ -223,7 +223,8 @@ class SalesController extends Controller
                         ->merge($gentlemanagreement)
                         ->sortByDesc('created_at');
         $vehicles = CustomerVehicle::onlyTrashed()->where('status', 1)->get();
-
+        
+     
         
         return view('sells.index', compact('combined','vehicles'));
     }

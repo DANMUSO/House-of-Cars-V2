@@ -83,6 +83,22 @@
                                                                 <label class="form-label">Deposit</label>
                                                                 <input type="number" class="form-control" id="deposit" name="deposit" required>
                                                             </div>-->
+                                                              <div class="col-md-6">
+                                                                <label class="form-label">Engine Number</label>
+                                                                <input type="text" class="form-control" id="engine_no" name="engine_no" required>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label">Engine Capacity</label>
+                                                                <input type="text" class="form-control" id="engine_capacity" name="engine_capacity" required>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label">Transmission</label>
+                                                                <input type="text" class="form-control" id="transmission" name="transmission" required>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label class="form-label">Colour</label>
+                                                                <input type="text" class="form-control" id="colour" name="colour" required>
+                                                            </div>
                                                             <div class="col-md-6">
                                                                 <label class="form-label">Photos</label>
                                                                 <input type="file" class="form-control" id="photos" name="photos[]" multiple required>
@@ -282,6 +298,22 @@
                                                                 <label class="form-label">Deposit</label>
                                                                 <input type="number" class="form-control" id="editdeposit" name="editdeposit" value="{{ $bid->deposit }}" required>
                                                             </div>-->
+                                                              <div class="col-md-6">
+                                                                    <label class="form-label">Engine Number</label>
+                                                                    <input type="text" class="form-control" id="editengine_no" name="editengine_no" value="{{ $bid-> engine_no}}" required>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label">Engine Capacity</label>
+                                                                    <input type="text" class="form-control" id="editengine_capacity" name="editengine_capacity" value="{{ $bid-> engine_capacity}}" required>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label">Transmission</label>
+                                                                    <input type="text" class="form-control" id="edittransmission" name="edittransmission" value="{{ $bid-> transmission}}" required>
+                                                                </div>
+                                                                <div class="col-md-6">
+                                                                    <label class="form-label">Colour</label>
+                                                                    <input type="text" class="form-control" id="editcolour" name="editcolour" value="{{ $bid-> colour}}" required>
+                                                                </div>
                                                             <div class="col-md-6">
                                                                 <label class="form-label">Photos</label>
                                                                 <input type="file" class="form-control" id="editphotos" name="editphotos[]" multiple>

@@ -265,9 +265,14 @@
                             <label class="form-label">Phone No</label>
                             <input type="number" class="form-control" id="Phone_No" name="Phone_No" required>
                         </div>
+                         
                         <div class="col-md-6">
                             <label class="form-label">Email Address </label>
                             <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                         <div class="col-md-6">
+                            <label class="form-label">National ID</label>
+                            <input type="number" class="form-control" id="national_id" name="national_id" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Vehicle Make/Type</label>
@@ -284,6 +289,22 @@
                         <div class="col-md-6">
                             <label class="form-label">Number Plate</label>
                             <input type="text" class="form-control" id="Number_Plate" name="Number_Plate" required>
+                        </div>
+                          <div class="col-md-6">
+                            <label class="form-label">Engine Number</label>
+                            <input type="text" class="form-control" id="engine_no" name="engine_no" required>
+                        </div>
+                          <div class="col-md-6">
+                            <label class="form-label">Engine Capacity</label>
+                            <input type="text" class="form-control" id="engine_capacity" name="engine_capacity" required>
+                        </div>
+                          <div class="col-md-6">
+                            <label class="form-label">Transmission</label>
+                            <input type="text" class="form-control" id="transmission" name="transmission" required>
+                        </div>
+                          <div class="col-md-6">
+                            <label class="form-label">Colour</label>
+                            <input type="text" class="form-control" id="colour" name="colour" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Minimum Price</label>
@@ -492,8 +513,14 @@
                                                     <div class="row mb-3">
                                                         <div class="col">
                                                             <label class="form-label">Phone Number</label>
-                                                            <input type="text" class="form-control" name="phone_nov1" value="{{ $vehicle->phone_no }}" required>
+                                                            <input type="number" class="form-control" name="phone_nov1" value="{{ $vehicle->phone_no }}" required>
                                                         </div>
+                                                        <div class="col">
+                                                            <label class="form-label">National ID</label>
+                                                            <input type="number" class="form-control" name="national_idv1" value="{{ $vehicle->national_id }}" required>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row mb-3">
                                                         <div class="col">
                                                             <label class="form-label">Email</label>
                                                             <input type="email" class="form-control" name="emailv1" value="{{ $vehicle->email }}" required>
@@ -519,6 +546,22 @@
                                                         <div class="col">
                                                             <label class="form-label">Number Plate</label>
                                                             <input type="text" class="form-control" name="number_platev1" value="{{ $vehicle->number_plate }}" required>
+                                                        </div>
+                                                          <div class="col-md-6">
+                                                            <label class="form-label">Engine Number</label>
+                                                            <input type="text" class="form-control" id="engine_nov1" name="engine_nov1" value="{{ $vehicle->engine_no }}" required>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label">Engine Capacity</label>
+                                                            <input type="text" class="form-control" id="engine_capacityv1" name="engine_capacityv1" value="{{ $vehicle->engine_capacity }}" required>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label">Transmission</label>
+                                                            <input type="text" class="form-control" id="transmissionv1" name="transmissionv1" value="{{ $vehicle->transmission }}" required>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label class="form-label">Colour</label>
+                                                            <input type="text" class="form-control" id="colourv1" name="colourv1" value="{{ $vehicle->colour }}" required>
                                                         </div>
                                                         <div class="col">
                                                         <label class="form-label">Minimum Price</label>

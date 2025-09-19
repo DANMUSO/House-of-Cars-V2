@@ -58,8 +58,9 @@
 
     <!-- Compact Gate Pass Cards -->
     <div class="row" id="gate-pass-container">
+        
         @foreach($combined as $sale)
-        <div class="col-md-6 col-lg-4 gate-pass-item" 
+        <div class="col-md-6 col-lg-6 gate-pass-item" 
              data-sale-type="{{ $sale->record_type }}"
              data-pass-id="GP-{{ str_pad($sale->id, 6, '0', STR_PAD_LEFT) }}"
              data-id-number="{{ $sale->ID_Number ?? $sale->customer_id_number ?? $sale->national_id ?? '' }}"
@@ -72,346 +73,715 @@
              }}">
             
             <div class="card gate-pass-card mb-3" id="gate-pass-{{ $sale->id }}">
-                <!-- Compact Header -->
-                <div class="gate-pass-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="mb-0 text-white fw-bold">Gate Pass</h6>
-                            <small class="text-white-50">ID: GP-{{ str_pad($sale->id, 6, '0', STR_PAD_LEFT) }}</small>
-                        </div>
-                        <div class="text-end">
-                            @if($sale->record_type == 'incash')
-                                <span class="badge bg-success">CASH</span>
-                            @elseif($sale->record_type == 'hire_purchase')
-                                <span class="badge bg-info">H.P.</span>
-                            @else
-                                <span class="badge bg-warning">G.A.</span>
-                            @endif
-                            <div class="small text-white-50">{{ \Carbon\Carbon::parse($sale->created_at)->format('M d, Y') }}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Compact Body -->
-                <div class="gate-pass-body p-4">
-                    <!-- Vehicle Section -->
-                    <div class="info-section">
-                        <div class="section-header">
-                            <i class="fas fa-car"></i>
-                            <span>VEHICLE DETAILS</span>
-                        </div>
-                        <div class="section-content">
-                            <div class="primary-info">
-                                @if($sale->record_type == 'incash')
-                                    @if($sale->car_type == 'import' && $sale->carImport)
-                                        {{ $sale->carImport->make }} {{ $sale->carImport->model }} ({{ $sale->carImport->year }})
-                                    @elseif($sale->car_type == 'customer' && $sale->customerVehicle)
-                                        {{ $sale->customerVehicle->vehicle_make }}
-                                    @else
-                                        N/A
-                                    @endif
-                                @elseif($sale->record_type == 'hire_purchase')
-                                    @if($sale->carImport)
-                                        {{ $sale->carImport->make }} {{ $sale->carImport->model }} ({{ $sale->carImport->year }})
-                                    @elseif($sale->customerVehicle)
-                                        {{ $sale->customerVehicle->vehicle_make }}
-                                    @else
-                                        N/A
-                                    @endif
-                                @else
-                                    @if($sale->car_type == 'import' && $sale->carImport)
-                                        {{ $sale->carImport->make }} {{ $sale->carImport->model }} ({{ $sale->carImport->year }})
-                                    @elseif($sale->car_type == 'customer' && $sale->customerVehicle)
-                                        {{ $sale->customerVehicle->vehicle_make }}
-                                    @else
-                                        {{ $sale->vehicle_make ?? 'N/A' }} {{ $sale->vehicle_model ?? '' }}
-                                    @endif
-                                @endif
-                            </div>
-                            <div class="secondary-info">
-                                Chassis: 
-                                @if($sale->record_type == 'incash')
-                                    {{ $sale->carImport->vin ?? $sale->customerVehicle->chasis_no ?? 'N/A' }}
-                                @elseif($sale->record_type == 'hire_purchase')
-                                    {{ $sale->carImport->vin ?? $sale->carImport->chassis_number ?? $sale->customerVehicle->chasis_no ?? 'N/A' }}
-                                @else
-                                    {{ $sale->carImport->chassis_number ?? $sale->carImport->vin ?? $sale->customerVehicle->chasis_no ?? 'N/A' }}
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Customer Section -->
-                    <div class="info-section">
-                        <div class="section-header">
-                            <i class="fas fa-user"></i>
-                            <span>CUSTOMER DETAILS</span>
-                        </div>
-                        <div class="section-content">
-                            <div class="customer-layout">
-                                <div class="customer-main">
-                                    <div class="primary-info">
-                                        @if($sale->record_type == 'incash')
-                                            {{ $sale->Client_Name ?? 'N/A' }}
-                                        @elseif($sale->record_type == 'hire_purchase')
-                                            {{ $sale->customer_name ?? $sale->client_name ?? 'N/A' }}
-                                        @else
-                                            {{ $sale->client_name ?? 'N/A' }}
-                                        @endif
-                                    </div>
-                                    <div class="secondary-info">
-                                        Phone: 
-                                        @if($sale->record_type == 'incash')
-                                            {{ $sale->Phone_No ?? 'N/A' }}
-                                        @elseif($sale->record_type == 'hire_purchase')
-                                            {{ $sale->customer_phone ?? $sale->phone_number ?? 'N/A' }}
-                                        @else
-                                            {{ $sale->phone_number ?? 'N/A' }}
-                                        @endif
-                                        Email: 
-                                        @if($sale->record_type == 'incash')
-                                            {{ $sale->email ?? 'N/A' }}
-                                        @elseif($sale->record_type == 'hire_purchase')
-                                            {{ $sale->customer_phone ?? $sale->email ?? 'N/A' }}
-                                        @else
-                                            {{ $sale->email ?? 'N/A' }}
-                                        @endif
-                                    </div>
-                                </div>
-                                <div class="customer-id">
-                                    <div class="id-label">ID Number</div>
-                                    <div class="id-number">
-                                        @if($sale->record_type == 'incash')
-                                            {{ $sale->ID_Number ?? 'N/A' }}
-                                        @elseif($sale->record_type == 'hire_purchase')
-                                            {{ $sale->customer_id_number ?? $sale->national_id ?? 'N/A' }}
-                                        @else
-                                            {{ $sale->national_id ?? 'N/A' }}
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Authorization Section -->
-                    <div class="info-section">
-                        <div class="section-header">
-                            <i class="fas fa-clipboard-check"></i>
-                            <span>AUTHORIZATION</span>
-                        </div>
-                        <div class="section-content">
-                            <div class="auth-grid">
-                                <div class="auth-item">
-                                    <span class="auth-label">Purpose:</span>
-                                    <span class="auth-value">Vehicle delivery</span>
-                                </div>
-                                <div class="auth-item">
-                                    <span class="auth-label">Date:</span>
-                                    <span class="auth-value">{{ \Carbon\Carbon::parse($sale->created_at)->format('Y-m-d') }}</span>
-                                </div>
-                                <div class="auth-item">
-                                    <span class="auth-label">Time:</span>
-                                    <span class="auth-value">{{ \Carbon\Carbon::parse($sale->created_at)->format('H:i') }}</span>
-                                </div>
-                                <div class="auth-item">
-                                    <span class="auth-label">By:</span>
-                                    <span class="auth-value">{{ $sale->authorized_by ?? 'Showroom Manager' }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Security Alert -->
-                    <!-- <div class="security-verification">
-                        <div class="verification-icon">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                        <div class="verification-content">
-                           
-                            <div class="verification-text">Security must check customer ID before vehicle release</div>
-                        </div>
-                    </div> -->
-                    <!-- ADD SIGNATURE SECTIONS HERE -->
-<div class="signatures-section">
-    <div class="signatures-header">Authorization Signatures</div>
-    <div class="signatures-grid">
-        <!-- Buyer Signature -->
-        <div class="signature-box">
-            <div class="signature-label">Seller</div>
-            <div class="signature-area"></div>
-            <div class="signature-date">
-                <strong>Date:</strong> ________________
-            </div>
+                <div class="row">
+    <div class="col-md-4">
+        <div class="company-logo">
+            <img src="{{asset('dashboardv1/assets/images/houseofcars.png')}}" alt="House of Cars" class="logo-img" style="height:160px; width:auto">
         </div>
-        
-        <!-- Seller Representative Signature -->
-        <div class="signature-box">
-            <div class="signature-label">Buyer</div>
-            <div class="signature-area"></div>
-            <div class="signature-date">
-                <strong>Date:</strong> ________________
+    </div>
+    <div class="col-md-8">
+        <div class="company-details">
+            <br>
+            <div style="color:#000">
+                <span>📞 +254 715 400 709</span><br>
+                <span>📧 Email: info@kelmercars.co.ke</span><br>
+                <span>🌐 houseofcars.co.ke</span><br>
+                <span>📍 Jabavu Lane, Hurlingham<br>
+                    P.O Box 9215 - 00100, Nairobi - Kenya
+                </span>
             </div>
         </div>
     </div>
+     <div class="text-center mb-3" style="border-bottom: 3px solid #007bff; padding-bottom: 10px;">
+            <h5 style="font-weight: bold; color: #000; margin: 0;">GATEPASS/DELIVERY</h5>
+        </div>
 </div>
+
+<div class="col-md-12">
+    <!-- Vehicle Section -->
+    <div class="info-section">
+        <div class="section-header">
+            <i class="fas fa-car" style="background-color: #f8f9fa !important; color: black !important;"></i>
+            <span style="background-color: #f8f9fa !important; color: black !important;">VEHICLE DETAILS</span>
+        </div>
+        <div class="section-content" class="text-center" >
+            <div class="row">
+                <!-- Registration/Number Plate -->
+                <div class="col-md-6">
+                    <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                        <strong>Registration:</strong>
+                        @if($sale->record_type == 'incash')
+                            @if($sale->car_type == 'import' && $sale->carImport)
+                                {{ $sale->carImport->vin ?? 'N/A' }}
+                            @elseif($sale->car_type == 'customer' && $sale->customerVehicle)
+                                {{ $sale->customerVehicle->number_plate ?? 'N/A' }}
+                            @else
+                                N/A
+                            @endif
+                        @elseif($sale->record_type == 'hire_purchase')
+                            @if($sale->carImport)
+                                {{ $sale->carImport->vin ?? 'N/A' }}
+                            @elseif($sale->customerVehicle)
+                                {{ $sale->customerVehicle->number_plate ?? 'N/A' }}
+                            @else
+                                N/A
+                            @endif
+                        @else
+                            @if($sale->car_type == 'import' && $sale->carImport)
+                                {{ $sale->carImport->vin ?? 'N/A' }}
+                            @elseif($sale->car_type == 'customer' && $sale->customerVehicle)
+                                {{ $sale->customerVehicle->number_plate ?? 'N/A' }}
+                            @else
+                                {{ $sale->vehicle_plate ?? 'N/A' }}
+                            @endif
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Stock No -->
+                <div class="col-md-6">
+                    <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                        <strong>Stock No:</strong>
+                        @if($sale->car_type == 'import')
+                            {{ $sale->carImport->id ?? $sale->imported_id ?? 'N/A' }}
+                        @else
+                            {{ $sale->customerVehicle->id ?? $sale->car_id ?? 'N/A' }}
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Year of Manufacture -->
+                <div class="col-md-6">
+                    <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                        <strong>Year:</strong>
+                        @if($sale->car_type == 'import' && $sale->carImport)
+                            {{ $sale->carImport->year ?? 'N/A' }}
+                        @elseif($sale->car_type == 'customer' && $sale->customerVehicle)
+                            @php
+                                $model = $sale->customerVehicle->model ?? '';
+                                preg_match('/(\d{4})/', $model, $matches);
+                                echo $matches[1] ?? 'N/A';
+                            @endphp
+                        @else
+                            {{ $sale->vehicle_year ?? 'N/A' }}
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Make -->
+                <div class="col-md-6">
+                    <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                        <strong>Make:</strong>
+                        @if($sale->car_type == 'import' && $sale->carImport)
+                            {{ $sale->carImport->make ?? 'N/A' }}
+                        @elseif($sale->car_type == 'customer' && $sale->customerVehicle)
+                            {{ $sale->customerVehicle->vehicle_make ?? 'N/A' }}
+                        @else
+                            {{ $sale->vehicle_make ?? 'N/A' }}
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Model -->
+                <div class="col-md-6">
+                    <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                        <strong>Model:</strong>
+                        @if($sale->car_type == 'import' && $sale->carImport)
+                            {{ $sale->carImport->model ?? 'N/A' }}
+                        @elseif($sale->car_type == 'customer' && $sale->customerVehicle)
+                            {{ $sale->customerVehicle->model ?? 'N/A' }}
+                        @else
+                            {{ $sale->vehicle_model ?? 'N/A' }}
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Chassis No / VIN -->
+                <div class="col-md-6">
+                    <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                        <strong>Chassis/VIN:</strong>
+                        @if($sale->car_type == 'import' && $sale->carImport)
+                            {{ $sale->carImport->vin ?? 'N/A' }}
+                        @elseif($sale->car_type == 'customer' && $sale->customerVehicle)
+                            {{ $sale->customerVehicle->chasis_no ?? 'N/A' }}
+                        @else
+                            {{ $sale->chassis_number ?? 'N/A' }}
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Color -->
+                <div class="col-md-6">
+                    <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                        <strong>Color:</strong>
+                        @if($sale->car_type == 'import' && $sale->carImport)
+                            {{ $sale->carImport->colour ?? 'N/A' }}
+                        @elseif($sale->car_type == 'customer' && $sale->customerVehicle)
+                            {{ $sale->customerVehicle->colour ?? 'N/A' }}
+                        @else
+                            N/A
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Engine No -->
+                <div class="col-md-6">
+                    <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                        <strong>Engine No:</strong>
+                        @if($sale->car_type == 'import' && $sale->carImport)
+                            {{ $sale->carImport->engine_no ?? 'N/A' }}
+                        @elseif($sale->car_type == 'customer' && $sale->customerVehicle)
+                            {{ $sale->customerVehicle->engine_no ?? 'N/A' }}
+                        @else
+                            N/A
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Engine Capacity/CC -->
+                <div class="col-md-6">
+                    <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                        <strong>Engine CC:</strong>
+                        @if($sale->car_type == 'import' && $sale->carImport)
+                            {{ $sale->carImport->engine_capacity ?? $sale->carImport->engine_type ?? 'N/A' }}
+                        @elseif($sale->car_type == 'customer' && $sale->customerVehicle)
+                            {{ $sale->customerVehicle->engine_capacity ?? 'N/A' }}
+                        @else
+                            N/A
+                        @endif
+                    </div>
+                </div>
+
+                <!-- Transmission -->
+                <div class="col-md-6">
+                    <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                        <strong>Transmission:</strong>
+                        @if($sale->car_type == 'import' && $sale->carImport)
+                            {{ $sale->carImport->transmission ?? 'N/A' }}
+                        @elseif($sale->car_type == 'customer' && $sale->customerVehicle)
+                            {{ $sale->customerVehicle->transmission ?? 'N/A' }}
+                        @else
+                            N/A
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+         <!-- Vehicle Inspection Checklist -->
+    <div class="info-section mt-4">
+        <div class="section-header">
+            <i class="fas fa-clipboard-check" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;"></i>
+            <span class="text-center" style=" background-color: #f8f9fa !important; color: black !important;">VEHICLE INSPECTION CHECKLIST</span>
+        </div>
+        <div class="section-content">
+            <div class="inspection-notice mb-3">
+                <div class="alert alert-info">
+                    <strong>Notice:</strong> I/We have received the above mentioned motor vehicle and have confirmed that it is in good order and condition as per the inventory form.
                 </div>
             </div>
             
-            <!-- Download Button OUTSIDE Card -->
+            <div class="inspection-table">
+                <table class="table table-bordered" style="background-color: white !important; color: black !important;">
+                    <thead style="background-color: #f8f9fa !important; color: black !important;">
+                        <tr>
+                            <th style="background-color: #f8f9fa !important; color: black !important;">Item</th>
+                            <th class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">Present</th>
+                            <th class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">Absent</th>
+                        </tr>
+                    </thead>
+                    <tbody style="background-color: white !important; color: black !important;">
+                        <tr >
+                            <td class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;"><strong>Spare Wheel</strong></td>
+                            <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="spare_wheel_present" id="spare_wheel_present">
+                                </div>
+                            </td>
+                            <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="spare_wheel_absent" id="spare_wheel_absent">
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;"><strong>Wheel Spanner</strong></td>
+                            <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="wheel_spanner_present" id="wheel_spanner_present">
+                                </div>
+                            </td>
+                            <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="wheel_spanner_absent" id="wheel_spanner_absent">
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;"><strong>Jack</strong></td>
+                            <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="jack_present" id="jack_present">
+                                </div>
+                            </td>
+                            <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="jack_absent" id="jack_absent">
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;"><strong>Life Saver</strong></td>
+                            <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="life_saver_present" id="life_saver_present">
+                                </div>
+                            </td>
+                            <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="life_saver_absent" id="life_saver_absent">
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td  class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;"><strong>First Aid Kit</strong></td>
+                            <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="first_aid_kit_present" id="first_aid_kit_present">
+                                </div>
+                            </td>
+                            <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="first_aid_kit_absent" id="first_aid_kit_absent">
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- Comments Section -->
+            <div class="comments-section mt-4">
+                <div class="row">
+                    <div class="col-md-12">
+                        <label for="comments" class="form-label" style="font-weight: bold; color: #dc3545; border-bottom: 2px solid #dc3545; padding-bottom: 2px;">
+                            Comments:
+                        </label>
+                        <textarea 
+                            class="form-control mt-2" 
+                            id="comments" 
+                            name="comments" 
+                            rows="2" 
+                            placeholder="Enter any additional comments or observations about the vehicle condition..."
+                            style="background-color: white !important; color: black !important; border: 1px solid #dee2e6;">
+                        </textarea>
+                    </div>
+                </div>
+                
+            </div>
+            <!-- Comments Section -->
+            <div class="comments-section mt-4">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="notice-box" style="background-color: #dc3545; color: white; padding: 20px; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: bold; border-radius: 8px;">
+                            I/We have received the motor vehicle above in good order and condition
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                    <div class="signature-box delivered-by-section" style="padding: 20px;  background-color: white;">
+    <div style="margin-bottom: 15px; font-weight: bold;  color: black !important;" >
+        Vehicle delivered by:
+    </div>
+    <div class="form-group mb-3">
+        <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Name:</div>
+        <div class="delivered-by-name" style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px;"></div>
+    </div>
+    <div class="form-group mb-3">
+        <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Sign:</div>
+        <div class="delivered-by-email" style="height: 35px; border-bottom: 1px solid #000; margin-bottom: 10px;"></div>
+    </div>
+    <div class="form-group">
+        <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Date:</div>
+        <div class="delivered-by-date" style="height: 25px; border-bottom: 1px solid #000; width: 120px;"></div>
+    </div>
+</div>
+                    </div>
+                    <div class="col-md-6">
+                         <div class="signature-box" style="padding: 20px; height: 200px; background-color: white;">
+                            <div style="margin-bottom: 15px; font-weight: bold;   color: black !important;">
+                                Vehicle received by:
+                            </div>
+                            <div class="form-group mb-3">
+                                <div style="margin-bottom: 5px; font-size: 14px;   color: black !important;">Name: 
+                                   
+                                    </div>
+                                <div style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px; color: black !important;">   @if($sale->record_type == 'incash')
+                                        {{ $sale->Client_Name ?? 'N/A' }}
+                                    @elseif($sale->record_type == 'hire_purchase')
+                                        {{ $sale->client_name ?? 'N/A' }}
+                                    @elseif($sale->record_type == 'gentleman_agreement')
+                                        {{ $sale->client_name ?? 'N/A' }}
+                                    @else
+                                        {{ $sale->client_name ?? $sale->Client_Name ?? 'N/A' }}
+                                    @endif</div>
+                            </div>
+                            <div class="form-group mb-3">
+                                <div style="margin-bottom: 5px; font-size: 14px;   color: black !important;">Sign | ID: 
+                                   
+                                </div>
+                                <div style="height: 35px; border-bottom: 1px solid #000; margin-bottom: 10px; color: black !important;"> 
+                                     @if($sale->record_type == 'incash')
+                                        {{ $sale->National_ID ?? 'N/A' }}
+                                    @elseif($sale->record_type == 'hire_purchase')
+                                        {{ $sale->national_id ?? 'N/A' }}
+                                    @elseif($sale->record_type == 'gentleman_agreement')
+                                        {{ $sale->national_id ?? 'N/A' }}
+                                    @else
+                                        {{ $sale->national_id ?? $sale->National_ID ?? 'N/A' }}
+                                    @endif</div>
+                            </div>
+                             <div class="form-group">
+                                <div style="margin-bottom: 5px; font-size: 14px;   color: black !important;">Date:</div>
+                                <div style="height: 25px; border-bottom: 1px solid #000; width: 120px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+
+            
+        </div>
+    </div>
+    
+    </div>
+</div>
+
+            </div>
+            <div class="row">
+             <div class="col-md-12">
+                <!-- Download Button OUTSIDE Card -->
             <div class="download-actions mb-3">
                 <button class="btn btn-primary btn-sm w-100" onclick="downloadCard({{ $sale->id }})">
                     <i class="fas fa-download"></i> Download Gate Pass
                 </button>
             </div>
+            </div>
+            </div>
+            
         </div>
         @endforeach
 
         @foreach($vehicles as $vehicle)
-        <div class="col-md-6 col-lg-4 gate-pass-item" 
-             data-sale-type="deleted_vehicle"
-             data-pass-id="GP-{{ str_pad($vehicle->id, 6, '0', STR_PAD_LEFT) }}"
-             data-id-number=""
-             data-customer="{{ $vehicle->customer_name }}"
-             data-vehicle="{{ $vehicle->vehicle_make }} {{ $vehicle->model }}">
-            
-            <div class="card gate-pass-card mb-3" id="gate-pass-{{ $vehicle->id }}">
-                <!-- Compact Header -->
-                <div class="gate-pass-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="mb-0 text-white fw-bold">Gate Pass</h6>
-                            <small class="text-white-50">ID: GP-{{ str_pad($vehicle->id, 6, '0', STR_PAD_LEFT) }}</small>
-                        </div>
-                        <div class="text-end">
-                            @if($vehicle->sell_type == 1)
-                                <span class="badge bg-success">TRADE-IN</span>
-                            @else
-                                <span class="badge bg-info">SELL-BEHALF</span>
-                            @endif
-                            <div class="small text-white-50">{{ \Carbon\Carbon::parse($vehicle->created_at)->format('M d, Y') }}</div>
-                        </div>
-                    </div>
+<div class="col-md-6 col-lg-6 gate-pass-item" 
+     data-pass-id="GP-{{ str_pad($vehicle->id, 6, '0', STR_PAD_LEFT) }}"
+     data-customer="{{ $vehicle->customer_name ?? '' }}"
+     data-vehicle="{{ $vehicle->vehicle_make ?? '' }} {{ $vehicle->model ?? '' }}">
+    
+    <div class="card gate-pass-card mb-3" id="gate-pass-{{ $vehicle->id }}">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="company-logo">
+                    <img src="{{asset('dashboardv1/assets/images/houseofcars.png')}}" alt="House of Cars" class="logo-img" style="height:160px; width:auto">
                 </div>
-
-                <!-- Compact Body -->
-                <div class="gate-pass-body p-4">
-                    <!-- Vehicle Section -->
-                    <div class="info-section">
-                        <div class="section-header">
-                            <i class="fas fa-car"></i>
-                            <span>VEHICLE DETAILS</span>
-                        </div>
-                        <div class="section-content">
-                            <div class="primary-info">
-                                {{ $vehicle->vehicle_make }} {{ $vehicle->model }}
-                            </div>
-                            <div class="secondary-info">
-                                Chassis: {{ $vehicle->chasis_no ?? 'N/A' }}
-                                <br>
-                                Plate: {{ $vehicle->number_plate ?? 'N/A' }}
-                                <br>
-                                Min Price: KSh {{ number_format($vehicle->minimum_price, 2) }}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Customer Section -->
-                    <div class="info-section">
-                        <div class="section-header">
-                            <i class="fas fa-user"></i>
-                            <span>CUSTOMER DETAILS</span>
-                        </div>
-                        <div class="section-content">
-                            <div class="customer-layout">
-                                <div class="customer-main">
-                                    <div class="primary-info">
-                                        {{ $vehicle->customer_name ?? 'N/A' }}
-                                    </div>
-                                    <div class="secondary-info">
-                                        Phone: {{ $vehicle->phone_no ?? 'N/A' }}
-                                        <br>
-                                        Email: {{ $vehicle->email ?? 'N/A' }}
-                                    </div>
-                                </div>
-                                <div class="customer-id">
-                                    <div class="id-label">ID Number</div>
-                                    <div class="id-number">N/A</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Authorization Section -->
-                    <div class="info-section">
-                        <div class="section-header">
-                            <i class="fas fa-clipboard-check"></i>
-                            <span>AUTHORIZATION</span>
-                        </div>
-                        <div class="section-content">
-                            <div class="auth-grid">
-                                <div class="auth-item">
-                                    <span class="auth-label">Purpose:</span>
-                                    <span class="auth-value">Vehicle delivery</span>
-                                </div>
-                                <div class="auth-item">
-                                    <span class="auth-label">Date:</span>
-                                    <span class="auth-value">{{ \Carbon\Carbon::parse($vehicle->created_at)->format('Y-m-d') }}</span>
-                                </div>
-                                <div class="auth-item">
-                                    <span class="auth-label">Time:</span>
-                                    <span class="auth-value">{{ \Carbon\Carbon::parse($vehicle->created_at)->format('H:i') }}</span>
-                                </div>
-                                <div class="auth-item">
-                                    <span class="auth-label">By:</span>
-                                    <span class="auth-value">Showroom Manager</span>
-                                </div>
-                                <div class="auth-item">
-                                    <span class="auth-label">Status:</span>
-                                    <span class="auth-value text-danger">DELETED</span>
-                                </div>
-                                <div class="auth-item">
-                                    <span class="auth-label">Deleted:</span>
-                                    <span class="auth-value">{{ \Carbon\Carbon::parse($vehicle->deleted_at)->format('M d, Y') }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ADD SIGNATURE SECTIONS HERE -->
-                    <div class="signatures-section">
-                        <div class="signatures-header">Authorization Signatures</div>
-                        <div class="signatures-grid">
-                            <!-- Buyer Signature -->
-                            <div class="signature-box">
-                                <div class="signature-label">Seller</div>
-                                <div class="signature-area"></div>
-                                <div class="signature-date">
-                                    <strong>Date:</strong> ________________
-                                </div>
-                            </div>
-                            
-                            <!-- Seller Representative Signature -->
-                            <div class="signature-box">
-                                <div class="signature-label">Buyer</div>
-                                <div class="signature-area"></div>
-                                <div class="signature-date">
-                                    <strong>Date:</strong> ________________
-                                </div>
-                            </div>
-                        </div>
+            </div>
+            <div class="col-md-8">
+                <div class="company-details">
+                    <br>
+                    <div style="color:#000">
+                        <span>📞 +254 715 400 709</span><br>
+                        <span>📧 Email: info@kelmercars.co.ke</span><br>
+                        <span>🌐 houseofcars.co.ke</span><br>
+                        <span>📍 Jabavu Lane, Hurlingham<br>
+                            P.O Box 9215 - 00100, Nairobi - Kenya
+                        </span>
                     </div>
                 </div>
             </div>
-            
-            <!-- Download Button OUTSIDE Card -->
+            <div class="text-center mb-3" style="border-bottom: 3px solid #007bff; padding-bottom: 10px;">
+            <h5 style="font-weight: bold; color: #000; margin: 0;">GATEPASS/DELIVERY</h5>
+        </div>
+        </div>
+
+        <div class="col-md-12">
+            <!-- Vehicle Section -->
+            <div class="info-section">
+                <div class="section-header">
+                    <i class="fas fa-car" style="background-color: #f8f9fa !important; color: black !important;"></i>
+                    <span style="background-color: #f8f9fa !important; color: black !important;">VEHICLE DETAILS</span>
+                </div>
+                <div class="section-content" class="text-center" >
+                    <div class="row">
+                        <!-- Registration/Number Plate -->
+                        <div class="col-md-6">
+                            <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                                <strong>Registration:</strong>
+                                {{ $vehicle->number_plate ?? 'N/A' }}
+                            </div>
+                        </div>
+
+                        <!-- Stock No -->
+                        <div class="col-md-6">
+                            <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                                <strong>Stock No:</strong>
+                                {{ $vehicle->id ?? 'N/A' }}
+                            </div>
+                        </div>
+
+                        <!-- Year of Manufacture -->
+                        <div class="col-md-6">
+                            <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                                <strong>Year:</strong>
+                                @php
+                                    $model = $vehicle->model ?? '';
+                                    preg_match('/(\d{4})/', $model, $matches);
+                                    echo $matches[1] ?? 'N/A';
+                                @endphp
+                            </div>
+                        </div>
+
+                        <!-- Make -->
+                        <div class="col-md-6">
+                            <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                                <strong>Make:</strong>
+                                {{ $vehicle->vehicle_make ?? 'N/A' }}
+                            </div>
+                        </div>
+
+                        <!-- Model -->
+                        <div class="col-md-6">
+                            <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                                <strong>Model:</strong>
+                                {{ $vehicle->model ?? 'N/A' }}
+                            </div>
+                        </div>
+
+                        <!-- Chassis No / VIN -->
+                        <div class="col-md-6">
+                            <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                                <strong>Chassis/VIN:</strong>
+                                {{ $vehicle->chasis_no ?? 'N/A' }}
+                            </div>
+                        </div>
+
+                        <!-- Color -->
+                        <div class="col-md-6">
+                            <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                                <strong>Color:</strong>
+                                {{ $vehicle->colour ?? 'N/A' }}
+                            </div>
+                        </div>
+
+                        <!-- Engine No -->
+                        <div class="col-md-6">
+                            <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                                <strong>Engine No:</strong>
+                                {{ $vehicle->engine_no ?? 'N/A' }}
+                            </div>
+                        </div>
+
+                        <!-- Engine Capacity/CC -->
+                        <div class="col-md-6">
+                            <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                                <strong>Engine CC:</strong>
+                                {{ $vehicle->engine_capacity ?? 'N/A' }}
+                            </div>
+                        </div>
+
+                        <!-- Transmission -->
+                        <div class="col-md-6">
+                            <div class="secondary-info" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;">
+                                <strong>Transmission:</strong>
+                                {{ $vehicle->transmission ?? 'N/A' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Vehicle Inspection Checklist -->
+                <div class="info-section mt-4">
+                    <div class="section-header">
+                        <i class="fas fa-clipboard-check" style="background-color: #f8f9fa !important; color: black !important; #dee2e6 !important;"></i>
+                        <span class="text-center" style=" background-color: #f8f9fa !important; color: black !important;">VEHICLE INSPECTION CHECKLIST</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="inspection-notice mb-3">
+                            <div class="alert alert-info">
+                                <strong>Notice:</strong> I/We have received the above mentioned motor vehicle and have confirmed that it is in good order and condition as per the inventory form.
+                            </div>
+                        </div>
+                        
+                        <div class="inspection-table">
+                            <table class="table table-bordered" style="background-color: white !important; color: black !important;">
+                                <thead style="background-color: #f8f9fa !important; color: black !important;">
+                                    <tr>
+                                        <th style="background-color: #f8f9fa !important; color: black !important;">Item</th>
+                                        <th class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">Present</th>
+                                        <th class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">Absent</th>
+                                    </tr>
+                                </thead>
+                                <tbody style="background-color: white !important; color: black !important;">
+                                    <tr >
+                                        <td class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;"><strong>Spare Wheel</strong></td>
+                                        <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="spare_wheel_present" id="spare_wheel_present">
+                                            </div>
+                                        </td>
+                                        <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="spare_wheel_absent" id="spare_wheel_absent">
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;"><strong>Wheel Spanner</strong></td>
+                                        <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="wheel_spanner_present" id="wheel_spanner_present">
+                                            </div>
+                                        </td>
+                                        <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="wheel_spanner_absent" id="wheel_spanner_absent">
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;"><strong>Jack</strong></td>
+                                        <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="jack_present" id="jack_present">
+                                            </div>
+                                        </td>
+                                        <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="jack_absent" id="jack_absent">
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;"><strong>Life Saver</strong></td>
+                                        <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="life_saver_present" id="life_saver_present">
+                                            </div>
+                                        </td>
+                                        <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="life_saver_absent" id="life_saver_absent">
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td  class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;"><strong>First Aid Kit</strong></td>
+                                        <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="first_aid_kit_present" id="first_aid_kit_present">
+                                            </div>
+                                        </td>
+                                        <td class="text-center" class="text-center" style="width: 100px; background-color: #f8f9fa !important; color: black !important;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="first_aid_kit_absent" id="first_aid_kit_absent">
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Comments Section -->
+                        <div class="comments-section mt-4">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <label for="comments" class="form-label" style="font-weight: bold; color: #dc3545; border-bottom: 2px solid #dc3545; padding-bottom: 2px;">
+                                        Comments:
+                                    </label>
+                                    <textarea 
+                                        class="form-control mt-2" 
+                                        id="comments" 
+                                        name="comments" 
+                                        rows="2" 
+                                        placeholder="Enter any additional comments or observations about the vehicle condition..."
+                                        style="background-color: white !important; color: black !important; border: 1px solid #dee2e6;">
+                                    </textarea>
+                                </div>
+                            </div>
+                            
+                        </div>
+                        <!-- Comments Section -->
+                        <div class="comments-section mt-4">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="notice-box" style="background-color: #dc3545; color: white; padding: 20px; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: bold; border-radius: 8px;">
+                                        I/We have received the motor vehicle above in good order and condition
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                <div class="signature-box delivered-by-section" style="padding: 20px;  background-color: white;">
+                                <div style="margin-bottom: 15px; font-weight: bold;  color: black !important;" >
+                                    Vehicle delivered by:
+                                </div>
+                                <div class="form-group mb-3">
+                                    <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Name:</div>
+                                    <div class="delivered-by-name" style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px;"></div>
+                                </div>
+                                <div class="form-group mb-3">
+                                    <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Sign:</div>
+                                    <div class="delivered-by-email" style="height: 35px; border-bottom: 1px solid #000; margin-bottom: 10px;"></div>
+                                </div>
+                                <div class="form-group">
+                                    <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Date:</div>
+                                    <div class="delivered-by-date" style="height: 25px; border-bottom: 1px solid #000; width: 120px;"></div>
+                                </div>
+                            </div>
+                                </div>
+                                <div class="col-md-7">
+                                     <div class="signature-box" style="padding: 20px; height: 200px; background-color: white;">
+                                        <div style="margin-bottom: 15px; font-weight: bold;   color: black !important;">
+                                            Vehicle received by:
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <div style="margin-bottom: 5px; font-size: 14px;   color: black !important;">Name : 
+                                               
+                                                </div>
+                                            <div style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px; color: black !important;">{{ $vehicle->customer_name ?? 'N/A' }} </div>
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <div style="margin-bottom: 5px; font-size: 14px;   color: black !important;">Sign  | ID: 
+                                               
+                                            </div>
+                                            <div style="height: 35px; border-bottom: 1px solid #000; margin-bottom: 10px; color: black !important;">| {{ $vehicle->national_id ?? 'N/A' }}</div>
+                                        </div>
+                                        <div class="form-group">
+                                            <div style="margin-bottom: 5px; font-size: 14px;   color: black !important;">Date:</div>
+                                            <div style="height: 25px; border-bottom: 1px solid #000; width: 120px;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+
+                        
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+
+    </div>
+    
+   
+     <div class="row">
+             <div class="col-md-12">
+                <!-- Download Button OUTSIDE Card -->
             <div class="download-actions mb-3">
                 <button class="btn btn-danger btn-sm w-100" onclick="downloadCard({{ $vehicle->id }})">
                     <i class="fas fa-download"></i> Download Gate Pass (Deleted)
                 </button>
             </div>
-        </div>
+              </div>
+            </div>
+</div>
 @endforeach
+
     </div>
 
     <!-- No Results Message -->
@@ -735,7 +1105,384 @@ document.addEventListener('DOMContentLoaded', function() {
     new GatePassFilter();
 });
 </script>
+<script>
+    // SOLUTION 1: Update JavaScript to use correct route paths
 
+class GatePassInspection {
+    constructor() {
+        this.initializeEventListeners();
+        this.loadSavedData();
+    }
+
+    async saveInspectionData(gatePassId) {
+        const inspectionData = this.collectInspectionData(gatePassId);
+        if (!inspectionData) return;
+
+        // Add user ID explicitly
+        inspectionData.submitted_by = window.authUserId;
+
+        try {
+            // Use the correct route path that matches your Laravel routes
+            const response = await fetch('/gate-pass-inspection/save', {  // Updated path
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(inspectionData)
+            });
+
+            if (!response.ok) {
+                // Handle different HTTP status codes
+                if (response.status === 401) {
+                    throw new Error('Authentication required - please log in');
+                } else if (response.status === 403) {
+                    throw new Error('Access denied - insufficient permissions');
+                } else if (response.status === 419) {
+                    throw new Error('CSRF token mismatch - please refresh the page');
+                } else {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+            }
+
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showSaveIndicator(gatePassId, 'saved');
+                if (result.user_data) {
+                    this.updateDeliveredBySection(gatePassId, result.user_data);
+                }
+            } else {
+                console.error('Save failed:', result);
+                this.showSaveIndicator(gatePassId, 'error');
+                
+                // Show user-friendly error message
+                if (result.message) {
+                    this.showErrorMessage(gatePassId, result.message);
+                }
+            }
+
+        } catch (error) {
+            console.error('Error saving inspection data:', error);
+            this.showSaveIndicator(gatePassId, 'error');
+            this.showErrorMessage(gatePassId, error.message);
+        }
+    }
+
+    async loadSavedData() {
+        const gatePassCards = document.querySelectorAll('.gate-pass-card');
+        const gatePassIds = Array.from(gatePassCards).map(card => this.extractGatePassId(card));
+
+        if (gatePassIds.length === 0) return;
+
+        try {
+            // Use the correct route path
+            const response = await fetch('/gate-pass-inspection/load', {  // Updated path
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ gate_pass_ids: gatePassIds })
+            });
+
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    console.warn('Authentication/authorization failed for loading data');
+                    return; // Silently fail for loading data
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            
+            if (result.success && result.data) {
+                result.data.forEach(inspectionData => {
+                    this.populateInspectionData(inspectionData);
+                });
+            }
+
+        } catch (error) {
+            console.error('Error loading inspection data:', error);
+        }
+    }
+
+    // Add error message display method
+    showErrorMessage(gatePassId, message) {
+        const gatePassCard = document.getElementById(`gate-pass-${gatePassId}`);
+        if (!gatePassCard) return;
+
+        // Remove existing error messages
+        const existingError = gatePassCard.querySelector('.error-message');
+        if (existingError) {
+            existingError.remove();
+        }
+
+        // Create error message
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message alert alert-danger';
+        errorDiv.style.cssText = `
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            max-width: 300px;
+            z-index: 1001;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        `;
+        errorDiv.textContent = message;
+
+        gatePassCard.style.position = 'relative';
+        gatePassCard.appendChild(errorDiv);
+
+        // Remove error message after 5 seconds
+        setTimeout(() => {
+            if (errorDiv.parentNode) {
+                errorDiv.remove();
+            }
+        }, 5000);
+    }
+
+    // Rest of your existing methods...
+    extractGatePassId(gatePassCard) {
+        const cardId = gatePassCard.id;
+        return cardId.replace('gate-pass-', '');
+    }
+
+    collectInspectionData(gatePassId) {
+        const gatePassCard = document.getElementById(`gate-pass-${gatePassId}`);
+        if (!gatePassCard) return null;
+
+        const inspectionData = {
+            gate_pass_id: gatePassId,
+            spare_wheel_present: gatePassCard.querySelector('input[name="spare_wheel_present"]')?.checked || false,
+            spare_wheel_absent: gatePassCard.querySelector('input[name="spare_wheel_absent"]')?.checked || false,
+            wheel_spanner_present: gatePassCard.querySelector('input[name="wheel_spanner_present"]')?.checked || false,
+            wheel_spanner_absent: gatePassCard.querySelector('input[name="wheel_spanner_absent"]')?.checked || false,
+            jack_present: gatePassCard.querySelector('input[name="jack_present"]')?.checked || false,
+            jack_absent: gatePassCard.querySelector('input[name="jack_absent"]')?.checked || false,
+            life_saver_present: gatePassCard.querySelector('input[name="life_saver_present"]')?.checked || false,
+            life_saver_absent: gatePassCard.querySelector('input[name="life_saver_absent"]')?.checked || false,
+            first_aid_kit_present: gatePassCard.querySelector('input[name="first_aid_kit_present"]')?.checked || false,
+            first_aid_kit_absent: gatePassCard.querySelector('input[name="first_aid_kit_absent"]')?.checked || false,
+            comments: gatePassCard.querySelector('#comments')?.value || '',
+            submitted_by: window.authUserId || null,
+            submitted_at: new Date().toISOString()
+        };
+
+        return inspectionData;
+    }
+
+    handleCheckboxChange(checkbox) {
+        const gatePassCard = checkbox.closest('.gate-pass-card');
+        const gatePassId = this.extractGatePassId(gatePassCard);
+        
+        // Handle mutual exclusivity
+        if (checkbox.name.endsWith('_present')) {
+            const absentCheckbox = gatePassCard.querySelector(`input[name="${checkbox.name.replace('_present', '_absent')}"]`);
+            if (checkbox.checked && absentCheckbox) {
+                absentCheckbox.checked = false;
+            }
+        } else if (checkbox.name.endsWith('_absent')) {
+            const presentCheckbox = gatePassCard.querySelector(`input[name="${checkbox.name.replace('_absent', '_present')}"]`);
+            if (checkbox.checked && presentCheckbox) {
+                presentCheckbox.checked = false;
+            }
+        }
+
+        this.saveInspectionData(gatePassId);
+    }
+
+    showSaveIndicator(gatePassId, status) {
+        const gatePassCard = document.getElementById(`gate-pass-${gatePassId}`);
+        if (!gatePassCard) return;
+
+        const existingIndicator = gatePassCard.querySelector('.save-indicator');
+        if (existingIndicator) {
+            existingIndicator.remove();
+        }
+
+        const indicator = document.createElement('div');
+        indicator.className = 'save-indicator';
+        indicator.style.cssText = `
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+        `;
+
+        if (status === 'saved') {
+            indicator.textContent = 'Saved';
+            indicator.style.backgroundColor = '#d4edda';
+            indicator.style.color = '#155724';
+            indicator.style.border = '1px solid #c3e6cb';
+        } else if (status === 'error') {
+            indicator.textContent = 'Save Failed';
+            indicator.style.backgroundColor = '#f8d7da';
+            indicator.style.color = '#721c24';
+            indicator.style.border = '1px solid #f5c6cb';
+        }
+
+        gatePassCard.style.position = 'relative';
+        gatePassCard.appendChild(indicator);
+
+        setTimeout(() => {
+            if (indicator.parentNode) {
+                indicator.style.opacity = '0';
+                setTimeout(() => {
+                    if (indicator.parentNode) {
+                        indicator.remove();
+                    }
+                }, 300);
+            }
+        }, 3000);
+    }
+
+    populateInspectionData(inspectionData) {
+        const gatePassCard = document.getElementById(`gate-pass-${inspectionData.gate_pass_id}`);
+        if (!gatePassCard) return;
+
+        // Populate checkboxes
+        const checkboxMapping = {
+            'spare_wheel_present': 'input[name="spare_wheel_present"]',
+            'spare_wheel_absent': 'input[name="spare_wheel_absent"]',
+            'wheel_spanner_present': 'input[name="wheel_spanner_present"]',
+            'wheel_spanner_absent': 'input[name="wheel_spanner_absent"]',
+            'jack_present': 'input[name="jack_present"]',
+            'jack_absent': 'input[name="jack_absent"]',
+            'life_saver_present': 'input[name="life_saver_present"]',
+            'life_saver_absent': 'input[name="life_saver_absent"]',
+            'first_aid_kit_present': 'input[name="first_aid_kit_present"]',
+            'first_aid_kit_absent': 'input[name="first_aid_kit_absent"]'
+        };
+
+        Object.entries(checkboxMapping).forEach(([dataKey, selector]) => {
+            const checkbox = gatePassCard.querySelector(selector);
+            if (checkbox && inspectionData[dataKey]) {
+                checkbox.checked = true;
+            }
+        });
+
+        // Populate comments
+        const commentsTextarea = gatePassCard.querySelector('#comments');
+        if (commentsTextarea && inspectionData.comments) {
+            commentsTextarea.value = inspectionData.comments;
+        }
+
+        // Update delivered by section if user data exists
+        if (inspectionData.user_data) {
+            this.updateDeliveredBySection(inspectionData.gate_pass_id, inspectionData.user_data);
+        }
+    }
+
+    updateDeliveredBySection(gatePassId, userData) {
+    const gatePassCard = document.getElementById(`gate-pass-${gatePassId}`);
+    if (!gatePassCard || !userData) return;
+
+    // Find the "Vehicle delivered by" section
+    const deliveredBySection = gatePassCard.querySelector('.delivered-by-section');
+    if (!deliveredBySection) return;
+
+    // Update delivered by name field with full name (first_name + last_name)
+    const deliveredNameDiv = deliveredBySection.querySelector('.delivered-by-name');
+    if (deliveredNameDiv) {
+        deliveredNameDiv.textContent = userData.name || ''; // This now contains "first_name last_name"
+        deliveredNameDiv.style.color = '#000';
+    }
+
+    // Update delivered by email field  
+    const deliveredEmailDiv = deliveredBySection.querySelector('.delivered-by-email');
+    if (deliveredEmailDiv) {
+        deliveredEmailDiv.textContent = userData.email || '';
+        deliveredEmailDiv.style.color = '#000';
+    }
+
+    // Update delivered by date with submission date
+    const deliveredDateDiv = deliveredBySection.querySelector('.delivered-by-date');
+    if (deliveredDateDiv && userData.submitted_at) {
+        const submitDate = new Date(userData.submitted_at);
+        deliveredDateDiv.textContent = submitDate.toLocaleDateString();
+        deliveredDateDiv.style.color = '#000';
+    }
+
+    // Update the "Vehicle received by" date section with same submission date
+    const allSignatureBoxes = gatePassCard.querySelectorAll('.signature-box');
+    const receivedBySection = Array.from(allSignatureBoxes).find(box => 
+        box.textContent.includes('Vehicle received by:') && 
+        !box.classList.contains('delivered-by-section')
+    );
+
+    if (receivedBySection && userData.submitted_at) {
+        const receivedDateFields = receivedBySection.querySelectorAll('div[style*="border-bottom"]');
+        const receivedDateDiv = receivedDateFields[receivedDateFields.length - 1];
+        
+        if (receivedDateDiv) {
+            const submitDate = new Date(userData.submitted_at);
+            receivedDateDiv.textContent = submitDate.toLocaleDateString();
+            receivedDateDiv.style.color = '#000';
+        }
+    }
+}
+
+    initializeEventListeners() {
+        document.addEventListener('change', (e) => {
+            if (e.target.type === 'checkbox' && e.target.closest('.gate-pass-card')) {
+                this.handleCheckboxChange(e.target);
+            }
+        });
+
+        document.addEventListener('input', (e) => {
+            if (e.target.id === 'comments' && e.target.closest('.gate-pass-card')) {
+                const gatePassCard = e.target.closest('.gate-pass-card');
+                const gatePassId = this.extractGatePassId(gatePassCard);
+                
+                clearTimeout(this.saveTimeout);
+                this.saveTimeout = setTimeout(() => {
+                    this.saveInspectionData(gatePassId);
+                }, 1000);
+            }
+        });
+    }
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if user is authenticated
+    if (!window.authUserId) {
+        console.warn('User not authenticated - inspection features may not work');
+    }
+    
+    window.gatePassInspection = new GatePassInspection();
+});
+
+// Debugging function to test authentication
+function testAuth() {
+    fetch('/gate-pass-inspection/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+        },
+        body: JSON.stringify({ gate_pass_id: 'test' })
+    })
+    .then(response => response.json())
+    .then(data => console.log('Auth test result:', data))
+    .catch(error => console.error('Auth test error:', error));
+}
+    </script>
 <!-- Enhanced CSS -->
 <style>
 .gate-pass-card {
@@ -907,4 +1654,15 @@ document.addEventListener('DOMContentLoaded', function() {
     font-weight: 600;
 }
 </style>
+<script>
+    @auth
+        window.authUserId = {{ Auth::id() }};
+        window.authUserName = @json(Auth::user()->name);
+        window.authUserEmail = @json(Auth::user()->email);
+    @else
+        window.authUserId = null;
+        window.authUserName = '';
+        window.authUserEmail = '';
+    @endauth
+</script>
 </x-app-layout>

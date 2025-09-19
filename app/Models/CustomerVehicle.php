@@ -20,6 +20,11 @@ class CustomerVehicle extends Model
         'minimum_price',
         'sell_type',
         'photos',
+        'colour',
+        'engine_no',
+        'engine_capacity',
+        'transmission',
+        'national_id'
     ];
     public function vehicleInspection()
         {

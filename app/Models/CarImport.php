@@ -25,6 +25,10 @@ class CarImport extends Model
         'photos',
         'fullamount',
         'status',
+        'colour',
+        'engine_no',
+        'engine_capacity',
+        'transmission'
     ];
 
     protected $casts = [

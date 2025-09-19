@@ -58,9 +58,7 @@ Route::middleware(['auth'])->group(function () {
         return view('operations.index');
     })->name('operations.index');
 
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+  
 
 });
 Route::get('/proxy-image', function(Request $request) {
@@ -116,7 +114,14 @@ Route::post('/password/reset/sms', [App\Http\Controllers\Dashboard\UsersControll
     ->name('password.sms.send')
     ->middleware('guest');
 Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Support-Staff,HR,General-Manager'])->group(function () {
-//Receipt Routes
+   Route::prefix('gate-pass-inspection')->group(function () {
+        Route::post('/save', [App\Http\Controllers\Dashboard\InspectionController::class, 'savegatepass']);
+        Route::post('/load', [App\Http\Controllers\Dashboard\InspectionController::class, 'loadgatepass']);
+        Route::get('/show/{gatePassId}', [App\Http\Controllers\Dashboard\InspectionController::class, 'showgatepass']);
+        Route::delete('/delete/{gatePassId}', [App\Http\Controllers\Dashboard\InspectionController::class, 'destroygatepass']);
+        Route::get('/statistics', [App\Http\Controllers\Dashboard\InspectionController::class, 'statisticsgatepass']);
+    });
+    //Receipt Routes
 Route::post('/facilitation/{id}/receipt', [App\Http\Controllers\Dashboard\FacilitationController::class, 'uploadReceipt'])->name('facilitation.receipt.upload');
 Route::delete('/facilitation/{id}/receipt', [App\Http\Controllers\Dashboard\FacilitationController::class, 'deleteReceipt'])->name('facilitation.receipt.delete');
     // Logbook Management Routes
@@ -439,19 +444,7 @@ Route::post('/fleet-payments/{id}/confirm', [App\Http\Controllers\Dashboard\Flee
 
     // Main dashboard routes
 Route::middleware(['auth'])->group(function () {
-    
-    // Standard dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    
-    // Enhanced dashboard with all features
-    Route::get('/dashboard/enhanced', [DashboardController::class, 'indexEnhanced'])->name('dashboard.enhanced');
-    
-    // API endpoint for real-time updates
-    Route::get('/dashboard/api', [DashboardController::class, 'getDashboardApi'])->name('dashboard.api');
-    
-    // Export dashboard data
-    Route::get('/dashboard/export', [DashboardController::class, 'exportDashboard'])->name('dashboard.export');
-    
+
     // Additional specific routes for drill-down functionality
     Route::prefix('dashboard')->name('dashboard.')->group(function () {
         

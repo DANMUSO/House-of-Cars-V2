@@ -31,6 +31,11 @@ class TradeInController extends Controller
         'Chasis_No'       => 'required|string|max:255|unique:customer_vehicles,chasis_no',
         'Number_Plate'    => 'required|string|max:255|unique:customer_vehicles,number_plate',
         'Minimum_Price'   => 'required|numeric|min:0',
+        'colour' => 'required|string',
+        'engine_no' => 'required|string',
+        'engine_capacity' => 'required|string',
+        'transmission' => 'required|string', 
+        'national_id' => 'required|string',
         'photos.*'        => 'required|image|mimes:jpg,jpeg,png,webp|max:2048'
     ]);
 
@@ -100,6 +105,11 @@ class TradeInController extends Controller
             'sell_type'      => $validated['Sell_Type'],
             'status'         => $validated['Status'],
             'minimum_price'  => $validated['Minimum_Price'],
+            'colour'  => $validated['colour'],
+            'engine_no'  => $validated['engine_no'],
+            'engine_capacity'  => $validated['engine_capacity'],
+            'transmission'  => $validated['transmission'],
+            'national_id'  => $validated['national_id'],
             'photos'         => json_encode($photoPaths), // Save S3 paths
         ]);
 
@@ -152,6 +162,11 @@ public function update(Request $request)
         'number_platev1'    => 'required|string|max:255',
         'minimum_pricev1'   => 'required|numeric|min:0',
         'modelv1'   => 'required|string|max:255',
+        'colourv1' => 'required|string',
+        'engine_nov1' => 'required|string',
+        'engine_capacityv1' => 'required|string',
+        'transmissionv1' => 'required|string',
+        'national_idv1' => 'required|string',
         'photosv1.*'        => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
     ]);
 
@@ -179,6 +194,11 @@ public function update(Request $request)
             'chasis_no'      => $validatedData['chasis_nov1'],
             'number_plate'   => $validatedData['number_platev1'],
             'minimum_price'  => $validatedData['minimum_pricev1'],
+             'colour'  => $validatedData['colourv1'],
+            'engine_no'  => $validatedData['engine_nov1'],
+            'engine_capacity'  => $validatedData['engine_capacityv1'],
+            'transmission'  => $validatedData['transmissionv1'],
+            'national_id'  => $validatedData['national_idv1'],
         ];
 
         // Handle photos only if present

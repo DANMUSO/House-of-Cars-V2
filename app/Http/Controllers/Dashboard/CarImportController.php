@@ -25,6 +25,10 @@ class CarImportController extends Controller
         'bid_amount' => 'required|numeric',
         'bid_start_date' => 'required|date',
         'bid_end_date' => 'required|date',
+        'colour' => 'required|string',
+        'engine_no' => 'required|string',
+        'engine_capacity' => 'required|string',
+        'transmission' => 'required|string',
         //'deposit' => 'required|numeric',
         'photos.*' => 'required|image|mimes:jpg,jpeg,png,webp|max:2048'
     ]);
@@ -140,6 +144,10 @@ public function update(Request $request)
         'editbid_amount' => 'required|numeric',
         'editbid_start_date' => 'required|date',
         'editbid_end_date' => 'required|date',
+        'editcolour' => 'required|string',
+        'editengine_no' => 'required|string',
+        'editengine_capacity' => 'required|string',
+        'edittransmission' => 'required|string',
         //'editdeposit' => 'required|numeric',
         'editphotos.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
     ]);
@@ -169,6 +177,10 @@ public function update(Request $request)
         $car->bid_amount = $request->editbid_amount;
         $car->bid_start_date = $request->editbid_start_date;
         $car->bid_end_date = $request->editbid_end_date;
+        $car->colour = $request->editcolour;
+        $car->engine_no = $request->editengine_no;
+        $car->engine_capacity = $request->editengine_capacity;
+        $car->transmission = $request->edittransmission;
 
         // Handle photo updates
         if ($request->hasFile('editphotos')) {
