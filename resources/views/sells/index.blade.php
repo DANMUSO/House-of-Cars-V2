@@ -28,9 +28,9 @@
                         <option value="gentleman_agreement">Gentleman's Agreement</option>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label fw-semibold small">Pass ID</label>
-                    <input type="text" id="filter-pass-id" class="form-control form-control-sm" placeholder="GP-000001 or 1">
+                 <div class="col-md-2">
+                    <label class="form-label fw-semibold small">Registration</label>
+                    <input type="text" id="filter-registration" class="form-control form-control-sm" placeholder="KCA 123A or VIN">
                 </div>
                 <div class="col-md-2">
                     <label class="form-label fw-semibold small">ID Number</label>
@@ -60,17 +60,43 @@
     <div class="row" id="gate-pass-container">
         
         @foreach($combined as $sale)
-        <div class="col-md-6 col-lg-6 gate-pass-item" 
-             data-sale-type="{{ $sale->record_type }}"
-             data-pass-id="GP-{{ str_pad($sale->id, 6, '0', STR_PAD_LEFT) }}"
-             data-id-number="{{ $sale->ID_Number ?? $sale->customer_id_number ?? $sale->national_id ?? '' }}"
-             data-customer="{{ $sale->Client_Name ?? $sale->customer_name ?? $sale->client_name ?? '' }}"
-             data-vehicle="{{ 
-                ($sale->carImport->make ?? '') . ' ' . 
-                ($sale->carImport->model ?? '') . ' ' . 
-                ($sale->customerVehicle->vehicle_make ?? '') . ' ' .
-                ($sale->vehicle_make ?? '')
-             }}">
+        @php
+    $registration = 'N/A';
+    if ($sale->record_type == 'incash') {
+        if ($sale->car_type == 'import' && $sale->carImport) {
+            $registration = $sale->carImport->vin ?? 'N/A';
+        } elseif ($sale->car_type == 'customer' && $sale->customerVehicle) {
+            $registration = $sale->customerVehicle->number_plate ?? 'N/A';
+        }
+    } elseif ($sale->record_type == 'hire_purchase') {
+        if ($sale->carImport) {
+            $registration = $sale->carImport->vin ?? 'N/A';
+        } elseif ($sale->customerVehicle) {
+            $registration = $sale->customerVehicle->number_plate ?? 'N/A';
+        }
+    } else {
+        if ($sale->car_type == 'import' && $sale->carImport) {
+            $registration = $sale->carImport->vin ?? 'N/A';
+        } elseif ($sale->car_type == 'customer' && $sale->customerVehicle) {
+            $registration = $sale->customerVehicle->number_plate ?? 'N/A';
+        } else {
+            $registration = $sale->vehicle_plate ?? 'N/A';
+        }
+    }
+@endphp
+
+<div class="col-md-6 col-lg-6 gate-pass-item" 
+     data-sale-type="{{ $sale->record_type }}"
+     data-pass-id="GP-{{ str_pad($sale->id, 6, '0', STR_PAD_LEFT) }}"
+     data-registration="{{ $registration }}"
+     data-id-number="{{ $sale->ID_Number ?? $sale->customer_id_number ?? $sale->national_id ?? '' }}"
+     data-customer="{{ $sale->Client_Name ?? $sale->customer_name ?? $sale->client_name ?? '' }}"
+     data-vehicle="{{ 
+        ($sale->carImport->make ?? '') . ' ' . 
+        ($sale->carImport->model ?? '') . ' ' . 
+        ($sale->customerVehicle->vehicle_make ?? '') . ' ' .
+        ($sale->vehicle_make ?? '')
+     }}">
             
             <div class="card gate-pass-card mb-3" id="gate-pass-{{ $sale->id }}">
                 <div class="row">
@@ -473,6 +499,7 @@
         @foreach($vehicles as $vehicle)
 <div class="col-md-6 col-lg-6 gate-pass-item" 
      data-pass-id="GP-{{ str_pad($vehicle->id, 6, '0', STR_PAD_LEFT) }}"
+     data-registration="{{ $vehicle->number_plate ?? 'N/A' }}"
      data-customer="{{ $vehicle->customer_name ?? '' }}"
      data-vehicle="{{ $vehicle->vehicle_make ?? '' }} {{ $vehicle->model ?? '' }}">
     
@@ -814,7 +841,7 @@ class GatePassFilter {
     initializeFilters() {
         this.filters = {
             saleType: document.getElementById('filter-sale-type'),
-            passId: document.getElementById('filter-pass-id'),
+            registration: document.getElementById('filter-registration'),
             idNumber: document.getElementById('filter-id-number'),
             customer: document.getElementById('filter-customer'),
             vehicle: document.getElementById('filter-vehicle')
@@ -836,51 +863,51 @@ class GatePassFilter {
     }
 
     applyFilters() {
-        const filterValues = {
-            saleType: this.filters.saleType.value.toLowerCase(),
-            passId: this.filters.passId.value.toLowerCase(),
-            idNumber: this.filters.idNumber.value.toLowerCase(),
-            customer: this.filters.customer.value.toLowerCase(),
-            vehicle: this.filters.vehicle.value.toLowerCase()
+    const filterValues = {
+        saleType: this.filters.saleType.value.toLowerCase(),
+        registration: this.filters.registration.value.toLowerCase(),
+        idNumber: this.filters.idNumber.value.toLowerCase(),
+        customer: this.filters.customer.value.toLowerCase(),
+        vehicle: this.filters.vehicle.value.toLowerCase()
+    };
+
+    let visibleCount = 0;
+    let typeCounts = { incash: 0, hire_purchase: 0, gentleman_agreement: 0 };
+
+    this.items.forEach(item => {
+        const itemData = {
+            saleType: (item.dataset.saleType || '').toLowerCase(),
+            registration: (item.dataset.registration || '').toLowerCase(),
+            idNumber: (item.dataset.idNumber || '').toLowerCase(),
+            customer: (item.dataset.customer || '').toLowerCase(),
+            vehicle: (item.dataset.vehicle || '').toLowerCase()
         };
 
-        let visibleCount = 0;
-        let typeCounts = { incash: 0, hire_purchase: 0, gentleman_agreement: 0 };
+        const matches = this.checkMatches(filterValues, itemData);
 
-        this.items.forEach(item => {
-            const itemData = {
-                saleType: item.dataset.saleType.toLowerCase(),
-                passId: item.dataset.passId.toLowerCase(),
-                idNumber: item.dataset.idNumber.toLowerCase(),
-                customer: item.dataset.customer.toLowerCase(),
-                vehicle: item.dataset.vehicle.toLowerCase()
-            };
-
-            const matches = this.checkMatches(filterValues, itemData);
-
-            if (matches) {
-                item.style.display = 'block';
-                item.classList.remove('d-none');
-                visibleCount++;
-                typeCounts[item.dataset.saleType]++;
-            } else {
-                item.style.display = 'none';
-                item.classList.add('d-none');
+        if (matches) {
+            item.style.display = 'block';
+            item.classList.remove('d-none');
+            visibleCount++;
+            // Add safety check for dataset.saleType
+            const saleType = item.dataset.saleType || '';
+            if (typeCounts.hasOwnProperty(saleType)) {
+                typeCounts[saleType]++;
             }
-        });
+        } else {
+            item.style.display = 'none';
+            item.classList.add('d-none');
+        }
+    });
 
-        this.updateCounters(visibleCount, typeCounts);
-        this.toggleNoResults(visibleCount === 0);
-        this.updateFilterStatus(filterValues, visibleCount);
-    }
+    this.updateCounters(visibleCount, typeCounts);
+    this.toggleNoResults(visibleCount === 0);
+    this.updateFilterStatus(filterValues, visibleCount);
+}
 
     checkMatches(filterValues, itemData) {
         if (filterValues.saleType && !itemData.saleType.includes(filterValues.saleType)) return false;
-        if (filterValues.passId) {
-            const passIdMatch = itemData.passId.includes(filterValues.passId) ||
-                               itemData.passId.replace('gp-', '').includes(filterValues.passId);
-            if (!passIdMatch) return false;
-        }
+        if (filterValues.registration && !itemData.registration.includes(filterValues.registration)) return false;
         if (filterValues.idNumber && !itemData.idNumber.includes(filterValues.idNumber)) return false;
         if (filterValues.customer && !itemData.customer.includes(filterValues.customer)) return false;
         if (filterValues.vehicle && !itemData.vehicle.includes(filterValues.vehicle)) return false;

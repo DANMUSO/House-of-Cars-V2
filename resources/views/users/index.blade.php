@@ -290,6 +290,7 @@
         'Accountant' => 'info',
         'General-Manager' => 'success',
         'Showroom-Manager' => 'warning',
+        'Support-Staff' => 'warning',
         'client', 'Client' => 'purple',
         default => 'info'
     };

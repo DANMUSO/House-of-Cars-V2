@@ -27,9 +27,9 @@ class UsersController extends Controller
             'first_name'   => 'required|string|max:255',
             'last_name'    => 'required|string|max:255',
             'email'        => 'required|email|unique:users,email',
-            'phone'        => 'required|string|regex:/^254[17]\d{8}$/',
+            'phone'        => 'required|string|unique:users,phone|regex:/^254[17]\d{8}$/',
             'national_id'  => 'required|string|unique:users,national_id',
-            'role'         => 'required|string|in:Managing-Director,Accountant,Showroom-Manager,Salesperson,Support-Staff,HR,General-Manager',
+            'role'         => 'required|string|in:Managing-Director,Accountant,Showroom-Manager,Salesperson,Support-Staff,HR,General-Manager,Cleaner,Driver',
             'gender'       => 'required|string|in:Male,Female',
             'password'       => 'required|string', // Only for leave allocation, not saved
         ]);
@@ -109,6 +109,12 @@ class UsersController extends Controller
 
         $allocations = [
             'Managing-Director' => [
+                'Annual Leave' => 30,
+                'Sick Leave' => 14,
+                'Maternity/Paternity Leave' => $maternityPaternityLeave,
+                'Emergency Leave' => 5,
+            ],
+            'General-Manager' => [
                 'Annual Leave' => 30,
                 'Sick Leave' => 14,
                 'Maternity/Paternity Leave' => $maternityPaternityLeave,
@@ -219,7 +225,7 @@ class UsersController extends Controller
                 'editfirst_name' => 'required|string|max:255',
                 'editlast_name' => 'required|string|max:255',
                 'editemail' => 'required|email|unique:users,email,' . $request->id,
-                'editphone' => 'required|string|regex:/^254[17]\d{8}$/',
+                'editphone' => 'required|string|unique:users,phone,' . $request->id . '|regex:/^254[17]\d{8}$/',
                 'editnational_id' => 'required|string|unique:users,national_id,' . $request->id,
                 'editrole' => 'required|string|in:Managing-Director,Accountant,Showroom-Manager,Salesperson,Support-Staff,HR,General-Manager',
             ]);
@@ -255,7 +261,7 @@ class UsersController extends Controller
             Log::error('User update failed: ' . $e->getMessage());
             
             return response()->json([
-                'error' => 'Failed to update user. Please try again.'
+                'error' =>  $e->getMessage()
             ], 500);
         }
     }

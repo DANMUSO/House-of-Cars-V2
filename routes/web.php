@@ -113,7 +113,7 @@ Route::get('/password/reset/sms', [App\Http\Controllers\Dashboard\UsersControlle
 Route::post('/password/reset/sms', [App\Http\Controllers\Dashboard\UsersController::class, 'sendPasswordViaSms'])
     ->name('password.sms.send')
     ->middleware('guest');
-Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Support-Staff,HR,General-Manager'])->group(function () {
+Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Support-Staff,HR,General-Manager,Driver,Cleaner'])->group(function () {
    Route::prefix('gate-pass-inspection')->group(function () {
         Route::post('/save', [App\Http\Controllers\Dashboard\InspectionController::class, 'savegatepass']);
         Route::post('/load', [App\Http\Controllers\Dashboard\InspectionController::class, 'loadgatepass']);

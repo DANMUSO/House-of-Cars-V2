@@ -2277,30 +2277,6 @@ $.ajaxSetup({
     }
 });
 
-// Global error handler for AJAX requests
-$(document).ajaxError(function(event, xhr, settings, thrownError) {
-    if (xhr.status === 419) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Session Expired',
-            text: 'Your session has expired. Please refresh the page and try again.',
-        }).then(() => {
-            location.reload();
-        });
-    } else if (xhr.status === 500) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Server Error',
-            text: 'An internal server error occurred. Please try again later.',
-        });
-    } else if (xhr.status === 0) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Network Error',
-            text: 'Please check your internet connection and try again.',
-        });
-    }
-});
 
 // Initialize tooltips if Bootstrap is available
 if (typeof bootstrap !== 'undefined') {
@@ -2317,10 +2293,13 @@ if (typeof bootstrap !== 'undefined') {
         <script>
 function downloadCard(id) {
     const card = document.getElementById('gate-pass-' + id);
-
-    html2canvas(card).then(canvas => {
+    const gatePassItem = card.closest('.gate-pass-item');
+    const customerName = gatePassItem?.dataset.customer || 'Unknown';
+    const passId = gatePassItem?.dataset.passId || id;
+    
+    html2canvas(card, { scale: 2 }).then(canvas => {
         const link = document.createElement('a');
-        link.download = 'GatePass_' + id + '.png';
+        link.download = `GatePass_${passId}_${customerName.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
     });
