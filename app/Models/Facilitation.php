@@ -17,7 +17,10 @@ class Facilitation extends Model
         'amount',
         'status',
         'request_id',
-    'receipt_documents', 'receipt_count', 'receipt_file_size'
+        'receipt_documents', 
+        'receipt_count', 
+        'receipt_file_size',
+        'comment'
     ];
     // In app/Models/Facilitation.php
 protected $casts = [

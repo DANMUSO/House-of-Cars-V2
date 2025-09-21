@@ -34,8 +34,9 @@ class FacilitationController extends Controller
     public function store(Request $request)
     {
         $facilitation = Facilitation::create([
-            'request'    => $request->frequest,
+            'request'    => $request->frequest, 
             'amount'     => $request->famount,
+            'comment'     => $request->fcomment,
             'status'     => 1,
             'request_id' => Auth::user()->id,
         ]);
@@ -271,6 +272,7 @@ private function formatFileSize($bytes)
         $Facilitation->update([
             'request' => $request->editrequest,
             'amount' => $request->editamount,
+            'comment' => $request->editcomment,
         ]);
 
         return response()->json(['success' => 'Request updated successfully']);
