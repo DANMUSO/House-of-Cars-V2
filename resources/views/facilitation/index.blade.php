@@ -164,16 +164,33 @@
             </div>
         </div>
 
-        <!-- Request Type Statistics -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white border-bottom">
-                        <h6 class="card-title mb-0 fw-bold" style="color: #000 !important;">
-                            <i class="fas fa-chart-pie me-2 text-primary"></i>Request Types Breakdown
-                        </h6>
-                    </div>
-                    <div class="card-body">
+<!-- REPLACE the entire "Request Type Statistics" section (starting from line ~170) with this complete tab structure -->
+
+<!-- Tab Navigation and Content -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header border-bottom">
+                <!-- Tab Navigation -->
+                <ul class="nav nav-tabs card-header-tabs" id="facilitation-tabs" role="tablist" >
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview-pane" type="button" role="tab">
+                            <i class="fas fa-chart-pie me-2"></i>Request Types Overview
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="requester-grouping-tab" data-bs-toggle="tab" data-bs-target="#requester-grouping-pane" type="button" role="tab">
+                            <i class="fas fa-users me-2"></i>Requester Amount Grouping
+                        </button>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="card-body">
+                <!-- Tab Content -->
+                <div class="tab-content" id="facilitation-tab-content">
+                    <!-- Overview Tab (existing Request Types content) -->
+                    <div class="tab-pane fade show active" id="overview-pane" role="tabpanel">
                         <div class="row">
                             @php
                                 $requestTypes = [
@@ -210,10 +227,244 @@
                             @endforeach
                         </div>
                     </div>
+                    
+                    <!-- Requester Grouping Tab -->
+                    <div class="tab-pane fade" id="requester-grouping-pane" role="tabpanel">
+                        <div class="row">
+                            <div class="col-12">
+                                <h6 class="mb-3 text-muted">
+                                    <i class="fas fa-info-circle me-2"></i>Total amounts requested by each user
+                                </h6>
+                                
+                                <!-- Requester Summary Cards -->
+                                <div class="row">
+                                    @php
+                                        // Group by request_id (which contains the user ID)
+                                        $requesterData = $facilitations->groupBy('request_id')->map(function ($userFacilitations) {
+                                            $userId = $userFacilitations->first()->request_id;
+                                            
+                                            // Get user by ID - assuming you have User model
+                                            $user = \App\Models\User::find($userId);
+                                            
+                                            // Fallback if user not found
+                                            if (!$user) {
+                                                $user = (object) [
+                                                    'first_name' => 'Unknown',
+                                                    'last_name' => 'User',
+                                                    'email' => 'user' . $userId . '@example.com',
+                                                    'id' => $userId
+                                                ];
+                                            }
+                                            
+                                            return [
+                                                'user' => $user,
+                                                'user_id' => $userId,
+                                                'total_amount' => $userFacilitations->sum('amount'),
+                                                'approved_amount' => $userFacilitations->where('status', 2)->sum('amount'),
+                                                'pending_amount' => $userFacilitations->where('status', 1)->sum('amount'),
+                                                'rejected_amount' => $userFacilitations->where('status', 3)->sum('amount'),
+                                                'total_requests' => $userFacilitations->count(),
+                                                'approved_requests' => $userFacilitations->where('status', 2)->count(),
+                                                'pending_requests' => $userFacilitations->where('status', 1)->count(),
+                                                'rejected_requests' => $userFacilitations->where('status', 3)->count()
+                                            ];
+                                        })->sortByDesc('total_amount');
+                                    @endphp
+                                    
+                                    @if($requesterData->count() > 0)
+                                        @foreach($requesterData as $data)
+                                            <div class="col-lg-6 col-md-6 mb-4">
+                                                <div class="card h-100 border-0 shadow-sm">
+                                                    <div class="card-body">
+                                                        <!-- User Header -->
+                                                        <div class="d-flex align-items-center mb-3">
+                                                            <div class="avatar-sm me-3">
+                                                                <span class="avatar-title rounded-circle bg-primary text-white">
+                                                                    {{ substr($data['user']->first_name, 0, 1) }}{{ substr($data['user']->last_name, 0, 1) }}
+                                                                </span>
+                                                            </div>
+                                                            <div class="flex-grow-1">
+                                                                <h6 class="mb-0">{{ $data['user']->first_name }} {{ $data['user']->last_name }}</h6>
+                                                                <small class="text-muted">{{ $data['user']->email }}</small>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Amount Summary -->
+                                                        <div class="row g-2 mb-3">
+                                                            <div class="col-6">
+                                                                <div class="text-center p-2 bg-light rounded">
+                                                                    <h6 class="text-primary mb-0">KES {{ number_format($data['total_amount'], 2) }}</h6>
+                                                                    <small class="text-muted">Total Requested</small>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <div class="text-center p-2 bg-light rounded">
+                                                                    <h6 class="text-success mb-0">KES {{ number_format($data['approved_amount'], 2) }}</h6>
+                                                                    <small class="text-muted">Approved</small>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Request Count Summary -->
+                                                        <div class="row g-2 mb-3">
+                                                            <div class="col-3">
+                                                                <div class="text-center">
+                                                                    <span class="badge bg-primary">{{ $data['total_requests'] }}</span>
+                                                                    <small class="d-block text-muted mt-1">Total</small>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-3">
+                                                                <div class="text-center">
+                                                                    <span class="badge bg-success">{{ $data['approved_requests'] }}</span>
+                                                                    <small class="d-block text-muted mt-1">Approved</small>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-3">
+                                                                <div class="text-center">
+                                                                    <span class="badge bg-warning">{{ $data['pending_requests'] }}</span>
+                                                                    <small class="d-block text-muted mt-1">Pending</small>
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-3">
+                                                                <div class="text-center">
+                                                                    <span class="badge bg-danger">{{ $data['rejected_requests'] }}</span>
+                                                                    <small class="d-block text-muted mt-1">Rejected</small>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Progress Bar for Approval Rate -->
+                                                        @php
+                                                            $approvalRate = $data['total_requests'] > 0 ? ($data['approved_requests'] / $data['total_requests']) * 100 : 0;
+                                                        @endphp
+                                                        <div class="mb-2">
+                                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                <small class="text-muted">Approval Rate</small>
+                                                                <small class="text-muted">{{ number_format($approvalRate, 1) }}%</small>
+                                                            </div>
+                                                            <div class="progress" style="height: 6px;">
+                                                                <div class="progress-bar bg-success" role="progressbar" 
+                                                                     style="width: {{ $approvalRate }}%" 
+                                                                     aria-valuenow="{{ $approvalRate }}" 
+                                                                     aria-valuemin="0" aria-valuemax="100">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Pending/Rejected amounts if any -->
+                                                        @if($data['pending_amount'] > 0 || $data['rejected_amount'] > 0)
+                                                            <div class="row g-2 mt-2">
+                                                                @if($data['pending_amount'] > 0)
+                                                                    <div class="col-6">
+                                                                        <div class="text-center p-2 bg-warning bg-opacity-10 rounded">
+                                                                            <small class="text-warning fw-bold">KES {{ number_format($data['pending_amount'], 2) }}</small>
+                                                                            <small class="d-block text-muted">Pending</small>
+                                                                        </div>
+                                                                    </div>
+                                                                @endif
+                                                                @if($data['rejected_amount'] > 0)
+                                                                    <div class="col-6">
+                                                                        <div class="text-center p-2 bg-danger bg-opacity-10 rounded">
+                                                                            <small class="text-danger fw-bold">KES {{ number_format($data['rejected_amount'], 2) }}</small>
+                                                                            <small class="d-block text-muted">Rejected</small>
+                                                                        </div>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    @else
+                                        <div class="col-12">
+                                            <div class="text-center py-5">
+                                                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                                <h5 class="text-muted">No requesters found</h5>
+                                                <p class="text-muted">No facilitation requests have been made yet.</p>
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+                                
+                                <!-- Summary Table -->
+                                @if($requesterData->count() > 0)
+                                <div class="card border-0 shadow-sm mt-4">
+                                    <div class="card-header bg-light">
+                                        <h6 class="card-title mb-0">
+                                            <i class="fas fa-table me-2"></i>Requester Summary Table
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Requester</th>
+                                                        <th class="text-end">Total Requested</th>
+                                                        <th class="text-end">Approved Amount</th>
+                                                        <th class="text-center">Requests Count</th>
+                                                        <th class="text-center">Approval Rate</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($requesterData as $data)
+                                                        <tr>
+                                                            <td>
+                                                                <div class="d-flex align-items-center">
+                                                                    <div class="avatar-sm me-2">
+                                                                        <span class="avatar-title rounded-circle bg-primary text-white" style="width: 30px; height: 30px; font-size: 0.75rem;">
+                                                                            {{ substr($data['user']->first_name, 0, 1) }}{{ substr($data['user']->last_name, 0, 1) }}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div>
+                                                                        <div class="fw-semibold">{{ $data['user']->first_name }} {{ $data['user']->last_name }}</div>
+                                                                        <small class="text-muted">{{ $data['user']->email }}</small>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td class="text-end">
+                                                                <span class="fw-bold text-primary">KES {{ number_format($data['total_amount'], 2) }}</span>
+                                                            </td>
+                                                            <td class="text-end">
+                                                                <span class="fw-bold text-success">KES {{ number_format($data['approved_amount'], 2) }}</span>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <span class="badge bg-light text-dark">{{ $data['total_requests'] }}</span>
+                                                                <small class="text-muted d-block">
+                                                                    <span class="text-success">{{ $data['approved_requests'] }}</span> / 
+                                                                    <span class="text-warning">{{ $data['pending_requests'] }}</span> / 
+                                                                    <span class="text-danger">{{ $data['rejected_requests'] }}</span>
+                                                                </small>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                @php
+                                                                    $rate = $data['total_requests'] > 0 ? ($data['approved_requests'] / $data['total_requests']) * 100 : 0;
+                                                                @endphp
+                                                                <span class="fw-bold @if($rate >= 70) text-success @elseif($rate >= 40) text-warning @else text-danger @endif">
+                                                                    {{ number_format($rate, 1) }}%
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+    </div>
+</div>
 
+<!-- Also fix this line in the statistics section - change from user_id to request_id -->
+<!-- Line ~120: Change this line -->
+<h5 class="mb-1">{{ $facilitations->pluck('request_id')->unique()->count() }}</h5>
         <!-- New Request Modal -->
         <div class="modal fade" id="standard-modal" tabindex="-1" aria-labelledby="standard-modalLabel" aria-hidden="true">
             <div class="modal-dialog">
