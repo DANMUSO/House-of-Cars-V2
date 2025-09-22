@@ -12,7 +12,110 @@
                 </button>
             </div>
         </div>
+        <!-- REPLACE THE EXISTING STATUS FILTER BUTTONS SECTION WITH THIS ENHANCED FILTER SECTION -->
 
+<!-- Enhanced Filters Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-filter me-2"></i>Filter Leads
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Search</label>
+                        <input type="text" class="form-control" id="searchInput" 
+                               placeholder="Search by name, phone, email...">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="statusFilter">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="closed">Closed</option>
+                            <option value="unsuccessful">Unsuccessful</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Purchase Type</label>
+                        <select class="form-select" id="purchaseTypeFilter">
+                            <option value="">All Types</option>
+                            <option value="cash">Cash</option>
+                            <option value="finance">Finance</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Salesperson</label>
+                        <select class="form-select" id="salespersonFilter">
+                            <option value="">All Salespeople</option>
+                            <!-- Options will be populated dynamically -->
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">From Date</label>
+                        <input type="date" class="form-control" id="dateFromFilter">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">To Date</label>
+                        <input type="date" class="form-control" id="dateToFilter">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Follow Up</label>
+                        <select class="form-select" id="followUpFilter">
+                            <option value="">All</option>
+                            <option value="1">Required</option>
+                            <option value="0">Not Required</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="button" class="btn btn-outline-secondary w-100" id="clearFilters">
+                            <i class="fas fa-times me-1"></i> Clear
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Quick Date Filters -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="d-flex flex-wrap gap-2">
+                            <small class="text-muted align-self-center me-2">Quick date filters:</small>
+                            <button type="button" class="btn btn-outline-secondary btn-sm quick-date-filter" data-range="today">
+                                <i class="fas fa-calendar-day me-1"></i> Today
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm quick-date-filter" data-range="week">
+                                <i class="fas fa-calendar-week me-1"></i> Last 7 Days
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm quick-date-filter" data-range="month">
+                                <i class="fas fa-calendar-alt me-1"></i> This Month
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm quick-date-filter" data-range="quarter">
+                                <i class="fas fa-calendar me-1"></i> This Quarter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Results Info -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="text-muted">
+                <span id="filterResults">Showing all leads</span>
+            </div>
+            <div class="text-muted">
+                <small>Total: <span id="totalCount">{{ $leads->total() }}</span> leads</small>
+            </div>
+        </div>
+    </div>
+</div>
         <!-- Statistics Cards -->
         <div class="row mb-4">
             <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
@@ -682,6 +785,332 @@
 
     <script>
         $(document).ready(function() {
+        // ADD THIS CODE TO YOUR EXISTING $(document).ready() FUNCTION
+
+// Store original table data for filtering
+let originalTableData = [];
+let filteredData = [];
+
+// Initialize on page load
+initializeFiltering();
+
+function initializeFiltering() {
+    // Store original table data
+    storeOriginalData();
+    
+    // Populate salesperson dropdown
+    populateSalespersonDropdown();
+    
+    // Set up filter event handlers
+    setupFilterHandlers();
+    
+    // Initial filter application
+    applyClientSideFilters();
+}
+
+function storeOriginalData() {
+    originalTableData = [];
+    $('#responsive-datatable tbody tr').each(function(index) {
+        if (!$(this).find('td').hasClass('text-center')) { // Skip "no data" row
+            const row = $(this);
+            const data = {
+                element: row.clone(true),
+                clientName: row.find('td:eq(1) strong').text().trim().toLowerCase(),
+                clientPhone: row.find('td:eq(1) small').first().text().trim(),
+                clientEmail: row.find('td:eq(1) small').last().text().trim().toLowerCase(),
+                carModel: row.find('td:eq(2) strong').text().trim().toLowerCase(),
+                purchaseType: row.find('td:eq(3) .badge').text().trim().toLowerCase(),
+                budget: parseFloat(row.find('td:eq(4)').text().replace(/[^\d.]/g, '')) || 0,
+                salesperson: row.find('td:eq(6) span').text().trim().toLowerCase(),
+                status: row.find('td:eq(7) .badge').text().trim().toLowerCase(),
+                followUp: row.find('td:eq(8) .badge').text().includes('Required'),
+                createdDate: new Date(row.find('td:eq(9) strong').text().trim()),
+                rawRow: row[0].outerHTML
+            };
+            originalTableData.push(data);
+        }
+    });
+    filteredData = [...originalTableData];
+}
+
+function populateSalespersonDropdown() {
+    const salespeople = new Set();
+    originalTableData.forEach(row => {
+        if (row.salesperson && row.salesperson.trim() !== '') {
+            salespeople.add(row.salesperson);
+        }
+    });
+    
+    const dropdown = $('#salespersonFilter');
+    dropdown.find('option:not(:first)').remove();
+    
+    Array.from(salespeople).sort().forEach(salesperson => {
+        dropdown.append(`<option value="${salesperson}">${salesperson.charAt(0).toUpperCase() + salesperson.slice(1)}</option>`);
+    });
+}
+
+function setupFilterHandlers() {
+    // Text search with debounce
+    let searchTimeout;
+    $('#searchInput').on('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            applyClientSideFilters();
+        }, 300);
+    });
+    
+    // Dropdown filters
+    $('#statusFilter, #purchaseTypeFilter, #salespersonFilter, #followUpFilter').on('change', function() {
+        applyClientSideFilters();
+    });
+    
+    // Date filters
+    $('#dateFromFilter, #dateToFilter').on('change', function() {
+        validateDateRange();
+        applyClientSideFilters();
+    });
+    
+    // Quick date filters
+    $('.quick-date-filter').on('click', function() {
+        const range = $(this).data('range');
+        setQuickDateRange(range);
+        applyClientSideFilters();
+    });
+    
+    // Clear filters
+    $('#clearFilters').on('click', function() {
+        clearAllFilters();
+    });
+}
+
+function validateDateRange() {
+    const fromDate = $('#dateFromFilter').val();
+    const toDate = $('#dateToFilter').val();
+    
+    if (fromDate && toDate && fromDate > toDate) {
+        $('#dateToFilter').val(fromDate);
+    }
+    
+    if (fromDate) {
+        $('#dateToFilter').attr('min', fromDate);
+    }
+    if (toDate) {
+        $('#dateFromFilter').attr('max', toDate);
+    }
+}
+
+function setQuickDateRange(range) {
+    const today = new Date();
+    let fromDate, toDate;
+    
+    switch(range) {
+        case 'today':
+            fromDate = toDate = today.toISOString().split('T')[0];
+            break;
+        case 'week':
+            fromDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            toDate = today.toISOString().split('T')[0];
+            break;
+        case 'month':
+            fromDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+            toDate = today.toISOString().split('T')[0];
+            break;
+        case 'quarter':
+            const quarter = Math.floor(today.getMonth() / 3);
+            fromDate = new Date(today.getFullYear(), quarter * 3, 1).toISOString().split('T')[0];
+            toDate = today.toISOString().split('T')[0];
+            break;
+    }
+    
+    $('#dateFromFilter').val(fromDate);
+    $('#dateToFilter').val(toDate);
+}
+
+function applyClientSideFilters() {
+    const filters = {
+        search: $('#searchInput').val().toLowerCase().trim(),
+        status: $('#statusFilter').val().toLowerCase(),
+        purchaseType: $('#purchaseTypeFilter').val().toLowerCase(),
+        salesperson: $('#salespersonFilter').val().toLowerCase(),
+        followUp: $('#followUpFilter').val(),
+        dateFrom: $('#dateFromFilter').val() ? new Date($('#dateFromFilter').val()) : null,
+        dateTo: $('#dateToFilter').val() ? new Date($('#dateToFilter').val()) : null
+    };
+    
+    // Apply filters
+    filteredData = originalTableData.filter(row => {
+        // Search filter
+        if (filters.search && !matchesSearch(row, filters.search)) {
+            return false;
+        }
+        
+        // Status filter
+        if (filters.status && !row.status.includes(filters.status)) {
+            return false;
+        }
+        
+        // Purchase type filter
+        if (filters.purchaseType && !row.purchaseType.includes(filters.purchaseType)) {
+            return false;
+        }
+        
+        // Salesperson filter
+        if (filters.salesperson && row.salesperson !== filters.salesperson) {
+            return false;
+        }
+        
+        // Follow up filter
+        if (filters.followUp !== '' && ((filters.followUp === '1') !== row.followUp)) {
+            return false;
+        }
+        
+        // Date range filter
+        if (filters.dateFrom && row.createdDate < filters.dateFrom) {
+            return false;
+        }
+        if (filters.dateTo) {
+            const endOfDay = new Date(filters.dateTo);
+            endOfDay.setHours(23, 59, 59, 999);
+            if (row.createdDate > endOfDay) {
+                return false;
+            }
+        }
+        
+        return true;
+    });
+    
+    // Update table
+    updateTableDisplay();
+    
+    // Update statistics
+    updateFilteredStatistics();
+    
+    // Update filter results text
+    updateFilterResultsText(filters);
+}
+
+function matchesSearch(row, searchTerm) {
+    return row.clientName.includes(searchTerm) ||
+           row.clientPhone.includes(searchTerm) ||
+           row.clientEmail.includes(searchTerm) ||
+           row.carModel.includes(searchTerm);
+}
+
+function updateTableDisplay() {
+    const tbody = $('#responsive-datatable tbody');
+    tbody.empty();
+    
+    if (filteredData.length === 0) {
+        tbody.append(`
+            <tr>
+                <td colspan="11" class="text-center py-4">
+                    <div class="text-muted">
+                        <i class="fas fa-search fa-3x mb-3"></i>
+                        <h5>No leads found</h5>
+                        <p>No leads match your current filter criteria.</p>
+                    </div>
+                </td>
+            </tr>
+        `);
+    } else {
+        filteredData.forEach((row, index) => {
+            // Update row number
+            const updatedRow = $(row.element);
+            updatedRow.find('td:first').text(index + 1);
+            tbody.append(updatedRow);
+        });
+    }
+    
+    // Reattach event handlers for the new elements
+    attachRowEventHandlers();
+}
+
+function attachRowEventHandlers() {
+    // Reattach edit, delete, and notes button handlers
+    $('.editBtn').off('click').on('click', function() {
+        // Your existing edit button code
+    });
+    
+    $('.deleteBtn').off('click').on('click', function() {
+        // Your existing delete button code
+    });
+    
+    $('.notesBtn').off('click').on('click', function() {
+        // Your existing notes button code
+    });
+}
+
+function updateFilteredStatistics() {
+    const stats = {
+        active: filteredData.filter(row => row.status.includes('active')).length,
+        closed: filteredData.filter(row => row.status.includes('closed')).length,
+        unsuccessful: filteredData.filter(row => row.status.includes('unsuccessful')).length,
+        followUp: filteredData.filter(row => row.followUp).length,
+        finance: filteredData.filter(row => row.purchaseType.includes('finance')).length,
+        cash: filteredData.filter(row => row.purchaseType.includes('cash')).length,
+        total: filteredData.length,
+        totalBudget: filteredData.reduce((sum, row) => sum + row.budget, 0),
+        avgBudget: filteredData.length > 0 ? filteredData.reduce((sum, row) => sum + row.budget, 0) / filteredData.length : 0
+    };
+    
+    // Update statistics cards
+    $('.statistics .card-body h5').eq(0).text(stats.active);
+    $('.statistics .card-body h5').eq(1).text(stats.closed);
+    $('.statistics .card-body h5').eq(2).text(stats.unsuccessful);
+    $('.statistics .card-body h5').eq(3).text(stats.followUp);
+    $('.statistics .card-body h5').eq(4).text(stats.finance);
+    $('.statistics .card-body h5').eq(5).text(stats.cash);
+    
+    // Update summary row
+    $('#totalCount').text(stats.total);
+    
+    // Calculate conversion rate
+    const totalProcessed = stats.active + stats.closed + stats.unsuccessful;
+    const conversionRate = totalProcessed > 0 ? ((stats.closed / totalProcessed) * 100).toFixed(1) : 0;
+    
+    // Update average budget and conversion rate if those elements exist
+    $('.card.bg-light .text-success').text(stats.total);
+    $('.card.bg-light .text-primary').text('KES ' + stats.avgBudget.toLocaleString('en-US', {minimumFractionDigits: 2}));
+    $('.card.bg-light .text-warning').text('KES ' + stats.totalBudget.toLocaleString('en-US', {minimumFractionDigits: 2}));
+    $('.card.bg-light .text-info').text(conversionRate + '%');
+}
+
+function updateFilterResultsText(filters) {
+    let resultText = 'Showing ';
+    const activeFilters = [];
+    
+    if (filters.search) activeFilters.push(`search: "${filters.search}"`);
+    if (filters.status) activeFilters.push(`status: ${filters.status}`);
+    if (filters.purchaseType) activeFilters.push(`type: ${filters.purchaseType}`);
+    if (filters.salesperson) activeFilters.push(`salesperson: ${filters.salesperson}`);
+    if (filters.followUp !== '') activeFilters.push(`follow-up: ${filters.followUp === '1' ? 'required' : 'not required'}`);
+    if (filters.dateFrom) activeFilters.push(`from: ${filters.dateFrom.toLocaleDateString()}`);
+    if (filters.dateTo) activeFilters.push(`to: ${filters.dateTo.toLocaleDateString()}`);
+    
+    if (activeFilters.length > 0) {
+        resultText += `filtered leads (${activeFilters.join(', ')})`;
+    } else {
+        resultText += 'all leads';
+    }
+    
+    $('#filterResults').text(resultText);
+}
+
+function clearAllFilters() {
+    $('#searchInput').val('');
+    $('#statusFilter').val('');
+    $('#purchaseTypeFilter').val('');
+    $('#salespersonFilter').val('');
+    $('#followUpFilter').val('');
+    $('#dateFromFilter').val('');
+    $('#dateToFilter').val('');
+    
+    // Remove date restrictions
+    $('#dateFromFilter').removeAttr('max');
+    $('#dateToFilter').removeAttr('min');
+    
+    applyClientSideFilters();
+}
             document.getElementById('editModal').addEventListener('hidden.bs.modal', function () {
     document.body.classList.remove('modal-open');
     document.body.style.overflow = 'auto';
@@ -707,24 +1136,7 @@
                 applyFilters();
             });
 
-            // Status filter buttons
-            $('.status-filter').on('click', function() {
-                $('.status-filter').removeClass('active');
-                $(this).addClass('active');
-                
-                const status = $(this).data('status');
-                const followUp = $(this).data('follow-up');
-                
-                if (status !== undefined) {
-                    $('#statusFilter').val(status);
-                    $('#followUpFilter').val('');
-                } else if (followUp !== undefined) {
-                    $('#followUpFilter').val(followUp);
-                    $('#statusFilter').val('');
-                }
-                
-                applyFilters();
-            });
+            
 
             // Clear filters
             $('#clearFilters').on('click', function() {
@@ -735,45 +1147,7 @@
             });
 
             // Apply filters function
-            function applyFilters() {
-                const formData = $('#filterForm').serialize();
-                
-                $.ajax({
-                    url: window.location.href,
-                    type: 'GET',
-                    data: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    success: function(response) {
-                        // Update statistics
-                        updateStatistics(response.statistics);
-                        
-                        // Update table content
-                        updateTable(response.leads);
-                        
-                        // Update URL without page reload
-                        const url = new URL(window.location);
-                        const params = new URLSearchParams(formData);
-                        params.forEach((value, key) => {
-                            if (value) {
-                                url.searchParams.set(key, value);
-                            } else {
-                                url.searchParams.delete(key);
-                            }
-                        });
-                        window.history.pushState({}, '', url);
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Filter error:', error);
-                        Swal.fire(
-                            'Error!',
-                            'Error applying filters. Please try again.',
-                            'error'
-                        );
-                    }
-                });
-            }
+           
 
             // Update statistics
             function updateStatistics(stats) {
