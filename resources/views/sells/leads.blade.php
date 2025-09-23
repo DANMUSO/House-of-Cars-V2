@@ -494,7 +494,7 @@
                                             </td>
                                             <td>
                                                 <div class="btn-group-vertical" role="group">
-                                                    <!-- <button class="btn btn-warning btn-sm editBtn mb-1"
+                                                    <button class="btn btn-warning btn-sm editBtn mb-1"
                                                         data-id="{{ $lead->id }}"
                                                         data-client-name="{{ $lead->client_name }}"
                                                         data-client-phone="{{ $lead->client_phone }}"
@@ -508,7 +508,7 @@
                                                         data-commitment-amount="{{ $lead->commitment_amount }}"
                                                         data-notes="{{ $lead->notes }}">
                                                         <i class="fas fa-edit me-1"></i> Edit
-                                                    </button> -->
+                                                    </button>
                                                     <button class="btn btn-danger btn-sm deleteBtn mb-1" data-id="{{ $lead->id }}">
                                                         <i class="fas fa-trash me-1"></i> Delete
                                                     </button>
