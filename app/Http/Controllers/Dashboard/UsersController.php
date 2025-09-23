@@ -29,7 +29,7 @@ class UsersController extends Controller
             'email'        => 'required|email|unique:users,email',
             'phone'        => 'required|string|unique:users,phone|regex:/^254[17]\d{8}$/',
             'national_id'  => 'required|string|unique:users,national_id',
-            'role'         => 'required|string|in:Managing-Director,Accountant,Showroom-Manager,Salesperson,Support-Staff,HR,General-Manager,Cleaner,Driver',
+            'role'         => 'required|string|in:Managing-Director,Accountant,Showroom-Manager,Salesperson,Support-Staff,HR,General-Manager,Yard-Supervisor',
             'gender'       => 'required|string|in:Male,Female',
             'password'       => 'required|string', // Only for leave allocation, not saved
         ]);

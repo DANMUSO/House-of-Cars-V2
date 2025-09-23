@@ -33,6 +33,7 @@ class RouteServiceProvider extends ServiceProvider
             'Showroom-Manager' => '/admin/dashboard',
             'Salesperson' => '/Facilitation/requests',
             'Support-Staff' => '/Facilitation/requests',
+            'Yard-Supervisor' => '/Facilitation/requests',
             'HR' => '/admin/dashboard',
             'General-Manager' => '/admin/dashboard',
             default => self::HOME,  // Fallback to the default route, which is /dashboard

@@ -1271,6 +1271,24 @@
                                 </div>
                             </li>
                              @endif
+                            @if(in_array(Auth::user()->role, ['Yard-Supervisor']))
+                            <li>
+                                <a href="#sidebarBaseui1" data-bs-toggle="collapse">
+                                <i class="fa-solid fa-tag"></i>
+                                    <span>Gatepass Mgt </span>
+                                    <span class="menu-arrow"></span>
+                                </a>
+                                <div class="collapse" id="sidebarBaseui1">
+                                    <ul class="nav-second-level">
+                    
+                                          <li>
+                                            <a class='tp-link' href="{{url('gatepasscard')}}">Gate Pass Card</a>
+                                        </li>
+
+                                    </ul>
+                                </div>
+                            </li>
+                             @endif
                             <li>
                                 <a href="#sidebarAdvancedUIs" data-bs-toggle="collapse">
                                 <i class="fa-solid fa-people-carry-box"></i>
