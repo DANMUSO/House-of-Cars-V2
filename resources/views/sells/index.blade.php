@@ -482,16 +482,29 @@
 </div>
 
             </div>
-            <div class="row">
-             <div class="col-md-12">
-                <!-- Download Button OUTSIDE Card -->
-            <div class="download-actions mb-3">
-                <button class="btn btn-primary btn-sm w-100" onclick="downloadCard({{ $sale->id }})">
+             <div class="row">
+    <div class="col-md-12">
+        <div class="download-actions mb-3">
+            <div class="dropdown w-100">
+                <button class="btn btn-primary btn-sm dropdown-toggle w-100" type="button" id="downloadDropdown{{ $sale->id }}" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="fas fa-download"></i> Download Gate Pass
                 </button>
+                <ul class="dropdown-menu w-100" aria-labelledby="downloadDropdown{{ $sale->id }}">
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="event.preventDefault(); downloadCard({{ $sale->id }}, 'a4');">
+                            <i class="fas fa-file-pdf"></i> Download as A4
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="event.preventDefault(); downloadCard({{ $sale->id }}, 'a5');">
+                            <i class="fas fa-file-pdf"></i> Download as A5
+                        </a>
+                    </li>
+                </ul>
             </div>
-            </div>
-            </div>
+        </div>
+    </div>
+</div>
             
         </div>
         @endforeach
@@ -758,6 +771,17 @@
                                     <div class="delivered-by-date" style="height: 25px; border-bottom: 1px solid #000; width: 120px;"></div>
                                 </div>
                             </div>
+                            <br>
+                             <div class="signature-box delivered-by-section" style="padding: 20px;  background-color: white;">
+                                <div style="margin-bottom: 15px; font-weight: bold;  color: black !important;" >
+                                    Vehicle released by:
+                                </div>
+                                <div class="form-group mb-3">
+                                    <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Name:</div>
+                                    <div  style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px;"></div>
+                                </div>
+                                
+                            </div>
                                 </div>
                                 <div class="col-md-7">
                                      <div class="signature-box" style="padding: 20px; height: 200px; background-color: white;">
@@ -781,6 +805,25 @@
                                             <div style="height: 25px; border-bottom: 1px solid #000; width: 120px;"></div>
                                         </div>
                                     </div>
+                                    <br><br>
+                                    <div class="signature-box" style="padding: 20px; height: 200px; background-color: white;">
+                                        <div style="margin-bottom: 15px; font-weight: bold;   color: black !important;">
+                                            Vehicle received on Behalf:
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <div style="margin-bottom: 5px; font-size: 14px;   color: black !important;">ID : 
+                                               
+                                                </div>
+                                            <div style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px; color: black !important;"></div>
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <div style="margin-bottom: 5px; font-size: 14px;   color: black !important;">Sign: 
+                                               
+                                            </div>
+                                            <div style="height: 35px; border-bottom: 1px solid #000; margin-bottom: 10px; color: black !important;"></div>
+                                        </div>
+                                        
+                                    </div>
                                 </div>
                             </div>
                             
@@ -797,15 +840,28 @@
     
    
      <div class="row">
-             <div class="col-md-12">
-                <!-- Download Button OUTSIDE Card -->
-            <div class="download-actions mb-3">
-                <button class="btn btn-danger btn-sm w-100" onclick="downloadCard({{ $vehicle->id }})">
-                    <i class="fas fa-download"></i> Download Gate Pass (Deleted)
+    <div class="col-md-12">
+        <div class="download-actions mb-3">
+            <div class="dropdown w-100">
+                <button class="btn btn-danger btn-sm dropdown-toggle w-100" type="button" id="downloadDropdown{{ $vehicle->id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-download"></i> Download Gate Pass
                 </button>
+                <ul class="dropdown-menu w-100" aria-labelledby="downloadDropdown{{ $vehicle->id }}">
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="event.preventDefault(); downloadCard({{ $vehicle->id }}, 'a4');">
+                            <i class="fas fa-file-pdf"></i> Download as A4
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="#" onclick="event.preventDefault(); downloadCard({{ $vehicle->id }}, 'a5');">
+                            <i class="fas fa-file-pdf"></i> Download as A5
+                        </a>
+                    </li>
+                </ul>
             </div>
-              </div>
-            </div>
+        </div>
+    </div>
+</div>
 </div>
 @endforeach
 
@@ -956,175 +1012,168 @@ class GatePassFilter {
 }
 
 // CLEAN Download Function - Clones existing card and adds signatures
-function downloadCard(saleId) {
-    const cardElement = document.getElementById(`gate-pass-${saleId}`);
-    const gatePassItem = cardElement.closest('.gate-pass-item');
+async function downloadCard(id, format = 'a4') {
+    const card = document.getElementById('gate-pass-' + id);
+    const gatePassItem = card.closest('.gate-pass-item');
+    const customerName = gatePassItem?.dataset.customer || 'Unknown';
+    const passId = gatePassItem?.dataset.passId || id;
     
-    // Extract customer data for signature section
-    const customerName = gatePassItem.dataset.customer;
-    const idNumber = gatePassItem.dataset.idNumber;
+    // FIX: Handle both button and anchor elements
+    let originalButton = null;
+    let originalText = '';
     
-    // Clone the existing card HTML
-    const cardClone = cardElement.cloneNode(true);
+    if (typeof event !== 'undefined' && event.target) {
+        originalButton = event.target.closest('button') || event.target.closest('a');
+        if (originalButton) {
+            originalText = originalButton.innerHTML;
+            originalButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+            originalButton.disabled = true;
+            if (originalButton.tagName === 'A') {
+                originalButton.style.pointerEvents = 'none';
+            }
+        }
+    }
     
-    // Add signature sections HTML to the cloned card
-    const signatureHTML = `
-        <!-- Signature Sections -->
-        <div class="signatures-section">
-            <div class="signatures-header">Authorization Signatures</div>
-            <div class="signatures-grid">
-                <!-- Buyer Signature -->
-                <div class="signature-box">
-                    <div class="signature-label">Vehicle Buyer</div>
-                    <div class="signature-area"></div>
-                    <div class="signature-details">
-                        <strong>Name:</strong> ${customerName || 'N/A'}<br>
-                        <strong>ID Number:</strong> ${idNumber || 'N/A'}
-                    </div>
-                    <div class="signature-date">
-                        <strong>Date:</strong> ________________
-                    </div>
-                </div>
-                
-                <!-- Seller Representative Signature -->
-                <div class="signature-box">
-                    <div class="signature-label">Seller Representative</div>
-                    <div class="signature-area"></div>
-                    <div class="signature-details">
-                        <strong>Title:</strong> Sales Manager<br>
-                        <strong>Department:</strong> Vehicle Sales
-                    </div>
-                    <div class="signature-date">
-                        <strong>Date:</strong> ________________
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Add signature sections to the card body
-    const cardBody = cardClone.querySelector('.gate-pass-body');
-    cardBody.insertAdjacentHTML('beforeend', signatureHTML);
-    
-    // Create print window with the cloned card
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <html>
-            <head>
-                <title>Gate Pass - ${gatePassItem.dataset.passId}</title>
-                <style>
-                    * { margin: 0; padding: 0; box-sizing: border-box; }
-                    body { 
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                        background: white; padding: 20px; color: #333; line-height: 1.5;
-                    }
-                    
-                    /* Include all existing card styles */
-                    .gate-pass-card {
-                        border: 2px solid #000; border-radius: 12px; background: #fff; overflow: hidden;
-                        max-width: 600px; margin: 0 auto;
-                    }
-                    .gate-pass-header {
-                        background: linear-gradient(135deg, #007bff, #0056b3); color: white; padding: 16px 20px;
-                    }
-                    .gate-pass-body { font-size: 0.9rem; background: #f8f9fa; padding: 24px; }
-                    .info-section {
-                        background: #fff; margin: 0 0 12px 0; border-radius: 6px; 
-                        border: 1px solid #e9ecef; overflow: hidden;
-                    }
-                    .section-header {
-                        background: #f8f9fa; padding: 10px 16px; border-bottom: 1px solid #e9ecef;
-                        display: flex; align-items: center; gap: 10px; font-weight: 600; 
-                        font-size: 0.8rem; color: #495057; letter-spacing: 0.5px;
-                    }
-                    .section-content { padding: 16px; background: #fff; }
-                    .primary-info {
-                        font-size: 1.1rem; font-weight: 600; color: #007bff; 
-                        margin-bottom: 6px; line-height: 1.3;
-                    }
-                    .secondary-info { font-size: 0.85rem; color: #6c757d; line-height: 1.4; }
-                    .customer-layout {
-                        display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
-                    }
-                    .customer-main { flex: 1; }
-                    .customer-main .primary-info { color: #495057; font-size: 1.05rem; }
-                    .customer-id {
-                        background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px;
-                        padding: 10px 12px; text-align: center; min-width: 120px;
-                    }
-                    .id-label {
-                        font-size: 0.7rem; color: #6c757d; font-weight: 500; margin-bottom: 4px;
-                        text-transform: uppercase; letter-spacing: 0.3px;
-                    }
-                    .id-number {
-                        font-weight: 700; color: #007bff; font-size: 0.9rem; font-family: 'Courier New', monospace;
-                    }
-                    .auth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
-                    .auth-item { display: flex; flex-direction: column; gap: 2px; }
-                    .auth-label {
-                        font-size: 0.75rem; color: #6c757d; font-weight: 500;
-                        text-transform: uppercase; letter-spacing: 0.3px;
-                    }
-                    .auth-value { font-size: 0.85rem; color: #495057; font-weight: 500; }
-                    .security-verification {
-                        background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 6px;
-                        padding: 12px 16px; display: flex; align-items: center; gap: 12px; margin-top: 12px;
-                    }
-                    .verification-icon { color: #721c24; font-size: 1.1rem; flex-shrink: 0; }
-                    .verification-title {
-                        color: #721c24; font-size: 0.8rem; font-weight: 700; margin-bottom: 2px;
-                        text-transform: uppercase; letter-spacing: 0.5px;
-                    }
-                    .verification-text { color: #721c24; font-size: 0.8rem; line-height: 1.3; }
-                    
-                    /* Signature Styles */
-                    .signatures-section {
-                        background: white; border: 1px solid #e9ecef; border-radius: 8px;
-                        padding: 20px; margin-top: 20px;
-                    }
-                    .signatures-header {
-                        text-align: center; margin-bottom: 20px; color: #333; font-weight: 700;
-                        font-size: 1rem; text-transform: uppercase; letter-spacing: 0.5px;
-                        border-bottom: 2px solid #007bff; padding-bottom: 8px;
-                    }
-                    .signatures-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-                    .signature-box {
-                        text-align: center; border: 1px solid #dee2e6; border-radius: 6px;
-                        padding: 16px; background: #fafafa;
-                    }
-                    .signature-area {
-                        height: 60px; border-bottom: 2px solid #333; margin-bottom: 12px; position: relative;
-                    }
-                    .signature-area::after {
-                        content: 'Signature'; position: absolute; right: 0; bottom: -18px;
-                        font-size: 0.7rem; color: #999; font-style: italic;
-                    }
-                    .signature-label {
-                        font-weight: 700; color: #333; font-size: 0.9rem; margin-bottom: 6px;
-                        text-transform: uppercase; letter-spacing: 0.3px;
-                    }
-                    .signature-details { font-size: 0.8rem; color: #6c757d; line-height: 1.3; }
-                    .signature-date {
-                        margin-top: 12px; padding-top: 8px; border-top: 1px solid #dee2e6;
-                        font-size: 0.75rem; color: #6c757d;
-                    }
-                    .signature-date strong { color: #333; }
-                    
-                    /* Hide download buttons and actions */
-                    .download-actions, .card-footer, button { display: none !important; }
-                    
-                    @media print {
-                        body { padding: 0; }
-                        .download-actions, .card-footer, button { display: none !important; }
-                    }
-                </style>
-            </head>
-            <body onload="window.print(); window.close();">
-                ${cardClone.outerHTML}
-            </body>
-        </html>
-    `);
-    printWindow.document.close();
+    try {
+        // Clone the card
+        const cardClone = card.cloneNode(true);
+        
+        // Remove unwanted elements
+        const unwantedElements = cardClone.querySelectorAll('.download-actions, .card-footer, button');
+        unwantedElements.forEach(el => el.remove());
+        
+        // Expand textarea to show all content
+        const textareas = cardClone.querySelectorAll('textarea');
+        textareas.forEach(textarea => {
+            const text = textarea.value;
+            const div = document.createElement('div');
+            div.style.cssText = `
+                background-color: white;
+                color: black;
+                border: 1px solid #dee2e6;
+                padding: 10px;
+                min-height: 50px;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                font-family: inherit;
+                font-size: 0.85rem;
+                line-height: 1.5;
+            `;
+            div.textContent = text || 'No comments';
+            textarea.parentNode.replaceChild(div, textarea);
+        });
+        
+        // Create temporary container
+        const tempContainer = document.createElement('div');
+        tempContainer.style.cssText = `
+            position: absolute;
+            left: -9999px;
+            top: 0;
+            background: white;
+            width: 800px;
+        `;
+        tempContainer.appendChild(cardClone);
+        document.body.appendChild(tempContainer);
+        
+        // Wait for images to load
+        const images = tempContainer.getElementsByTagName('img');
+        await Promise.all(Array.from(images).map(img => {
+            if (img.complete) return Promise.resolve();
+            return new Promise((resolve) => {
+                img.onload = resolve;
+                img.onerror = resolve;
+                setTimeout(resolve, 1000);
+            });
+        }));
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Generate canvas
+        const canvas = await html2canvas(cardClone, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff',
+            windowWidth: 800,
+            scrollY: 0,
+            scrollX: 0
+        });
+        
+        // Clean up
+        document.body.removeChild(tempContainer);
+        
+        // Create PDF with selected format
+        const { jsPDF } = window.jspdf;
+        
+        // Define page dimensions based on format
+        let pageWidth, pageHeight;
+        if (format === 'a5') {
+            pageWidth = 148;
+            pageHeight = 210;
+        } else {
+            pageWidth = 210;
+            pageHeight = 297;
+        }
+        
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: format,
+            compress: true
+        });
+        
+        const margin = 5;
+        const maxWidth = pageWidth - (2 * margin);
+        const maxHeight = pageHeight - (2 * margin);
+        
+        // Calculate image dimensions to fill the page
+        const canvasRatio = canvas.width / canvas.height;
+        const pageRatio = maxWidth / maxHeight;
+        
+        let imgWidth, imgHeight;
+        
+        if (canvasRatio > pageRatio) {
+            imgWidth = maxWidth;
+            imgHeight = imgWidth / canvasRatio;
+        } else {
+            imgHeight = maxHeight;
+            imgWidth = imgHeight * canvasRatio;
+        }
+        
+        // Center the content
+        const xPos = margin + (maxWidth - imgWidth) / 2;
+        const yPos = margin + (maxHeight - imgHeight) / 2;
+        
+        // Convert canvas to image and add to PDF
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        pdf.addImage(imgData, 'JPEG', xPos, yPos, imgWidth, imgHeight);
+        
+        // Add metadata
+        pdf.setProperties({
+            title: `Gate Pass ${passId}`,
+            subject: 'Vehicle Gate Pass',
+            author: 'House of Cars',
+            creator: 'House of Cars System'
+        });
+        
+        // Save the PDF
+        const formatLabel = format.toUpperCase();
+        const filename = `GatePass_${passId}_${customerName.replace(/[^a-zA-Z0-9]/g, '_')}_${formatLabel}.pdf`;
+        pdf.save(filename);
+        
+    } catch (error) {
+        console.error('PDF Generation Error:', error);
+        alert('Failed to generate PDF: ' + error.message);
+    } finally {
+        // Restore button state
+        if (originalButton) {
+            originalButton.innerHTML = originalText;
+            originalButton.disabled = false;
+            if (originalButton.tagName === 'A') {
+                originalButton.style.pointerEvents = '';
+            }
+        }
+    }
 }
 
 // Initialize
@@ -1679,6 +1728,47 @@ function testAuth() {
 .signature-date strong {
     color: #495057;
     font-weight: 600;
+}
+</style>
+
+<style>
+@media print, (max-width: 0px) {
+    .gate-pass-card {
+        font-size: 0.85rem !important;
+    }
+    
+    .gate-pass-card .section-header {
+        padding: 8px 12px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .gate-pass-card .section-content {
+        padding: 12px !important;
+    }
+    
+    .gate-pass-card .primary-info {
+        font-size: 0.95rem !important;
+        margin-bottom: 4px !important;
+    }
+    
+    .gate-pass-card .secondary-info {
+        font-size: 0.75rem !important;
+        margin-bottom: 2px !important;
+    }
+    
+    .gate-pass-card .inspection-table {
+        font-size: 0.8rem !important;
+    }
+    
+    .gate-pass-card .signature-box {
+        padding: 12px !important;
+        font-size: 0.75rem !important;
+    }
+    
+    .gate-pass-card .company-logo img {
+        height: 100px !important;
+        width: auto !important;
+    }
 }
 </style>
 <script>

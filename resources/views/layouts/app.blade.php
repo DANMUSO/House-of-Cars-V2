@@ -2308,21 +2308,7 @@ if (typeof bootstrap !== 'undefined') {
 
 </script>
         
-        <script>
-function downloadCard(id) {
-    const card = document.getElementById('gate-pass-' + id);
-    const gatePassItem = card.closest('.gate-pass-item');
-    const customerName = gatePassItem?.dataset.customer || 'Unknown';
-    const passId = gatePassItem?.dataset.passId || id;
-    
-    html2canvas(card, { scale: 2 }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = `GatePass_${passId}_${customerName.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-    });
-}
-</script> 
+
 <script>
     function downloadAgreementPDF() {
     Swal.fire({

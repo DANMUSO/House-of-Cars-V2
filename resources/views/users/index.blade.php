@@ -105,8 +105,8 @@
                             </div>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <h5 class="mb-1">{{ $users->whereIn('role', ['client', 'Client'])->where('deleted_at', null)->count() }}</h5>
-                            <p class="text-muted mb-0 small">Clients</p>
+                            <h5 class="mb-1">{{ $users->whereIn('role', ['General-Manager', 'General-Manager'])->where('deleted_at', null)->count() }}</h5>
+                            <p class="text-muted mb-0 small">General Manager</p>
                         </div>
                     </div>
                 </div>
