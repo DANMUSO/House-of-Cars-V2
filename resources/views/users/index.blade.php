@@ -216,6 +216,7 @@
                                         <option value="Salesperson">Salesperson</option>
                                         <option value="Support-Staff">Support Staff</option>
                                         <option value="Yard-Supervisor">Yard Supervisor</option>
+                                        <option value="Sales-Supervisor">Sales Supervisor</option>
                                          <option value="HR">HR</option>
                                          
                                     </select>
@@ -294,6 +295,7 @@
         'Showroom-Manager' => 'warning',
         'Support-Staff' => 'warning', 
         'Yard-Supervisor' => 'info',
+        'Sales-Supervisor' => 'primary',
         'client', 'Client' => 'purple',
         default => 'info'
     };
@@ -380,6 +382,7 @@
                                                                     <option value="Support-Staff" {{ $user->role == 'Support-Staff' ? 'selected' : '' }}>Support Staff</option>
                                                                     <option value="HR" {{ $user->role == 'HR' ? 'selected' : '' }}>HR</option>
                                                                     <option value="Yard-Supervisor" {{ $user->role == 'Yard-Supervisor' ? 'selected' : '' }}>Yard Supervisor</option>
+                                                                    <option value="Sales-Supervisor" {{ $user->role == 'Sales-Supervisor' ? 'selected' : '' }}>Sales Supervisor</option>
                                                                 </select>
                                                             </div>
                                                             <br>

@@ -22,7 +22,7 @@ class LeadsController extends Controller
             $userRole = Auth::user()->role;
             
             // Initialize the query based on user role
-            if (in_array($userRole, ['Managing-Director','General-Manager', 'Accountant', 'Sales-Manager'])) {
+            if (in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
                 // Show all leads for Managing Director, Accountant, and Sales Manager
                 $query = Lead::with('users');
             } else {
@@ -50,7 +50,7 @@ class LeadsController extends Controller
             }
 
             // Only allow filtering by salesperson for privileged roles
-            if ($request->filled('salesperson_id') && in_array($userRole, ['Managing-Director','General-Manager', 'Accountant', 'Sales-Manager'])) {
+            if ($request->filled('salesperson_id') && in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
                 $query->where('salesperson_id', $request->input('salesperson_id'));
             }
 
@@ -62,7 +62,7 @@ class LeadsController extends Controller
             $leads = $query->orderBy('created_at', 'desc')->paginate(15);
             
             // Get salespeople list (only for privileged roles)
-            if (in_array($userRole, ['Managing-Director','General-Manager', 'Accountant', 'Sales-Manager'])) {
+            if (in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
                 $salespeople = User::select('id','last_name','first_name')->get();
             } else {
                 $salespeople = collect(); // Empty collection for regular users
@@ -84,7 +84,7 @@ class LeadsController extends Controller
             
             // Return default values in case of error based on role
             $userRole = Auth::user()->role;
-            if (in_array($userRole, ['Managing-Director','General-Manager', 'Accountant', 'Sales-Manager'])) {
+            if (in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
                 $leads = Lead::paginate(15);
                 $salespeople = User::select('id','last_name','first_name')->get();
             } else {
@@ -108,7 +108,7 @@ class LeadsController extends Controller
             $userRole = Auth::user()->role;
             
             // Build base query based on role
-            if (in_array($userRole, ['Managing-Director','General-Manager', 'Accountant', 'Sales-Manager'])) {
+            if (in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
                 // Show statistics for all leads
                 $baseQuery = Lead::query();
             } else {
@@ -193,7 +193,7 @@ class LeadsController extends Controller
         // Add the salesperson_id manually
         $validated['salesperson_id'] = auth()->id();
         // For regular users, force the salesperson_id to be their own ID
-        if (!in_array($userRole, ['Managing-Director','General-Manager', 'Accountant', 'Sales-Manager'])) {
+        if (!in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
             $validated['salesperson_id'] = Auth::id();
         }
 
@@ -257,7 +257,7 @@ class LeadsController extends Controller
         ]);
 
         // For regular users, don't allow changing the salesperson
-        if (!in_array($userRole, ['Managing-Director','General-Manager', 'Accountant', 'Sales-Manager'])) {
+        if (!in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
             unset($validated['salesperson_id']);
         }
 
@@ -284,7 +284,7 @@ class LeadsController extends Controller
     {
         // Check if user can delete this lead (only privileged roles)
         $userRole = Auth::user()->role;
-        if (!in_array($userRole, ['Managing-Director','General-Manager', 'Accountant','Salesperson', 'Sales-Manager'])) {
+        if (!in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant','Salesperson', 'Sales-Manager'])) {
             abort(403, 'Unauthorized action.');
         }
         
@@ -318,7 +318,7 @@ class LeadsController extends Controller
         $query = Lead::whereIn('id', $request->lead_ids);
         
         // For regular users, only allow updating their own leads
-        if (!in_array($userRole, ['Managing-Director','General-Manager', 'Accountant', 'Sales-Manager'])) {
+        if (!in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
             $query->where('salesperson_id', Auth::id());
         }
 
@@ -339,7 +339,7 @@ class LeadsController extends Controller
         $userRole = Auth::user()->role;
         
         // Initialize query based on role
-        if (in_array($userRole, ['Managing-Director','General-Manager', 'Accountant', 'Sales-Manager'])) {
+        if (in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
             $query = Lead::with('users');
         } else {
             $query = Lead::with('users')->where('salesperson_id', Auth::id());
@@ -365,7 +365,7 @@ class LeadsController extends Controller
         }
 
         // Only allow filtering by salesperson for privileged roles
-        if ($request->filled('salesperson_id') && in_array($userRole, ['Managing-Director','General-Manager', 'Accountant', 'Sales-Manager'])) {
+        if ($request->filled('salesperson_id') && in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
             $query->where('salesperson_id', $request->input('salesperson_id'));
         }
 
@@ -422,7 +422,7 @@ class LeadsController extends Controller
     {
         $userRole = Auth::user()->role;
         
-        if (in_array($userRole, ['Managing-Director','General-Manager', 'Accountant', 'Sales-Manager'])) {
+        if (in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
             $totalLeads = Lead::count();
             $closedLeads = Lead::where('status', 'Closed')->count();
         } else {
@@ -445,7 +445,7 @@ class LeadsController extends Controller
         $userRole = Auth::user()->role;
         
         // Initialize query based on role
-        if (in_array($userRole, ['Managing-Director','General-Manager', 'Accountant', 'Sales-Manager'])) {
+        if (in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
             $query = Lead::with('users');
         } else {
             $query = Lead::with('users')->where('salesperson_id', Auth::id());
@@ -471,7 +471,7 @@ class LeadsController extends Controller
         }
 
         // Only allow filtering by salesperson for privileged roles
-        if ($request->filled('salesperson_id') && in_array($userRole, ['Managing-Director','General-Manager', 'Accountant', 'Sales-Manager'])) {
+        if ($request->filled('salesperson_id') && in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
             $query->where('salesperson_id', $request->input('salesperson_id'));
         }
 
@@ -497,7 +497,7 @@ class LeadsController extends Controller
         $userRole = Auth::user()->role;
         
         // Privileged roles can access all leads
-        if (in_array($userRole, ['Managing-Director','General-Manager', 'Accountant', 'Sales-Manager'])) {
+        if (in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
             return true;
         }
         

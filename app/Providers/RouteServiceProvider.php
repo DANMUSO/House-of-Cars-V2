@@ -36,6 +36,7 @@ class RouteServiceProvider extends ServiceProvider
             'Yard-Supervisor' => '/Facilitation/requests',
             'HR' => '/admin/dashboard',
             'General-Manager' => '/admin/dashboard',
+            'Sales-Supervisor' => '/Facilitation/requests',
             default => self::HOME,  // Fallback to the default route, which is /dashboard
         };
     }

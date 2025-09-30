@@ -571,7 +571,7 @@
              <th><i class="fas fa-receipt me-1"></i>Comment</th>
             <th><i class="fas fa-receipt me-1"></i>Receipt</th>
             <th><i class="fas fa-calendar me-1"></i>Date</th>
-            @if(in_array(Auth::user()->role, ['Managing-Director', 'Accountant']))
+            @if(in_array(Auth::user()->role, ['Managing-Director','Sales-Supervisor', 'Accountant']))
                 <th><i class="fas fa-cog me-1"></i>Actions</th>
             @endif
         </tr>
@@ -682,7 +682,7 @@
                 </td>
                 
                 {{-- Actions column only for Managing Director and Accountant --}}
-                @if(in_array(Auth::user()->role, ['Managing-Director', 'Accountant']))
+                @if(in_array(Auth::user()->role, ['Managing-Director','Sales-Supervisor', 'Accountant']))
                 <td>
                     @if($facilitation->status == '1')
                     <div class="btn-group-vertical" role="group">

@@ -1253,7 +1253,7 @@
                                 </div>
                             </li>
                             @endif
-                            @if(in_array(Auth::user()->role, ['Salesperson']))
+                            @if(in_array(Auth::user()->role, ['Salesperson','Sales-Supervisor']))
                             <li>
                                 <a href="#sidebarBaseui" data-bs-toggle="collapse">
                                 <i class="fa-solid fa-tag"></i>
