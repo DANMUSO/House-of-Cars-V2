@@ -59,7 +59,7 @@ class LeadsController extends Controller
                 $query->where('follow_up_required', $followUp);
             }
 
-            $leads = $query->orderBy('created_at', 'desc')->paginate(15);
+            $leads = $query->orderBy('created_at', 'desc')->paginate(1000);
             
             // Get salespeople list (only for privileged roles)
             if (in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
@@ -85,10 +85,10 @@ class LeadsController extends Controller
             // Return default values in case of error based on role
             $userRole = Auth::user()->role;
             if (in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
-                $leads = Lead::paginate(15);
+                $leads = Lead::paginate(1000);
                 $salespeople = User::select('id','last_name','first_name')->get();
             } else {
-                $leads = Lead::where('salesperson_id', Auth::id())->paginate(15);
+                $leads = Lead::where('salesperson_id', Auth::id())->paginate(1000);
                 $salespeople = collect();
             }
             
@@ -480,7 +480,7 @@ class LeadsController extends Controller
             $query->where('follow_up_required', $followUp);
         }
 
-        $leads = $query->orderBy('created_at', 'desc')->paginate(15);
+        $leads = $query->orderBy('created_at', 'desc')->paginate(1000);
         $statistics = $this->getStatisticsBasedOnRole();
 
         return response()->json([
