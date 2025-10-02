@@ -123,6 +123,17 @@ Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Sa
         Route::delete('/delete/{gatePassId}', [App\Http\Controllers\Dashboard\InspectionController::class, 'destroygatepass']);
         Route::get('/statistics', [App\Http\Controllers\Dashboard\InspectionController::class, 'statisticsgatepass']);
     });
+    Route::get('/hire-purchase/{id}/repossession', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'showRepossessionForm'])->name('hire-purchase.repossession.form');
+    Route::post('/hire-purchase/{id}/repossession', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'processRepossession'])->name('hire-purchase.repossession.process');
+    Route::post('/hire-purchase/repossessions/{id}/sale', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'recordVehicleSale'])->name('repossession.record-sale');
+    Route::get('/hire-purchase/repossessions', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'repossessionsList'])->name('repossessions.list');
+    Route::get('/hire-purchase/{id}/repossession-data', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'getRepossessionData']);
+
+        Route::get('/gentlement/{id}/repossession', [App\Http\Controllers\Dashboard\GentlemanAgreementController::class, 'showRepossessionForm'])->name('gentlement.repossession.form');
+    Route::post('/gentlement/{id}/repossession', [App\Http\Controllers\Dashboard\GentlemanAgreementController::class, 'processRepossession'])->name('gentlement.repossession.process');
+    Route::post('/gentlement/repossessions/{id}/sale', [App\Http\Controllers\Dashboard\GentlemanAgreementController::class, 'recordVehicleSale'])->name('repossession.record-sale');
+    Route::get('/gentlement/repossessions', [App\Http\Controllers\Dashboard\GentlemanAgreementController::class, 'repossessionsList'])->name('repossessions.list');
+    Route::get('/gentlement/{id}/repossession-data', [App\Http\Controllers\Dashboard\GentlemanAgreementController::class, 'getRepossessionData']);
     //Receipt Routes
 Route::post('/facilitation/{id}/receipt', [App\Http\Controllers\Dashboard\FacilitationController::class, 'uploadReceipt'])->name('facilitation.receipt.upload');
 Route::delete('/facilitation/{id}/receipt', [App\Http\Controllers\Dashboard\FacilitationController::class, 'deleteReceipt'])->name('facilitation.receipt.delete');

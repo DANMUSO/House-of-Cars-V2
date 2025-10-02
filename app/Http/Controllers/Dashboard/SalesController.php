@@ -14,36 +14,92 @@ use App\Models\GentlemanAgreement;
 use Carbon\Carbon;
 use App\Models\Installment;
 use App\Models\Payment;
+use App\Models\Repossession;
 use App\Services\SmsService;
 use Illuminate\Support\Facades\Log;
 class SalesController extends Controller
 {
    
-    public function index()
+public function index()
 {
-     // Collect IDs from InCash, HirePurchaseAgreement, and GentlemanAgreement
-        $importedIds = array_merge(
-            InCash::whereNotNull('imported_id')->pluck('imported_id')->toArray(),
-            HirePurchaseAgreement::whereNotNull('imported_id')->pluck('imported_id')->toArray(),
-            GentlemanAgreement::whereNotNull('imported_id')->pluck('imported_id')->toArray()
-        );
+    // Get IDs of agreements that have been repossessed (exclude from "in-use")
+    $repossessedAgreementIds = Repossession::whereIn('status', ['repossessed', 'pending_sale'])
+        ->pluck('agreement_id')
+        ->toArray();
 
-        $customerIds = array_merge(
-            InCash::whereNotNull('customer_id')->pluck('customer_id')->toArray(),
-            HirePurchaseAgreement::whereNotNull('customer_id')->pluck('customer_id')->toArray(),
-            GentlemanAgreement::whereNotNull('customer_id')->pluck('customer_id')->toArray()
-        );
+    // Collect IDs from ACTIVE (non-repossessed) agreements only
+    $importedIds = array_merge(
+        InCash::whereNotNull('imported_id')
+            ->whereNotIn('id', $repossessedAgreementIds)
+            ->pluck('imported_id')
+            ->toArray(),
+        HirePurchaseAgreement::whereNotNull('imported_id')
+            ->whereNotIn('id', $repossessedAgreementIds)
+            ->whereIn('status', ['pending', 'approved'])
+            ->pluck('imported_id')
+            ->toArray(),
+        GentlemanAgreement::whereNotNull('imported_id')
+            ->whereNotIn('id', $repossessedAgreementIds)
+            ->whereIn('status', ['pending', 'approved'])
+            ->pluck('imported_id')
+            ->toArray()
+    );
 
-        // Filter VehicleInspections where cars are not already in InCash, HirePurchase, or GentlemanAgreement
-        $cars = VehicleInspection::with('carsImport', 'customerVehicle')
-            ->whereDoesntHave('carsImport', function ($query) use ($importedIds) {
-                $query->whereIn('id', $importedIds);
-            })
-            ->whereDoesntHave('customerVehicle', function ($query) use ($customerIds) {
-                $query->whereIn('id', $customerIds);
-            })
-            ->latest()
-            ->get();
+    $customerIds = array_merge(
+        InCash::whereNotNull('customer_id')
+            ->whereNotIn('id', $repossessedAgreementIds)
+            ->pluck('customer_id')
+            ->toArray(),
+        HirePurchaseAgreement::whereNotNull('customer_id')
+            ->whereNotIn('id', $repossessedAgreementIds)
+            ->whereIn('status', ['pending', 'approved'])
+            ->pluck('customer_id')
+            ->toArray(),
+        GentlemanAgreement::whereNotNull('customer_id')
+            ->whereNotIn('id', $repossessedAgreementIds)
+            ->whereIn('status', ['pending', 'approved'])
+            ->pluck('customer_id')
+            ->toArray()
+    );
+
+    // Get repossessed vehicles ready for resale
+    $repossessedVehicles = Repossession::with('agreement')
+        ->whereIn('agreement_type', ['hire_purchase', 'gentleman_agreement'])
+        ->where('status', 'repossessed')
+        ->get()
+        ->map(function($repo) {
+            $agreement = null;
+            
+            if ($repo->agreement_type === 'hire_purchase') {
+                $agreement = HirePurchaseAgreement::find($repo->agreement_id);
+            } elseif ($repo->agreement_type === 'gentleman_agreement') {
+                $agreement = GentlemanAgreement::find($repo->agreement_id);
+            }
+            
+            if (!$agreement) return null;
+            
+            return [
+                'type' => $agreement->car_type ?? 'import',
+                'id' => $agreement->car_id ?? null,
+                'is_repossessed' => true,
+                'repossession_id' => $repo->id,
+                'car_value' => $repo->car_value,
+                'original_agreement_type' => $repo->agreement_type
+            ];
+        })
+        ->filter(fn($item) => $item !== null && $item['id'] !== null);
+
+    // Filter VehicleInspections for NEW cars not in active agreements
+    $cars = VehicleInspection::with('carsImport', 'customerVehicle')
+        ->whereDoesntHave('carsImport', function ($query) use ($importedIds) {
+            $query->whereIn('id', $importedIds);
+        })
+        ->whereDoesntHave('customerVehicle', function ($query) use ($customerIds) {
+            $query->whereIn('id', $customerIds);
+        })
+        ->latest()
+        ->get();
+
     $inCashes = InCash::latest()->get();
     $importCars = CarImport::whereIn('id', $inCashes->where('car_type', 'import')->pluck('car_id'))->get()->keyBy('id');
     $customerCars = CustomerVehicle::whereIn('id', $inCashes->where('car_type', 'customer')->pluck('car_id'))->get()->keyBy('id');
@@ -99,6 +155,7 @@ class SalesController extends Controller
         'inCashes', 
         'importCars', 
         'customerCars',
+        'repossessedVehicles', // ADD THIS
         'totalAmount', 
         'totalTransactions', 
         'pendingApproval', 

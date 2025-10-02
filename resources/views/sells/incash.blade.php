@@ -304,26 +304,60 @@
                             <div class="col-md-6">
                                 <label class="form-label">Select Vehicle <span class="text-danger">*</span></label>
                                 <select class="form-select" id="car_id" name="car_id" required>
-                                    <option disabled selected value="">Choose Vehicle</option>
-                                    <optgroup label="🚗 Imported Cars">
-                                        @foreach ($cars as $car)
-                                            @if ($car->carsImport)
-                                                <option value="import-{{ $car->carsImport->id }}">
-                                                    {{ $car->carsImport->make }} - {{ $car->carsImport->model }} - {{ $car->carsImport->year }}
-                                                </option>
-                                            @endif
-                                        @endforeach
-                                    </optgroup>
-                                    <optgroup label="🔄 Trade Inn | Sell In Behalf">
-                                        @foreach ($cars as $car)
-                                            @if ($car->customerVehicle)
-                                                <option value="customer-{{ $car->customerVehicle->id }}">
-                                                    {{ $car->customerVehicle->vehicle_make }} -  {{ $car->customerVehicle->model }} - {{ $car->customerVehicle->number_plate }}
-                                                </option>
-                                            @endif
-                                        @endforeach
-                                    </optgroup>
-                                </select>
+    <option disabled selected value="">Choose Vehicle</option>
+    
+    {{-- REPOSSESSED VEHICLES - Ready for Resale --}}
+    @if(isset($repossessedVehicles) && $repossessedVehicles->count() > 0)
+        <optgroup label="🔴 REPOSSESSED - Ready for Resale">
+            @foreach ($repossessedVehicles->sortBy(function($repo) {
+                if ($repo['type'] === 'import') {
+                    $car = \App\Models\CarImport::find($repo['id']);
+                    return ($car->make ?? 'Z') . ' ' . ($car->model ?? 'Z');
+                } else {
+                    $car = \App\Models\CustomerVehicle::find($repo['id']);
+                    return ($car->vehicle_make ?? 'Z') . ' ' . ($car->model ?? 'Z');
+                }
+            }) as $repo)
+                @php
+                    if ($repo['type'] === 'import') {
+                        $car = \App\Models\CarImport::find($repo['id']);
+                        $displayName = ($car->make ?? 'Unknown') . ' - ' . ($car->model ?? 'Unknown');
+                        if ($car->year ?? null) $displayName .= ' - ' . $car->year;
+                    } else {
+                        $car = \App\Models\CustomerVehicle::find($repo['id']);
+                        $displayName = ($car->vehicle_make ?? 'Unknown') . ' - ' . ($car->model ?? 'Unknown');
+                        if ($car->number_plate ?? null) $displayName .= ' - ' . $car->number_plate;
+                    }
+                @endphp
+                @if($car)
+                    <option value="repossessed-{{ $repo['repossession_id'] }}">
+                        🔴 REPO: {{ $displayName }} - KSh {{ number_format($repo['car_value']) }}
+                    </option>
+                @endif
+            @endforeach
+        </optgroup>
+    @endif
+    
+    {{-- IMPORTED CARS - Sorted Alphabetically --}}
+    <optgroup label="🚗 Imported Cars">
+        @foreach ($cars->filter(fn($car) => $car->carsImport !== null)
+                      ->sortBy(fn($car) => ($car->carsImport->make ?? 'Z') . ' ' . ($car->carsImport->model ?? 'Z')) as $car)
+            <option value="import-{{ $car->carsImport->id }}">
+                {{ $car->carsImport->make }} - {{ $car->carsImport->model }} - {{ $car->carsImport->year }}
+            </option>
+        @endforeach
+    </optgroup>
+    
+    {{-- TRADE-IN CARS - Sorted Alphabetically --}}
+    <optgroup label="🔄 Trade Inn | Sell In Behalf">
+        @foreach ($cars->filter(fn($car) => $car->customerVehicle !== null)
+                      ->sortBy(fn($car) => ($car->customerVehicle->vehicle_make ?? 'Z') . ' ' . ($car->customerVehicle->model ?? 'Z')) as $car)
+            <option value="customer-{{ $car->customerVehicle->id }}">
+                {{ $car->customerVehicle->vehicle_make }} - {{ $car->customerVehicle->model }} - {{ $car->customerVehicle->number_plate }}
+            </option>
+        @endforeach
+    </optgroup>
+</select>
                             </div>
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary">

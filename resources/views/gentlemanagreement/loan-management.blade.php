@@ -813,6 +813,12 @@ document.addEventListener('DOMContentLoaded', function() {
         <i class="fas fa-exclamation-triangle"></i> Penalties
        
     </button>
+    <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="repossession-tab" data-bs-toggle="tab" 
+                            data-bs-target="#repossession" type="button" role="tab">
+                         <i class="fas fa-car-crash"></i>  Repossession
+                    </button>
+                </li>
 </li>
             </ul>
         </div>
@@ -1175,6 +1181,1292 @@ document.addEventListener('DOMContentLoaded', function() {
 </table>
                     </div>
                 </div>
+                <!-- REPOSSESSION TAB CONTENT -->
+<div class="tab-pane fade" id="repossession" role="tabpanel">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5>Repossession Management</h5>
+        <div class="btn-group">
+            @if($agreement->status !== 'defaulted' && $agreement->status !== 'completed' && in_array(Auth::user()->role, ['Accountant','Managing-Director']))
+                <!-- CORRECTED BUTTONS -->
+                <button class="btn btn-secondary btn-sm" onclick="openInstructionLetterModal()">
+                    <i class="fas fa-car-crash"></i> Instruction Letter
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="openDemandLetterModal()">
+                    <i class="fas fa-car-crash"></i> Demand Letter
+                </button>
+
+
+               
+                  <button class="btn btn-danger btn-sm" onclick="openRepossessionModal({{ $agreement->id }})">
+                    <i class="fas fa-car-crash"></i> Repossess Vehicle
+                </button>
+                
+            @endif
+            <button class="btn btn-outline-info btn-sm" onclick="refreshRepossessionData()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+            <button class="btn btn-success btn-sm" onclick="exportRepossessionReport()">
+                <i class="fas fa-file-pdf"></i> Export PDF
+            </button>
+        </div>
+    </div>
+
+    @php
+        $repossession = \App\Models\Repossession::where('agreement_id', $agreement->id)
+            ->where('agreement_type', 'hire_purchase')
+            ->first();
+    @endphp
+
+    @if($repossession)
+        <!-- Repossession Status Card -->
+        <div class="card border-danger mb-4">
+            <div class="card-header bg-danger text-white">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Vehicle Repossessed
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-danger mb-3">Repossession Details</h6>
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td><strong>Repossession Date:</strong></td>
+                                <td>{{ $repossession->repossession_date->format('M d, Y') }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Status:</strong></td>
+                                <td>
+                                    @switch($repossession->status)
+                                        @case('repossessed')
+                                            <span class="badge bg-danger">Repossessed</span>
+                                            @break
+                                        @case('pending_sale')
+                                            <span class="badge bg-warning">Pending Sale</span>
+                                            @break
+                                        @case('sold')
+                                            <span class="badge bg-success">Sold</span>
+                                            @break
+                                        @case('returned')
+                                            <span class="badge bg-info">Returned</span>
+                                            @break
+                                    @endswitch
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Repossessed By:</strong></td>
+                                <td>{{ $repossession->repossessedBy->name ?? 'N/A' }}</td>
+                            </tr>
+                            @if($repossession->storage_location)
+                            <tr>
+                                <td><strong>Storage Location:</strong></td>
+                                <td>{{ $repossession->storage_location }}</td>
+                            </tr>
+                            @endif
+                            <tr>
+                                <td><strong>Vehicle Condition:</strong></td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ $repossession->vehicle_condition }}</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-danger mb-3">Financial Breakdown</h6>
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td><strong>Remaining Balance:</strong></td>
+                                <td class="text-end">KSh {{ number_format($repossession->remaining_balance, 2) }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Total Penalties:</strong></td>
+                                <td class="text-end">KSh {{ number_format($repossession->total_penalties, 2) }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Repossession Expenses:</strong></td>
+                                <td class="text-end">KSh {{ number_format($repossession->repossession_expenses, 2) }}</td>
+                            </tr>
+                            <tr class="border-top">
+                                <td><strong class="text-danger">Car Value:</strong></td>
+                                <td class="text-end"><strong class="text-danger">KSh {{ number_format($repossession->car_value, 2) }}</strong></td>
+                            </tr>
+                            @if($repossession->expected_sale_price)
+                            <tr class="border-top">
+                                <td><strong>Expected Sale Price:</strong></td>
+                                <td class="text-end">KSh {{ number_format($repossession->expected_sale_price, 2) }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Expected Result:</strong></td>
+                                <td class="text-end">
+                                    @php
+                                        $expectedResult = $repossession->calculateExpectedResult();
+                                    @endphp
+                                    <span class="badge bg-{{ $expectedResult >= 0 ? 'success' : 'danger' }}">
+                                        {{ $expectedResult >= 0 ? 'Profit' : 'Loss' }}: KSh {{ number_format(abs($expectedResult), 2) }}
+                                    </span>
+                                </td>
+                            </tr>
+                            @endif
+                            @if($repossession->actual_sale_price)
+                            <tr class="border-top">
+                                <td><strong>Actual Sale Price:</strong></td>
+                                <td class="text-end">KSh {{ number_format($repossession->actual_sale_price, 2) }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Sale Date:</strong></td>
+                                <td class="text-end">{{ $repossession->sale_date->format('M d, Y') }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Actual Result:</strong></td>
+                                <td class="text-end">
+                                    @php
+                                        $actualResult = $repossession->calculateSaleResult();
+                                    @endphp
+                                    <span class="badge bg-{{ $actualResult >= 0 ? 'success' : 'danger' }}">
+                                        {{ $actualResult >= 0 ? 'Profit' : 'Loss' }}: KSh {{ number_format(abs($actualResult), 2) }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Sold By:</strong></td>
+                                <td class="text-end">{{ $repossession->soldBy->name ?? 'N/A' }}</td>
+                            </tr>
+                            @endif
+                        </table>
+                    </div>
+                </div>
+
+                @if($repossession->repossession_reason)
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="alert alert-warning">
+                            <strong>Reason:</strong> {{ $repossession->repossession_reason }}
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                @if($repossession->repossession_notes)
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <strong>Notes:</strong>
+                                <p class="mb-0 mt-2">{{ $repossession->repossession_notes }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                @if($repossession->status !== 'sold' && in_array(Auth::user()->role, ['Accountant','Managing-Director']))
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button class="btn btn-success" onclick="openSaleModal({{ $repossession->id }})">
+                            <i class="fas fa-dollar-sign"></i> Record Vehicle Sale
+                        </button>
+                    </div>
+                </div>
+                @endif
+            </div>
+        </div>
+    @else
+        <!-- No Repossession - Show Financial Summary -->
+        <div class="card border-info mb-4">
+            <div class="card-header bg-info bg-opacity-10">
+                <h6 class="card-title mb-0 text-info">
+                    <i class="fas fa-info-circle me-2"></i>Current Financial Status
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    This vehicle has not been repossessed. Below is the current financial status.
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted mb-2">Outstanding Balance</h6>
+                                <h4 class="text-danger mb-0">KSh {{ number_format($actualOutstanding, 2) }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted mb-2">Total Penalties</h6>
+                                <h4 class="text-warning mb-0" id="currentPenaltiesAmount">KSh 0.00</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted mb-2">Loan Status</h6>
+                                <h5 class="mb-0">
+                                    <span class="badge bg-{{ $agreement->status === 'completed' ? 'success' : ($agreement->is_overdue ? 'danger' : 'primary') }}">
+                                        {{ ucfirst($agreement->status) }}
+                                    </span>
+                                </h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @if($agreement->is_overdue && $agreement->overdue_days > 30)
+                <div class="alert alert-danger mt-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This account is {{ $agreement->overdue_days }} days overdue. 
+                    Consider initiating repossession proceedings if collection efforts have failed.
+                </div>
+                @endif
+            </div>
+        </div>
+    @endif
+</div>
+<!-- Repossession Modal -->
+<div class="modal fade" id="repossessionModal" tabindex="-1" aria-labelledby="repossessionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="repossessionModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Vehicle Repossession
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <strong>Warning:</strong> This action will mark the vehicle as repossessed and change the agreement status to "Defaulted". This action should only be taken after all collection efforts have failed.
+                </div>
+
+                <form id="repossessionForm">
+                    @csrf
+                    <input type="hidden" name="agreement_id" id="repossession_agreement_id" value="{{ $agreement->id }}">
+                    
+                    <!-- Financial Summary -->
+                    <div class="card border-danger mb-3">
+                        <div class="card-header bg-danger bg-opacity-10">
+                            <h6 class="mb-0 text-danger">Financial Summary</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-2"><strong>Remaining Balance:</strong> 
+                                        <span id="repossession_remaining_balance">KSh 0.00</span>
+                                    </p>
+                                    <p class="mb-2"><strong>Total Penalties:</strong> 
+                                        <span id="repossession_total_penalties">KSh 0.00</span>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-2"><strong>Repossession Expenses:</strong> 
+                                        <span id="repossession_expenses_display">KSh 0.00</span>
+                                    </p>
+                                    <p class="mb-0"><strong class="text-danger">Car Value:</strong> 
+                                        <strong id="repossession_car_value" class="text-danger">KSh 0.00</strong>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Repossession Details -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Repossession Date *</label>
+                                <input type="date" class="form-control" name="repossession_date" 
+                                       value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Repossession Expenses (KSh) *</label>
+                                <input type="number" class="form-control" name="repossession_expenses" 
+                                       id="repossession_expenses_input"
+                                       min="0" step="0.01" required 
+                                       oninput="calculateCarValue()">
+                                <small class="text-muted">Towing, storage, legal fees, etc.</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Expected Sale Price (KSh)</label>
+                        <input type="number" class="form-control" name="expected_sale_price" 
+                               min="0" step="0.01">
+                        <small class="text-muted">Optional: Estimated resale value of the vehicle</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Reason for Repossession *</label>
+                        <select class="form-select" name="repossession_reason" required>
+                            <option value="">Select Reason</option>
+                            <option value="Non-payment of installments">Non-payment of installments</option>
+                            <option value="Breach of agreement terms">Breach of agreement terms</option>
+                            <option value="Multiple missed payments">Multiple missed payments</option>
+                            <option value="Client unreachable">Client unreachable</option>
+                            <option value="Vehicle misuse">Vehicle misuse</option>
+                            <option value="Other">Other (specify in notes)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Vehicle Condition *</label>
+                        <select class="form-select" name="vehicle_condition" required>
+                            <option value="">Select Condition</option>
+                            <option value="Excellent">Excellent</option>
+                            <option value="Good">Good</option>
+                            <option value="Fair">Fair</option>
+                            <option value="Poor">Poor</option>
+                            <option value="Damaged">Damaged</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Storage Location</label>
+                        <input type="text" class="form-control" name="storage_location" 
+                               placeholder="Where is the vehicle being stored?">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Additional Notes</label>
+                        <textarea class="form-control" name="repossession_notes" rows="3" 
+                                  placeholder="Any additional information about the repossession..."></textarea>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="confirmRepossession" required>
+                        <label class="form-check-label" for="confirmRepossession">
+                            I confirm that all collection efforts have been exhausted and repossession is necessary
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-danger" onclick="submitRepossession()">
+                    <i class="fas fa-car-crash me-1"></i>Process Repossession
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Instruction Letter Modal -->
+<div class="modal fade" id="instructionLetterModal" tabindex="-1" aria-labelledby="instructionLetterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #f8f9fa;">
+                <h5 class="modal-title" id="instructionLetterModalLabel" style="color:#000">
+                    <i class="fas fa-file-alt"></i> LETTER OF INSTRUCTION
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="instructionLetterContent" style="padding: 30px;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h4 style="font-weight: bold; text-decoration: underline;" class="mb-2">LETTER OF INSTRUCTION</h4>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <p class="mb-2"><strong>DATE:</strong> <span id="instruction_date">{{ date('jS F Y') }}</span></p>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <p style="margin-bottom: 5px;" class="mb-2"><strong>To: 1. Name and address of auctioneer:</strong></p>
+                    <div style="margin-left: 40px;" class="mb-2">
+                        <p style="margin: 2px 0;">HERITAGE AUCTIONEERS,</p>
+                        <p style="margin: 2px 0;">P.O BOX 51066-00100,</p>
+                        <p style="margin: 2px 0;">NAIROBI.</p>
+                        <p style="margin: 2px 0;">TEL NO: 0711846235</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <p style="margin-bottom: 5px;" class="mb-2"><strong>2. Name and address of instructing party:</strong></p>
+                    <div style="margin-left: 40px;" class="mb-2">
+                        <p style="margin: 2px 0;">KELMER'S HOUSE OF CARS LIMITED</p>
+                        <p style="margin: 2px 0;">P.O BOX 9215-00100</p>
+                        <p style="margin: 2px 0;">NAIROBI.</p>
+                        <p style="margin: 2px 0;">TEL NO: 0715 400 709</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <p style="margin-bottom: 5px;" class="mb-2"><strong>3. Name and address of principal debtor:</strong></p>
+                    <div style="margin-left: 40px;" class="mb-2">
+                        <p style="margin: 2px 0;" id="debtor_name">{{ $agreement->client_name }}</p>
+                        <p style="margin: 2px 0;">P.O BOX ………..</p>
+                        <p style="margin: 2px 0;">NAIROBI</p>
+                        <p style="margin: 2px 0;">ID NO: <span id="debtor_id"> {{ $agreement->national_id }}</span></p>
+                        <p style="margin: 2px 0;">TEL NO: <span id="debtor_phone"> +{{ $agreement->phone_number }}</span></p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <p style="margin-bottom: 5px;" class="mb-2"><strong>4. (a) Name and address of property owner:</strong></p>
+                    <div style="margin-left: 40px;" class="mb-2">
+                        <p style="margin: 2px 0;">KELMER'S HOUSE OF CARS</p>
+                        <p style="margin: 2px 0;">P.O BOX 9215-00100</p>
+                        <p style="margin: 2px 0;">NAIROBI</p>
+                        <p style="margin: 2px 0;">BUSINESS NO: PVT-JZUG6275</p>
+                        <p style="margin: 2px 0;">TEL NO: 0715 400 709</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <p style="margin-bottom: 5px; margin-left: 40px;" class="mb-2"><strong>(b) Physical address of properties to be seized/repossessed* and sold as per annexure:</strong></p>
+                    <div style="margin-left: 80px;" class="mb-2">
+                        <p style="margin: 2px 0;">TO BE TRACKED</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <p style="margin-bottom: 5px; margin-left: 40px;" class="mb-2"><strong>(c) Person to point out locality and property:</strong></p>
+                    <div style="margin-left: 80px;" class="mb-2">
+                        <p style="margin: 2px 0;">KELMER'S HOUSE OF CARS LIMITED</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <p style="margin-bottom: 5px; margin-left: 40px;" class="mb-2"><strong>(d) Legal description of property to be seized/repossessed* and sold:</strong></p>
+                    <div style="margin-left: 80px;" class="mb-2">
+                        <p style="margin: 2px 0;">MOTOR VEHICLE <span id="vehicle_description">
+                           
+                            </span>
+                        </span></p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <p style="margin-bottom: 5px;" class="mb-2"><strong>5. (a) Amount to be recovered as at date of letter of instruction:</strong></p>
+                    <div style="margin-left: 40px;" class="mb-2">
+                        <p style="margin: 2px 0;"> <span id="amount_to_recover"> <?php
+$formatter = new \NumberFormatter('en', \NumberFormatter::SPELLOUT);
+$shillings = floor($actualOutstanding);
+$cents = round(($actualOutstanding - $shillings) * 100);
+
+$words = ucfirst($formatter->format($shillings)) . ' shillings';
+if ($cents > 0) {
+    $words .= ' and ' . $formatter->format($cents) . ' cents';
+}
+?>
+
+<p class="mb-2">
+    KSH. {{ number_format($actualOutstanding, 2) }} ({{ $words }}) 
+    
+</p> </span></p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <p style="margin-bottom: 5px;" class="mb-2"><strong>5. Additional charges to be recovered:</strong></p>
+                    
+                    <p style="margin-bottom: 5px; margin-left: 20px;" class="mb-2"><strong>(a) Estimated legal cost:</strong></p>
+                    <div style="margin-left: 60px;" class="mb-2">
+                        <p style="margin: 2px 0;">To Be Advised</p>
+                    </div>
+
+                    <p style="margin-bottom: 5px; margin-left: 20px;" class="mb-2"><strong>(b) Estimated Auctioneers fees:</strong></p>
+                    <div style="margin-left: 60px;" class="mb-2">
+                        <p style="margin: 2px 0;">To be advised</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <p style="margin-bottom: 5px;" class="mb-2"><strong>7. Advertising instruction/expenditure authorized:</strong></p>
+                    <div style="margin-left: 40px;" class="mb-2">
+                        <p style="margin: 2px 0;">To Be Advised</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 30px;">
+                    <p style="margin-bottom: 10px;"><strong>8. We the instructing party or its advocate on its behalf hereby:</strong></p>
+                    
+                    <p style="margin-bottom: 10px;">(i) Confirm that all statutory conditions precedent to seizure/repossession* and sale have been complied with;</p>
+                    
+                    <p style="margin-bottom: 10px;">(ii) Request you to sell the property described in paragraph 4 by public auction at the best price obtainable subject to the reserve prices indicated in paragraph 8;*</p>
+                    
+                    <p style="margin-bottom: 10px;">(iii) Hereby agree to indemnify you against all costs, damage, losses and expenses you may incur in the lawful exercise of your duties as a licensed auctioneer;</p>
+                    
+                    <p style="margin-bottom: 10px;" class="mb-2">(iv) Agree to pay your charges as per fees already agreed*/as specified in the Auctioneers Rules.</p>
+                </div>
+
+                <div style="margin-top: 50px;">
+                    <p style="border-bottom: 1px dotted #000; width: 300px; padding-bottom: 5px;"></p>
+                    <p style="font-style: italic; margin-top: 5px;" class="mb-2">Signature of instructing party or its advocate</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <div class="dropdown">
+                    <button class="btn btn-primary dropdown-toggle" type="button" id="instructionDownloadDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-download"></i> Download Letter
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="instructionDownloadDropdown">
+                        <li>
+                            <a class="dropdown-item" href="#" onclick="event.preventDefault(); downloadModalContent('instructionLetterContent', 'a4', 'Instruction_Letter');">
+                                <i class="fas fa-file-pdf"></i> Download as A4
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#" onclick="event.preventDefault(); downloadModalContent('instructionLetterContent', 'a5', 'Instruction_Letter');">
+                                <i class="fas fa-file-pdf"></i> Download as A5
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Demand Letter Modal -->
+<div class="modal fade" id="demandLetterModal" tabindex="-1" aria-labelledby="demandLetterModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title" id="demandLetterModalLabel" style="color:#000">
+                    <i class="fas fa-file-invoice"></i> DEMAND LETTER
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-dark" id="demandLetterContent" style="padding: 30px;">
+                <!-- Company Logo -->
+                <div class="text-center mb-4">
+                    <img src="{{asset('dashboardv1/assets/images/houseofcars.png')}}" alt="House of Cars" style="height: 100px; width: auto;">
+                </div>
+
+                <!-- Date -->
+                <div class="mb-3">
+                   <p class="mb-2" id="demand_letter_date"></p>
+                </div>
+
+                <!-- Customer Details -->
+                <div class="mb-3">
+                    <p class="mb-2"> {{ $agreement->client_name }}</p>
+                    <p class="mb-2">ID No: {{ $agreement->national_id }}</p>
+                </div>
+
+                <!-- Salutation -->
+                <div class="mb-3">
+                    <p class="mb-2"><strong>DEAR SIR,</strong></p>
+                </div>
+
+                <!-- Subject Line -->
+                <div class="mb-3">
+                    <p class="mb-2"><strong><u>RE: DEMAND NOTICE MV. @if($agreement->customerVehicle)
+                    {{ $agreement->customerVehicle->model ?? 'N/A' }} -{{ $agreement->customerVehicle->number_plate ?? 'N/A' }}
+                    
+                                    @elseif($agreement->carImport)
+                                     {{ $agreement->carImport->model ?? 'N/A' }} - {{ $agreement->carImport->year ?? 'N/A' }}
+                                      
+                                            
+                                    @else
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Vehicle details not available.
+                                        </div>
+                                    @endif.</u></strong></p>
+                </div>
+
+                <!-- Body Paragraph 1 -->
+                <div class="mb-3">
+                    <p class="mb-2"><?php
+$formatter = new \NumberFormatter('en', \NumberFormatter::SPELLOUT);
+$shillings = floor($actualOutstanding);
+$cents = round(($actualOutstanding - $shillings) * 100);
+
+$words = ucfirst($formatter->format($shillings)) . ' shillings';
+if ($cents > 0) {
+    $words .= ' and ' . $formatter->format($cents) . ' cents';
+}
+?>
+
+<p class="mb-2">
+   This is to confirm that your outstanding balance amounts to   KSH. {{ number_format($actualOutstanding, 2) }} ({{ $words }})  against MOTOR VEHICLE 
+                       
+                    
+                    @if($agreement->customerVehicle)
+                    {{ $agreement->customerVehicle->model ?? 'N/A' }} -{{ $agreement->customerVehicle->number_plate ?? 'N/A' }}
+                    
+                                    @elseif($agreement->carImport)
+                                     {{ $agreement->carImport->model ?? 'N/A' }} - {{ $agreement->carImport->year ?? 'N/A' }}
+                                      
+                                            
+                                    @else
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Vehicle details not available.
+                                        </div>
+                                    @endif.
+</p>
+                </div>
+
+                <!-- Body Paragraph 2 -->
+                 <div class="mb-4">
+                    @php
+                        $dueDate = \Carbon\Carbon::now();
+                        $finalDate = \Carbon\Carbon::now()->addDays(7);
+                    @endphp
+                    <p class="mb-2">
+                        The owed amount of KSH. {{ number_format($actualOutstanding, 2) }} ({{ $words }}) 
+                        is due on {{ $dueDate->format('jS F Y') }} and we would like to remind you to 
+                        clear this balance on or before {{ $finalDate->format('jS F Y') }} to avoid 
+                        repossession of the said vehicle.
+                    </p>
+                </div>
+
+                <!-- Payment Instructions -->
+                <div class="mb-3">
+                    <p class="mb-2"><strong>Payment should be made through our account as follows:</strong></p>
+                </div>
+
+                <div class="mb-2" style="margin-left: 20px;">
+                    <table class="table-borderless text-dark">
+                        <tr>
+                            <td class="pe-3"><strong>BANK:</strong></td>
+                            <td>EQUITY BANK KENYA</td>
+                        </tr>
+                        <tr>
+                            <td class="pe-3"><strong>ACCOUNT NAME:</strong></td>
+                            <td>KELMER'S HOUSE OF CARS LIMITED</td>
+                        </tr>
+                        <tr>
+                            <td class="pe-3"><strong>ACCOUNT NO:</strong></td>
+                            <td>1130281359622(KES)</td>
+                        </tr>
+                        <tr>
+                            <td class="pe-3"><strong>ACCOUNT BRANCH:</strong></td>
+                            <td>UNICITY BRANCH</td>
+                        </tr>
+                        <tr>
+                            <td class="pe-3"><strong>BANK SWIFT CODE:</strong></td>
+                            <td>EQBLKENA</td>
+                        </tr>
+                        <tr>
+                            <td class="pe-3"><strong>BANK CODE:</strong></td>
+                            <td>068</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Closing -->
+                <div class="mb-3 mt-4">
+                    <p class="mb-2">Thank you and kind regards.</p>
+                    <p class="mb-2">Yours faithfully</p>
+                    <p class="mb-2">Accounts Department</p>
+                </div>
+
+                <!-- Company Stamp Area -->
+                <div class="mt-5">
+                    <div style="width: 200px; height: 100px; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                        <div class="text-center">
+                            <small class="text-muted d-block">KELMER'S HOUSE OF CARS LTD.</small>
+                            <strong class="text-danger" id="demand_stamp_date"></strong>
+                            <small class="text-muted d-block">TEL: 0715 400 709</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <div class="dropdown">
+                    <button class="btn btn-primary dropdown-toggle" type="button" id="demandDownloadDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-download"></i> Download Letter
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="demandDownloadDropdown">
+                        <li>
+                            <a class="dropdown-item" href="#" onclick="event.preventDefault(); downloadModalContent('demandLetterContent', 'a4', 'Demand_Letter');">
+                                <i class="fas fa-file-pdf"></i> Download as A4
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#" onclick="event.preventDefault(); downloadModalContent('demandLetterContent', 'a5', 'Demand_Letter');">
+                                <i class="fas fa-file-pdf"></i> Download as A5
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+// Function to format date with ordinal suffix (1st, 2nd, 3rd, etc.)
+function formatDateWithOrdinal() {
+    const date = new Date();
+    const day = date.getDate();
+    const monthNames = ["January", "February", "March", "April", "May", "June",
+                        "July", "August", "September", "October", "November", "December"];
+    const month = monthNames[date.getMonth()];
+    const year = date.getFullYear();
+    
+    // Get ordinal suffix
+    let suffix = 'th';
+    if (day === 1 || day === 21 || day === 31) suffix = 'st';
+    else if (day === 2 || day === 22) suffix = 'nd';
+    else if (day === 3 || day === 23) suffix = 'rd';
+    
+    return `${day}<sup>${suffix}</sup> ${month}, ${year}`;
+}
+
+// Function to format stamp date (DD MMM YYYY)
+function formatStampDate() {
+    const date = new Date();
+    const day = date.getDate();
+    const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN",
+                        "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+    const month = monthNames[date.getMonth()];
+    const year = date.getFullYear();
+    
+    return `${day} ${month} ${year}`;
+}
+
+// Update dates when modal is opened
+document.getElementById('demandLetterModal').addEventListener('shown.bs.modal', function () {
+    document.getElementById('demand_letter_date').innerHTML = formatDateWithOrdinal();
+    document.getElementById('demand_stamp_date').textContent = formatStampDate();
+});
+
+// Also update on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const letterDateElement = document.getElementById('demand_letter_date');
+    const stampDateElement = document.getElementById('demand_stamp_date');
+    
+    if (letterDateElement) {
+        letterDateElement.innerHTML = formatDateWithOrdinal();
+    }
+    if (stampDateElement) {
+        stampDateElement.textContent = formatStampDate();
+    }
+});
+</script>
+<script>
+// Functions to open modals
+function openInstructionLetterModal() {
+    var modal = new bootstrap.Modal(document.getElementById('instructionLetterModal'));
+    modal.show();
+}
+
+function openDemandLetterModal() {
+    var modal = new bootstrap.Modal(document.getElementById('demandLetterModal'));
+    modal.show();
+}
+
+// Download function for modal content (requires html2canvas and jsPDF)
+async function downloadModalContent(contentId, format = 'a4', filename = 'Letter') {
+    const content = document.getElementById(contentId);
+    
+    if (!content) {
+        alert('Content not found');
+        return;
+    }
+
+    // Check if required libraries are loaded
+    if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+        alert('Required libraries not loaded. Please include html2canvas and jsPDF in your page.');
+        return;
+    }
+
+    try {
+        // Create a clone for PDF generation
+        const contentClone = content.cloneNode(true);
+         // Force all text to black for PDF
+        contentClone.style.color = '#000';
+        const allElements = contentClone.querySelectorAll('*');
+        allElements.forEach(element => {
+            element.style.color = '#000';
+            if (!element.style.backgroundColor || element.style.backgroundColor === 'transparent') {
+                element.style.backgroundColor = '#fff';
+            }
+        });
+        // Convert textareas to divs with content
+        const textareas = contentClone.querySelectorAll('textarea');
+        textareas.forEach(textarea => {
+            const div = document.createElement('div');
+            div.style.cssText = 'border: 1px solid #000; padding: 10px; min-height: 100px; white-space: pre-wrap; color: #000; background-color: #fff;';
+            div.textContent = textarea.value || 'No content';
+            textarea.parentNode.replaceChild(div, textarea);
+        });
+
+        // Convert inputs to spans with content
+        const inputs = contentClone.querySelectorAll('input');
+        inputs.forEach(input => {
+            const span = document.createElement('span');
+            span.style.cssText = 'display: inline-block; border-bottom: 1px solid #000; min-width: 200px; padding: 5px; color: #000;';
+            span.textContent = input.value || '_______________';
+            input.parentNode.replaceChild(span, input);
+        });
+
+        // Create temporary container
+        const tempContainer = document.createElement('div');
+        tempContainer.style.cssText = 'position: absolute; left: -9999px; top: 0; background: white; width: 800px; padding: 20px;';
+        tempContainer.appendChild(contentClone);
+        document.body.appendChild(tempContainer);
+
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Generate canvas
+        const canvas = await html2canvas(contentClone, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff'
+        });
+
+        document.body.removeChild(tempContainer);
+
+        // Create PDF
+        const { jsPDF } = window.jspdf;
+        let pageWidth, pageHeight;
+        
+        if (format === 'a5') {
+            pageWidth = 148;
+            pageHeight = 210;
+        } else {
+            pageWidth = 210;
+            pageHeight = 297;
+        }
+
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: format,
+            compress: true
+        });
+
+        const margin = 10;
+        const maxWidth = pageWidth - (2 * margin);
+        const maxHeight = pageHeight - (2 * margin);
+
+        const canvasRatio = canvas.width / canvas.height;
+        const pageRatio = maxWidth / maxHeight;
+
+        let imgWidth, imgHeight;
+        if (canvasRatio > pageRatio) {
+            imgWidth = maxWidth;
+            imgHeight = imgWidth / canvasRatio;
+        } else {
+            imgHeight = maxHeight;
+            imgWidth = imgHeight * canvasRatio;
+        }
+
+        const xPos = margin + (maxWidth - imgWidth) / 2;
+        const yPos = margin;
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        pdf.addImage(imgData, 'JPEG', xPos, yPos, imgWidth, imgHeight);
+
+        const formatLabel = format.toUpperCase();
+        pdf.save(`${filename}_${formatLabel}_${new Date().toISOString().slice(0,10)}.pdf`);
+
+    } catch (error) {
+        console.error('PDF Generation Error:', error);
+        alert('Failed to generate PDF: ' + error.message);
+    }
+}
+</script>
+
+<style>
+.dropdown-menu {
+    min-width: 200px;
+}
+
+.dropdown-item {
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+}
+
+.dropdown-item i {
+    width: 20px;
+    color: #dc3545;
+}
+</style>
+<!-- Repossession Modal -->
+<div class="modal fade" id="repossessionModal" tabindex="-1" aria-labelledby="repossessionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="repossessionModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Vehicle Repossession
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <strong>Warning:</strong> This action will mark the vehicle as repossessed and change the agreement status to "Defaulted". This action should only be taken after all collection efforts have failed.
+                </div>
+
+                <form id="repossessionForm">
+                    @csrf
+                    <input type="hidden" name="agreement_id" id="repossession_agreement_id" value="{{ $agreement->id }}">
+                    
+                    <!-- Financial Summary -->
+                    <div class="card border-danger mb-3">
+                        <div class="card-header bg-danger bg-opacity-10">
+                            <h6 class="mb-0 text-danger">Financial Summary</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-2"><strong>Remaining Balance:</strong> 
+                                        <span id="repossession_remaining_balance">KSh 0.00</span>
+                                    </p>
+                                    <p class="mb-2"><strong>Total Penalties:</strong> 
+                                        <span id="repossession_total_penalties">KSh 0.00</span>
+                                    </p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-2"><strong>Repossession Expenses:</strong> 
+                                        <span id="repossession_expenses_display">KSh 0.00</span>
+                                    </p>
+                                    <p class="mb-0"><strong class="text-danger">Car Value:</strong> 
+                                        <strong id="repossession_car_value" class="text-danger">KSh 0.00</strong>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Repossession Details -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Repossession Date *</label>
+                                <input type="date" class="form-control" name="repossession_date" 
+                                       value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Repossession Expenses (KSh) *</label>
+                                <input type="number" class="form-control" name="repossession_expenses" 
+                                       id="repossession_expenses_input"
+                                       min="0" step="0.01" required 
+                                       oninput="calculateCarValue()">
+                                <small class="text-muted">Towing, storage, legal fees, etc.</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Expected Sale Price (KSh)</label>
+                        <input type="number" class="form-control" name="expected_sale_price" 
+                               min="0" step="0.01">
+                        <small class="text-muted">Optional: Estimated resale value of the vehicle</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Reason for Repossession *</label>
+                        <select class="form-select" name="repossession_reason" required>
+                            <option value="">Select Reason</option>
+                            <option value="Non-payment of installments">Non-payment of installments</option>
+                            <option value="Breach of agreement terms">Breach of agreement terms</option>
+                            <option value="Multiple missed payments">Multiple missed payments</option>
+                            <option value="Client unreachable">Client unreachable</option>
+                            <option value="Vehicle misuse">Vehicle misuse</option>
+                            <option value="Other">Other (specify in notes)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Vehicle Condition *</label>
+                        <select class="form-select" name="vehicle_condition" required>
+                            <option value="">Select Condition</option>
+                            <option value="Excellent">Excellent</option>
+                            <option value="Good">Good</option>
+                            <option value="Fair">Fair</option>
+                            <option value="Poor">Poor</option>
+                            <option value="Damaged">Damaged</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Storage Location</label>
+                        <input type="text" class="form-control" name="storage_location" 
+                               placeholder="Where is the vehicle being stored?">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Additional Notes</label>
+                        <textarea class="form-control" name="repossession_notes" rows="3" 
+                                  placeholder="Any additional information about the repossession..."></textarea>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="confirmRepossession" required>
+                        <label class="form-check-label" for="confirmRepossession">
+                            I confirm that all collection efforts have been exhausted and repossession is necessary
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-danger" onclick="submitRepossession()">
+                    <i class="fas fa-car-crash me-1"></i>Process Repossession
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vehicle Sale Modal -->
+<div class="modal fade" id="vehicleSaleModal" tabindex="-1" aria-labelledby="vehicleSaleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="vehicleSaleModalLabel">
+                    <i class="fas fa-dollar-sign me-2"></i>Record Vehicle Sale
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="vehicleSaleForm">
+                    @csrf
+                    <input type="hidden" id="sale_repossession_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Actual Sale Price (KSh) *</label>
+                        <input type="number" class="form-control" name="actual_sale_price" 
+                               min="0" step="0.01" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Sale Date *</label>
+                        <input type="date" class="form-control" name="sale_date" 
+                               value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Sale Notes</label>
+                        <textarea class="form-control" name="sale_notes" rows="3" 
+                                  placeholder="Buyer details, payment method, etc."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="submitVehicleSale()">
+                    <i class="fas fa-check me-1"></i>Record Sale
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Repossession JavaScript
+let repossessionData = {
+    remainingBalance: 0,
+    totalPenalties: 0,
+    repossessionExpenses: 0
+};
+
+// Load current penalties on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadCurrentPenalties();
+});
+
+function loadCurrentPenalties() {
+    fetch('/gentlement/{{ $agreement->id }}/penalties')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.summary) {
+                document.getElementById('currentPenaltiesAmount').textContent = 
+                    'KSh ' + data.summary.total_penalties.toLocaleString();
+            }
+        })
+        .catch(error => console.error('Error loading penalties:', error));
+}
+
+function openRepossessionModal(agreementId) {
+    fetch(`/gentlement/${agreementId}/repossession-data`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                repossessionData.remainingBalance = data.data.remaining_balance;
+                repossessionData.totalPenalties = data.data.total_penalties;
+                
+                document.getElementById('repossession_agreement_id').value = agreementId;
+                document.getElementById('repossession_remaining_balance').textContent = 
+                    'KSh ' + data.data.remaining_balance.toLocaleString('en-KE', {minimumFractionDigits: 2});
+                document.getElementById('repossession_total_penalties').textContent = 
+                    'KSh ' + data.data.total_penalties.toLocaleString('en-KE', {minimumFractionDigits: 2});
+                
+                calculateCarValue();
+                
+                const modal = new bootstrap.Modal(document.getElementById('repossessionModal'));
+                modal.show();
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: data.message || 'Failed to load repossession data'
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading repossession data:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to load repossession data'
+            });
+        });
+}
+
+function calculateCarValue() {
+    const expenses = parseFloat(document.getElementById('repossession_expenses_input').value) || 0;
+    repossessionData.repossessionExpenses = expenses;
+    
+    // Ensure all values are numbers before adding
+    const carValue = parseFloat(repossessionData.remainingBalance) + 
+                     parseFloat(repossessionData.totalPenalties) + 
+                     parseFloat(expenses);
+    
+    document.getElementById('repossession_expenses_display').textContent = 
+        'KSh ' + expenses.toLocaleString('en-KE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    document.getElementById('repossession_car_value').textContent = 
+        'KSh ' + carValue.toLocaleString('en-KE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+function submitRepossession() {
+    const form = document.getElementById('repossessionForm');
+    
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const agreementId = document.getElementById('repossession_agreement_id').value;
+    const formData = new FormData(form);
+    
+    Swal.fire({
+        title: 'Processing Repossession...',
+        text: 'Please wait while we process the repossession.',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    $.ajax({
+        url: `/gentlement/${agreementId}/repossession`,
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('repossessionModal'));
+            modal.hide();
+            
+            Swal.fire({
+                title: 'Repossession Processed!',
+                html: `
+                    <p><strong>Vehicle has been repossessed successfully.</strong></p>
+                    <p>Car Value: KSh ${response.car_value.toLocaleString()}</p>
+                    <p class="text-muted">Repossession ID: ${response.repossession_id}</p>
+                `,
+                icon: 'success',
+                confirmButtonColor: '#28a745'
+            }).then(() => {
+                location.reload();
+            });
+        },
+        error: function(xhr) {
+            Swal.fire({
+                title: 'Error!',
+                text: xhr.responseJSON?.message || 'Failed to process repossession',
+                icon: 'error',
+                confirmButtonColor: '#dc3545'
+            });
+        }
+    });
+}
+
+function openSaleModal(repossessionId) {
+    document.getElementById('sale_repossession_id').value = repossessionId;
+    const modal = new bootstrap.Modal(document.getElementById('vehicleSaleModal'));
+    modal.show();
+}
+
+function submitVehicleSale() {
+    const form = document.getElementById('vehicleSaleForm');
+    
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const repossessionId = document.getElementById('sale_repossession_id').value;
+    const formData = new FormData(form);
+    
+    Swal.fire({
+        title: 'Recording Sale...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    $.ajax({
+        url: `/gentlement/repossessions/${repossessionId}/sale`,
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('vehicleSaleModal'));
+            modal.hide();
+            
+            const resultClass = response.result_type === 'profit' ? 'success' : 'warning';
+            const resultText = response.result_type === 'profit' ? 'Profit' : 'Loss';
+            
+            Swal.fire({
+                title: 'Sale Recorded!',
+                html: `
+                    <p>Vehicle sale has been recorded successfully.</p>
+                    <p class="text-${resultClass}"><strong>${resultText}: KSh ${Math.abs(response.sale_result).toLocaleString()}</strong></p>
+                `,
+                icon: 'success',
+                confirmButtonColor: '#28a745'
+            }).then(() => {
+                location.reload();
+            });
+        },
+        error: function(xhr) {
+            Swal.fire({
+                title: 'Error!',
+                text: xhr.responseJSON?.message || 'Failed to record sale',
+                icon: 'error',
+                confirmButtonColor: '#dc3545'
+            });
+        }
+    });
+}
+
+function refreshRepossessionData() {
+    location.reload();
+}
+
+function exportRepossessionReport() {
+    // Implement PDF export for repossession report
+    window.print();
+}
+</script>
                 <!-- 3. PENALTIES TAB CONTENT -->
 <div class="tab-pane fade" id="penalties" role="tabpanel">
     <div class="d-flex justify-content-between align-items-center mb-3">

@@ -18,6 +18,7 @@ use App\Models\InCash;
 use App\Models\AppSetting;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use App\Models\Repossession;
 use Illuminate\Support\Facades\Schema; // ADD THIS LINE
 use Carbon\Carbon;
 use App\Services\SmsService;
@@ -29,42 +30,95 @@ class HirePurchasesController extends Controller
     const COMMISSION_SALES = 15000;       // KES 15,000 Sales commission
 
     public function index()
-    {
-        $hirePurchases = HirePurchaseAgreement::with(['payments', 'approvedBy', 'carImport', 'customerVehicle'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+{
+    $hirePurchases = HirePurchaseAgreement::with(['payments', 'approvedBy', 'carImport', 'customerVehicle'])
+        ->orderBy('created_at', 'desc')
+        ->get();
 
-       // Collect IDs from InCash, HirePurchaseAgreement, and GentlemanAgreement
-        $importedIds = array_merge(
-            InCash::whereNotNull('imported_id')->pluck('imported_id')->toArray(),
-            HirePurchaseAgreement::whereNotNull('imported_id')->pluck('imported_id')->toArray(),
-            GentlemanAgreement::whereNotNull('imported_id')->pluck('imported_id')->toArray()
-        );
+    // Get IDs of agreements that have been repossessed (exclude from "in-use")
+    $repossessedAgreementIds = Repossession::whereIn('status', ['repossessed', 'pending_sale'])
+        ->pluck('agreement_id')
+        ->toArray();
 
-        $customerIds = array_merge(
-            InCash::whereNotNull('customer_id')->pluck('customer_id')->toArray(),
-            HirePurchaseAgreement::whereNotNull('customer_id')->pluck('customer_id')->toArray(),
-            GentlemanAgreement::whereNotNull('customer_id')->pluck('customer_id')->toArray()
-        );
+    // Collect IDs from ACTIVE (non-repossessed) agreements only
+    $importedIds = array_merge(
+        InCash::whereNotNull('imported_id')
+            ->whereNotIn('id', $repossessedAgreementIds)
+            ->pluck('imported_id')
+            ->toArray(),
+        HirePurchaseAgreement::whereNotNull('imported_id')
+            ->whereNotIn('id', $repossessedAgreementIds)
+            ->whereIn('status', ['pending', 'approved']) // Only active agreements
+            ->pluck('imported_id')
+            ->toArray(),
+        GentlemanAgreement::whereNotNull('imported_id')
+            ->whereNotIn('id', $repossessedAgreementIds)
+            ->whereIn('status', ['pending', 'approved'])
+            ->pluck('imported_id')
+            ->toArray()
+    );
 
-        // Filter VehicleInspections where cars are not already in InCash, HirePurchase, or GentlemanAgreement
-        $cars = VehicleInspection::with('carsImport', 'customerVehicle')
-            ->whereDoesntHave('carsImport', function ($query) use ($importedIds) {
-                $query->whereIn('id', $importedIds);
-            })
-            ->whereDoesntHave('customerVehicle', function ($query) use ($customerIds) {
-                $query->whereIn('id', $customerIds);
-            })
-            ->latest()
-            ->get();
+    $customerIds = array_merge(
+        InCash::whereNotNull('customer_id')
+            ->whereNotIn('id', $repossessedAgreementIds)
+            ->pluck('customer_id')
+            ->toArray(),
+        HirePurchaseAgreement::whereNotNull('customer_id')
+            ->whereNotIn('id', $repossessedAgreementIds)
+            ->whereIn('status', ['pending', 'approved'])
+            ->pluck('customer_id')
+            ->toArray(),
+        GentlemanAgreement::whereNotNull('customer_id')
+            ->whereNotIn('id', $repossessedAgreementIds)
+            ->whereIn('status', ['pending', 'approved'])
+            ->pluck('customer_id')
+            ->toArray()
+    );
 
+    // Get vehicles from repossessed agreements that are ready for resale
+    $repossessedVehicles = Repossession::with('agreement')
+        ->where('agreement_type', 'hire_purchase')
+        ->where('status', 'repossessed') // Ready for sale, not yet sold
+        ->get()
+        ->map(function($repo) {
+            return [
+                'type' => $repo->agreement->car_type ?? 'import',
+                'id' => $repo->agreement->car_id ?? null,
+                'is_repossessed' => true,
+                'repossession_id' => $repo->id,
+                'car_value' => $repo->car_value
+            ];
+        })
+        ->filter(fn($item) => $item['id'] !== null);
 
-        // Group imported and customer cars for display (for existing agreements)
-        $importCars = CarImport::whereIn('id', $hirePurchases->where('car_type', 'import')->pluck('car_id'))->get()->keyBy('id');
-        $customerCars = CustomerVehicle::whereIn('id', $hirePurchases->where('car_type', 'customer')->pluck('car_id'))->get()->keyBy('id');
+    // Filter VehicleInspections for NEW cars not in active agreements
+    $cars = VehicleInspection::with('carsImport', 'customerVehicle')
+        ->whereDoesntHave('carsImport', function ($query) use ($importedIds) {
+            $query->whereIn('id', $importedIds);
+        })
+        ->whereDoesntHave('customerVehicle', function ($query) use ($customerIds) {
+            $query->whereIn('id', $customerIds);
+        })
+        ->latest()
+        ->get();
 
-        return view('hirepurchase.index', compact('cars', 'hirePurchases', 'importCars', 'customerCars'));
-    }
+    // Group imported and customer cars for display
+    $importCars = CarImport::whereIn('id', $hirePurchases->where('car_type', 'import')->pluck('car_id'))
+        ->get()
+        ->keyBy('id');
+    
+    $customerCars = CustomerVehicle::whereIn('id', $hirePurchases->where('car_type', 'customer')->pluck('car_id'))
+        ->get()
+        ->keyBy('id');
+
+    return view('hirepurchase.index', compact(
+        'cars', 
+        'hirePurchases', 
+        'importCars', 
+        'customerCars',
+        'repossessedVehicles' // Pass repossessed vehicles to view
+    ));
+}
     /**
  * CORRECTED: Apply lump sum with proper priority order
  * Priority: ALL overdue → ALL partial → ONE next installment → Principal reduction
@@ -6004,4 +6058,262 @@ public function waivePenalty(Request $request, $penaltyId)
             ], 500);
         }
     }
+    /**
+ * Show repossession form
+ */
+public function showRepossessionForm($id)
+{
+    $agreement = HirePurchaseAgreement::with(['paymentSchedule', 'penalties'])->findOrFail($id);
+    
+    // Check if already repossessed
+    $existingRepossession = Repossession::where('agreement_id', $id)
+        ->where('agreement_type', 'hire_purchase')
+        ->whereIn('status', ['repossessed', 'pending_sale'])
+        ->first();
+    
+    if ($existingRepossession) {
+        return redirect()->back()->with('error', 'This vehicle has already been repossessed.');
+    }
+    
+    // Calculate current outstanding balance
+    $totalScheduled = $agreement->paymentSchedule->sum('total_amount');
+    $totalPaid = $agreement->paymentSchedule->sum('amount_paid');
+    $remainingBalance = $totalScheduled - $totalPaid;
+    
+    // Calculate total penalties
+    $totalPenalties = $agreement->penalties()
+        ->where('status', 'pending')
+        ->sum('penalty_amount');
+    
+    return view('hirepurchase.repossession', compact(
+        'agreement',
+        'remainingBalance',
+        'totalPenalties'
+    ));
+}
+
+/**
+ * Process repossession
+ */
+public function processRepossession(Request $request, $id)
+{
+    $validated = $request->validate([
+        'repossession_date' => 'required|date|before_or_equal:today',
+        'repossession_expenses' => 'required|numeric|min:0',
+        'expected_sale_price' => 'nullable|numeric|min:0',
+        'repossession_reason' => 'required|string|max:1000',
+        'vehicle_condition' => 'required|string|max:1000',
+        'storage_location' => 'nullable|string|max:255',
+        'repossession_notes' => 'nullable|string|max:2000',
+    ]);
+
+    try {
+        DB::beginTransaction();
+
+        $agreement = HirePurchaseAgreement::with(['paymentSchedule', 'penalties'])->findOrFail($id);
+        
+        // Calculate financial details
+        $totalScheduled = $agreement->paymentSchedule->sum('total_amount');
+        $totalPaid = $agreement->paymentSchedule->sum('amount_paid');
+        $remainingBalance = $totalScheduled - $totalPaid;
+        
+        $totalPenalties = $agreement->penalties()
+            ->where('status', 'pending')
+            ->sum('penalty_amount');
+        
+        // Calculate car value: remaining balance + penalties + repossession expenses
+        $carValue = $remainingBalance + $totalPenalties + $validated['repossession_expenses'];
+        
+        // Create repossession record
+        $repossession = Repossession::create([
+            'agreement_id' => $agreement->id,
+            'agreement_type' => 'hire_purchase',
+            'repossession_date' => $validated['repossession_date'],
+            'remaining_balance' => $remainingBalance,
+            'total_penalties' => $totalPenalties,
+            'repossession_expenses' => $validated['repossession_expenses'],
+            'car_value' => $carValue,
+            'expected_sale_price' => $validated['expected_sale_price'] ?? null,
+            'status' => 'repossessed',
+            'repossession_reason' => $validated['repossession_reason'],
+            'vehicle_condition' => $validated['vehicle_condition'],
+            'storage_location' => $validated['storage_location'] ?? null,
+            'repossession_notes' => $validated['repossession_notes'] ?? null,
+            'repossessed_by' => auth()->id(),
+        ]);
+        
+        // Update agreement status
+        $agreement->update([
+            'status' => 'defaulted',
+            'updated_at' => now()
+        ]);
+        
+        DB::commit();
+        
+        // Send SMS notification
+        try {
+            $carDetails = $this->getCarDetails($agreement->car_type, $agreement->car_id);
+            $message = "Dear {$agreement->client_name}, due to non-payment, your {$carDetails} has been repossessed. Outstanding amount: KSh " . number_format($carValue, 2) . ". Please contact us immediately to discuss resolution. - House of Cars";
+            
+            SmsService::send($agreement->phone_number, $message);
+            
+            Log::info('Repossession SMS sent', [
+                'agreement_id' => $agreement->id,
+                'repossession_id' => $repossession->id,
+                'client' => $agreement->client_name
+            ]);
+        } catch (\Exception $smsException) {
+            Log::error('SMS error during repossession: ' . $smsException->getMessage());
+        }
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Vehicle repossessed successfully',
+            'repossession_id' => $repossession->id,
+            'car_value' => $carValue
+        ]);
+        
+    } catch (\Exception $e) {
+        DB::rollback();
+        Log::error('Repossession failed: ' . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to process repossession: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Record vehicle sale after repossession
+ */
+public function recordVehicleSale(Request $request, $repossessionId)
+{
+    $validated = $request->validate([
+        'actual_sale_price' => 'required|numeric|min:0',
+        'sale_date' => 'required|date|before_or_equal:today',
+        'sale_notes' => 'nullable|string|max:1000',
+    ]);
+
+    try {
+        DB::beginTransaction();
+
+        $repossession = Repossession::findOrFail($repossessionId);
+        
+        if ($repossession->status === 'sold') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vehicle has already been marked as sold'
+            ], 422);
+        }
+        
+        $repossession->update([
+            'actual_sale_price' => $validated['actual_sale_price'],
+            'sale_date' => $validated['sale_date'],
+            'status' => 'sold',
+            'sold_by' => auth()->id(),
+            'repossession_notes' => ($repossession->repossession_notes ?? '') . "\n\nSale Notes: " . ($validated['sale_notes'] ?? '')
+        ]);
+        
+        $saleResult = $repossession->calculateSaleResult();
+        
+        DB::commit();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Vehicle sale recorded successfully',
+            'sale_result' => $saleResult,
+            'result_type' => $saleResult >= 0 ? 'profit' : 'loss'
+        ]);
+        
+    } catch (\Exception $e) {
+        DB::rollback();
+        Log::error('Vehicle sale recording failed: ' . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to record vehicle sale: ' . $e->getMessage()
+        ], 500);
+    }
+}
+/**
+ * Get repossession data for an agreement (AJAX endpoint)
+ */
+public function getRepossessionData($agreementId)
+{
+    try {
+        $agreement = HirePurchaseAgreement::with(['paymentSchedule', 'penalties'])
+            ->findOrFail($agreementId);
+        
+        // Check if already repossessed
+        $existingRepossession = Repossession::where('agreement_id', $agreementId)
+            ->where('agreement_type', 'hire_purchase')
+            ->whereIn('status', ['repossessed', 'pending_sale', 'sold'])
+            ->first();
+        
+        if ($existingRepossession) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This vehicle has already been repossessed',
+                'repossession' => $existingRepossession
+            ], 422);
+        }
+        
+        // Calculate financial details
+        $totalScheduled = $agreement->paymentSchedule->sum('total_amount');
+        $totalPaid = $agreement->paymentSchedule->sum('amount_paid');
+        $remainingBalance = $totalScheduled - $totalPaid;
+        
+        // Get overdue installments count
+        $overdueCount = $agreement->paymentSchedule()
+            ->where('status', 'overdue')
+            ->count();
+        
+        // Calculate total penalties
+        $totalPenalties = $agreement->penalties()
+            ->where('status', 'pending')
+            ->sum('penalty_amount');
+        
+        // Get vehicle details
+        $vehicleDetails = $this->getCarDetails($agreement->car_type, $agreement->car_id);
+        
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'client_name' => $agreement->client_name,
+                'phone_number' => $agreement->phone_number,
+                'vehicle_details' => $vehicleDetails,
+                'vehicle_make' => $agreement->vehicle_make,
+                'vehicle_model' => $agreement->vehicle_model,
+                'vehicle_year' => $agreement->vehicle_year,
+                'remaining_balance' => $remainingBalance,
+                'total_penalties' => $totalPenalties,
+                'overdue_count' => $overdueCount,
+                'monthly_payment' => $agreement->monthly_payment,
+                'last_payment_date' => $agreement->last_payment_date,
+                'agreement_date' => $agreement->agreement_date,
+                'suggested_car_value' => $remainingBalance + $totalPenalties,
+            ]
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Error fetching repossession data: ' . $e->getMessage());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch repossession data: ' . $e->getMessage()
+        ], 500);
+    }
+}
+/**
+ * View repossessions list
+ */
+public function repossessionsList()
+{
+    $repossessions = Repossession::with(['agreement', 'repossessedBy', 'soldBy'])
+        ->orderBy('repossession_date', 'desc')
+        ->paginate(20);
+    
+    return view('hirepurchase.repossessions-list', compact('repossessions'));
+}
 }
