@@ -1841,7 +1841,7 @@ if ($cents > 0) {
                         </tr>
                         <tr>
                             <td class="pe-3"><strong>ACCOUNT BRANCH:</strong></td>
-                            <td>UNICITY BRANCH</td>
+                            <td>Kilimani Supreme BRANCH</td>
                         </tr>
                         <tr>
                             <td class="pe-3"><strong>BANK SWIFT CODE:</strong></td>

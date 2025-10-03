@@ -221,44 +221,46 @@ private function formatFileSize($bytes)
     }
 }
     /**
-     * Send SMS notification to Accountants when facilitation is requested
-     */
-    private function sendFacilitationRequestNotificationToAccountants($facilitation, $requesterUser)
-    {
-        try {
-            // Get all Accountants
-            $accountants = User::where('role', 'Accountant')
-                ->whereNotNull('phone')
-                ->get();
+ * Send SMS notification to Accountants and General Managers when facilitation is requested
+ */
+private function sendFacilitationRequestNotificationToAccountants($facilitation, $requesterUser)
+{
+    try {
+        // Get all Accountants and General Managers
+        $accountants = User::whereIn('role', ['Accountant', 'General-Manager'])
+            ->whereNotNull('phone')
+            ->get();
 
-            $requesterName = trim($requesterUser->first_name . ' ' . $requesterUser->last_name);
+        $requesterName = trim($requesterUser->first_name . ' ' . $requesterUser->last_name);
+        
+        $message = "New facilitation request from {$requesterName}. Please review and take action.";
+
+        foreach ($accountants as $accountant) {
+            $smsSent = SmsService::send($accountant->phone, $message);
             
-            $message = "New facilitation request from {$requesterName}. Please review and take action.";
-
-            foreach ($accountants as $accountant) {
-                $smsSent = SmsService::send($accountant->phone, $message);
-                
-                if ($smsSent) {
-                    Log::info('Facilitation request notification SMS sent to Accountant', [
-                        'facilitation_id' => $facilitation->id,
-                        'requester' => $requesterName,
-                        'accountant' => $accountant->first_name . ' ' . $accountant->last_name,
-                        'accountant_phone' => $accountant->phone
-                    ]);
-                } else {
-                    Log::warning('Facilitation request notification SMS failed to Accountant', [
-                        'facilitation_id' => $facilitation->id,
-                        'requester' => $requesterName,
-                        'accountant' => $accountant->first_name . ' ' . $accountant->last_name,
-                        'accountant_phone' => $accountant->phone
-                    ]);
-                }
+            if ($smsSent) {
+                Log::info('Facilitation request notification SMS sent', [
+                    'facilitation_id' => $facilitation->id,
+                    'requester' => $requesterName,
+                    'recipient' => $accountant->first_name . ' ' . $accountant->last_name,
+                    'recipient_role' => $accountant->role,
+                    'recipient_phone' => $accountant->phone
+                ]);
+            } else {
+                Log::warning('Facilitation request notification SMS failed', [
+                    'facilitation_id' => $facilitation->id,
+                    'requester' => $requesterName,
+                    'recipient' => $accountant->first_name . ' ' . $accountant->last_name,
+                    'recipient_role' => $accountant->role,
+                    'recipient_phone' => $accountant->phone
+                ]);
             }
-
-        } catch (\Exception $e) {
-            Log::error('Error sending facilitation request notification to accountants: ' . $e->getMessage());
         }
+
+    } catch (\Exception $e) {
+        Log::error('Error sending facilitation request notification: ' . $e->getMessage());
     }
+}
 
     public function update(Request $request)
     {

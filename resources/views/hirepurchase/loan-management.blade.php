@@ -2331,7 +2331,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <td class="text-end">KSh {{ number_format($repossession->remaining_balance, 2) }}</td>
                             </tr>
                             <tr>
-                                <td><strong>Total Penalties:</strong></td>
+                                <td><strong>Total Penalties 1:</strong></td>
                                 <td class="text-end">KSh {{ number_format($repossession->total_penalties, 2) }}</td>
                             </tr>
                             <tr>
@@ -2563,26 +2563,36 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
 
-                <div style="margin-bottom: 20px;">
-                    <p style="margin-bottom: 5px;" class="mb-2"><strong>5. (a) Amount to be recovered as at date of letter of instruction:</strong></p>
-                    <div style="margin-left: 40px;" class="mb-2">
-                        <p style="margin: 2px 0;"> <span id="amount_to_recover"> <?php
-$formatter = new \NumberFormatter('en', \NumberFormatter::SPELLOUT);
-$shillings = floor($actualOutstanding);
-$cents = round(($actualOutstanding - $shillings) * 100);
-
-$words = ucfirst($formatter->format($shillings)) . ' shillings';
-if ($cents > 0) {
-    $words .= ' and ' . $formatter->format($cents) . ' cents';
-}
-?>
-
-<p class="mb-2">
-    KSH. {{ number_format($actualOutstanding, 2) }} ({{ $words }}) 
-    
-</p> </span></p>
-                    </div>
+                 <div style="margin-bottom: 20px;">
+                <p style="margin-bottom: 5px;" class="mb-2"><strong>5. (a) Amount to be recovered as at date of letter of instruction:</strong></p>
+                <div style="margin-left: 40px;" class="mb-2">
+                    @php
+                        // Calculate total amount including penalties
+                        $totalPenalties = 0;
+                        if(isset($agreement->penalties)) {
+                            $totalPenalties = $agreement->penalties()
+                                ->where('status', '!=', 'waived')
+                                ->sum('penalty_amount');
+                        }
+                        $totalAmountToRecover = $actualOutstanding + $totalPenalties;
+                        
+                        $formatter = new \NumberFormatter('en', \NumberFormatter::SPELLOUT);
+                        $shillings = floor($totalAmountToRecover);
+                        $cents = round(($totalAmountToRecover - $shillings) * 100);
+                        
+                        $words = ucfirst($formatter->format($shillings)) . ' shillings';
+                        if ($cents > 0) {
+                            $words .= ' and ' . $formatter->format($cents) . ' cents';
+                        }
+                    @endphp
+                    <p style="margin: 2px 0;">
+                        KSH. {{ number_format($totalAmountToRecover, 2) }} ({{ $words }})
+                    </p>
+                    <p style="margin: 10px 0 2px 0;"><em>Breakdown:</em></p>
+                    <p style="margin: 2px 0; margin-left: 20px;">Outstanding Balance: KSH. {{ number_format($actualOutstanding, 2) }}</p>
+                    <p style="margin: 2px 0; margin-left: 20px;">Total Penalties: KSH. {{ number_format($totalPenalties, 2) }}</p>
                 </div>
+            </div>
 
                 <div style="margin-bottom: 20px;">
                     <p style="margin-bottom: 5px;" class="mb-2"><strong>5. Additional charges to be recovered:</strong></p>
@@ -2656,10 +2666,10 @@ if ($cents > 0) {
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body text-dark" id="demandLetterContent" style="padding: 30px;">
+            <div class="modal-body text-dark" id="demandLetterContent">
                 <!-- Company Logo -->
                 <div class="text-center mb-4">
-                    <img src="{{asset('dashboardv1/assets/images/houseofcars.png')}}" alt="House of Cars" style="height: 100px; width: auto;">
+                    <img src="{{asset('dashboardv1/assets/images/houseofcars.png')}}" alt="House of Cars" style="height: 300px; width: auto;">
                 </div>
 
                 <!-- Date -->
@@ -2695,41 +2705,74 @@ if ($cents > 0) {
                                     @endif.</u></strong></p>
                 </div>
 
-                <!-- Body Paragraph 1 -->
-                <div class="mb-3">
-                    <p class="mb-2"><?php
-$formatter = new \NumberFormatter('en', \NumberFormatter::SPELLOUT);
-$shillings = floor($actualOutstanding);
-$cents = round(($actualOutstanding - $shillings) * 100);
-
-$words = ucfirst($formatter->format($shillings)) . ' shillings';
-if ($cents > 0) {
-    $words .= ' and ' . $formatter->format($cents) . ' cents';
-}
-?>
-
-<p class="mb-2">
-   This is to confirm that your outstanding balance amounts to   KSH. {{ number_format($actualOutstanding, 2) }} ({{ $words }})  against MOTOR VEHICLE 
-                       
-                    
-                    @if($agreement->customerVehicle)
-                    {{ $agreement->customerVehicle->model ?? 'N/A' }} -{{ $agreement->customerVehicle->number_plate ?? 'N/A' }}
-                    
-                                    @elseif($agreement->carImport)
-                                     {{ $agreement->carImport->model ?? 'N/A' }} - {{ $agreement->carImport->year ?? 'N/A' }}
-                                      
-                                            
-                                    @else
-                                        <div class="alert alert-warning">
-                                            <i class="fas fa-exclamation-triangle"></i>
-                                            Vehicle details not available.
-                                        </div>
-                                    @endif.
-</p>
-                        
-                    
-                   
-                </div>
+<!-- Body Paragraph 1 - Updated Format -->
+<div class="mb-3">
+    @php
+        // Calculate penalties
+        $totalPenalties = 0;
+        if(isset($agreement->penalties)) {
+            $totalPenalties = $agreement->penalties()
+                ->where('status', '!=', 'waived')
+                ->sum('penalty_amount');
+        }
+        
+        // Total amount due
+        $totalAmountDue = $actualOutstanding + $totalPenalties;
+        
+        // Convert to words
+        $formatter = new \NumberFormatter('en', \NumberFormatter::SPELLOUT);
+        
+        // Total amount in words
+        $totalShillings = floor($totalAmountDue);
+        $totalCents = round(($totalAmountDue - $totalShillings) * 100);
+        $totalWords = ucfirst($formatter->format($totalShillings)) . ' shillings';
+        if ($totalCents > 0) {
+            $totalWords .= ' and ' . $formatter->format($totalCents) . ' cents';
+        }
+        
+        // Outstanding balance in words
+        $outstandingShillings = floor($actualOutstanding);
+        $outstandingCents = round(($actualOutstanding - $outstandingShillings) * 100);
+        $outstandingWords = ucfirst($formatter->format($outstandingShillings)) . ' shillings';
+        if ($outstandingCents > 0) {
+            $outstandingWords .= ' and ' . $formatter->format($outstandingCents) . ' cents';
+        }
+        
+        // Penalty amount in words
+        $penaltyShillings = floor($totalPenalties);
+        $penaltyCents = round(($totalPenalties - $penaltyShillings) * 100);
+        $penaltyWords = ucfirst($formatter->format($penaltyShillings)) . ' shillings';
+        if ($penaltyCents > 0) {
+            $penaltyWords .= ' and ' . $formatter->format($penaltyCents) . ' cents';
+        }
+        
+        // Get current date for "as at" statement
+        $currentDate = \Carbon\Carbon::now()->format('jS F Y');
+    @endphp
+    
+    <p class="mb-2">
+        This is to confirm that your outstanding balance amounts to ksh {{ number_format($totalAmountDue, 0) }} 
+        ({{ ucfirst($totalWords) }}) against MOTOR VEHICLE 
+        @if($agreement->customerVehicle)
+            {{ $agreement->customerVehicle->number_plate ?? 'N/A' }}
+        @elseif($agreement->carImport)
+            {{ $agreement->carImport->plate_number ?? $agreement->carImport->model ?? 'N/A' }}
+        @else
+            [Vehicle Registration]
+        @endif.
+    </p>
+    
+    <p class="mb-2">
+        This balance is as a result of the {{ number_format($actualOutstanding, 0) }} 
+        ({{ ucfirst($outstandingWords) }}) pending balance as at {{ $currentDate }}
+        @if($totalPenalties > 0)
+            and the accrued penalty of amount {{ number_format($totalPenalties, 0) }} 
+            ({{ ucfirst($penaltyWords) }}) due to late payment.
+        @else
+            .
+        @endif
+    </p>
+</div>
 
                 <!-- Body Paragraph 2 -->
                 <div class="mb-4">
@@ -2738,7 +2781,8 @@ if ($cents > 0) {
                         $finalDate = \Carbon\Carbon::now()->addDays(7);
                     @endphp
                     <p class="mb-2">
-                        The owed amount of KSH. {{ number_format($actualOutstanding, 2) }} ({{ $words }}) 
+                        The owed amount of ksh {{ number_format($totalAmountDue, 0) }} 
+        ({{ ucfirst($totalWords) }}) 
                         is due on {{ $dueDate->format('jS F Y') }} and we would like to remind you to 
                         clear this balance on or before {{ $finalDate->format('jS F Y') }} to avoid 
                         repossession of the said vehicle.
@@ -2766,7 +2810,7 @@ if ($cents > 0) {
                         </tr>
                         <tr>
                             <td class="pe-3"><strong>ACCOUNT BRANCH:</strong></td>
-                            <td>UNICITY BRANCH</td>
+                            <td>Kilimani Supreme BRANCH</td>
                         </tr>
                         <tr>
                             <td class="pe-3"><strong>BANK SWIFT CODE:</strong></td>
@@ -2787,8 +2831,8 @@ if ($cents > 0) {
                 </div>
 
                 <!-- Company Stamp Area -->
-                <div class="mt-5">
-                    <div style="width: 200px; height: 100px; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                <div class="">
+                    <div style="color:#000; width: 200px; height: 100px; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
                         <div class="text-center">
                             <small class="text-muted d-block">KELMER'S HOUSE OF CARS LTD.</small>
                             <strong class="text-danger" id="demand_stamp_date"></strong>
