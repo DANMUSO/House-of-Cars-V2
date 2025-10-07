@@ -1056,12 +1056,13 @@
                             <li class="dropdown notification-list topbar-dropdown">
                                 <a class="nav-link dropdown-toggle nav-user me-0" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="false" aria-expanded="false">
                                    
-                                    <span class="pro-user-name ms-1">{{ Auth::user()->name }} <i class="mdi mdi-chevron-down"></i></span>
+                                    <span class="pro-user-name ms-1">{{ Auth::user()->first_name }} {{ Auth::user()->last_name }} <i class="mdi mdi-chevron-down"></i></span>
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-end profile-dropdown">
                                     <!-- item-->
                                     <div class="dropdown-header noti-title">
                                         <h6 class="text-overflow m-0">Welcome !</h6>
+                                        <p>  {{ Auth::user()->email }}</p>
                                     </div>
                                       <div class="dropdown-header noti-title">
                                          <!-- Reset Password Modal -->
@@ -1076,7 +1077,9 @@
                                     </div>
 
 
-                                    <div class="dropdown-divider"></div>
+                                    <div class="dropdown-divider">
+                                      
+                                    </div>
 
                                     <!-- Authentication -->
                                     <form method="POST" action="{{ route('logout') }}">

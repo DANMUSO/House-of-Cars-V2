@@ -4689,31 +4689,39 @@ window['showUploadSection' + {{ $agreement->id }}] = function() {
                         
                         <!-- Quick Amount Buttons -->
                         <div class="mt-2">
-                            <small class="text-muted d-block mb-1">Quick amounts:</small>
-                            <div class="btn-group btn-group-sm" role="group">
-                                @if($agreement->monthly_payment <= $actualOutstanding)
-                                <button type="button" class="btn btn-outline-primary" onclick="setQuickAmount({{ $agreement->monthly_payment }})">
-                                    Monthly ({{ number_format($agreement->monthly_payment, 0) }})
-                                </button>
-                                @endif
-                                
-                                @if($actualOutstanding >= $agreement->monthly_payment * 2)
-                                <button type="button" class="btn btn-outline-info" onclick="setQuickAmount({{ min($agreement->monthly_payment * 2, $actualOutstanding) }})">
-                                    2 Months ({{ number_format(min($agreement->monthly_payment * 2, $actualOutstanding), 0) }})
-                                </button>
-                                @endif
-                                
-                                @if($actualOutstanding >= $agreement->monthly_payment * 3)
-                                <button type="button" class="btn btn-outline-warning" onclick="setQuickAmount({{ min($agreement->monthly_payment * 3, $actualOutstanding) }})">
-                                    3 Months ({{ number_format(min($agreement->monthly_payment * 3, $actualOutstanding), 0) }})
-                                </button>
-                                @endif
-                                
-                                <button type="button" class="btn btn-outline-success" onclick="setQuickAmount({{ $actualOutstanding }})">
-                                    Full Payment ({{ number_format($actualOutstanding, 0) }})
-                                </button>
-                            </div>
+                        <small class="text-muted d-block mb-1">Quick amounts:</small>
+                        <div class="btn-group btn-group-sm" role="group">
+                            @if($agreement->monthly_payment <= $actualOutstanding)
+                            <button type="button" 
+                                    class="btn btn-outline-primary" 
+                                    onclick="setQuickAmount({{ $agreement->monthly_payment }})">
+                                Monthly ({{ number_format($agreement->monthly_payment, 0) }})
+                            </button>
+                            @endif
+                            
+                            @if($actualOutstanding >= $agreement->monthly_payment * 2)
+                            <button type="button" 
+                                    class="btn btn-outline-info" 
+                                    onclick="setQuickAmount({{ min($agreement->monthly_payment * 2, $actualOutstanding) }})">
+                                2 Months ({{ number_format(min($agreement->monthly_payment * 2, $actualOutstanding), 0) }})
+                            </button>
+                            @endif
+                            
+                            @if($actualOutstanding >= $agreement->monthly_payment * 3)
+                            <button type="button" 
+                                    class="btn btn-outline-warning" 
+                                    onclick="setQuickAmount({{ min($agreement->monthly_payment * 3, $actualOutstanding) }})">
+                                3 Months ({{ number_format(min($agreement->monthly_payment * 3, $actualOutstanding), 0) }})
+                            </button>
+                            @endif
+                            
+                            <button type="button" 
+                                    class="btn btn-outline-success" 
+                                    onclick="setQuickAmount({{ $actualOutstanding }})">
+                                Full Payment ({{ number_format($actualOutstanding, 0) }})
+                            </button>
                         </div>
+                    </div>
                     </div>
                     
                     <!-- Rest of the form remains the same -->
@@ -5054,18 +5062,29 @@ $.ajaxSetup({
     }
 });
 
-// Set quick payment amounts
+// Set quick payment amounts - FIXED VERSION
 function setQuickAmount(amount) {
     const paymentInput = document.getElementById('paymentAmount');
-    const maxAmount = {{ $actualOutstanding }};
-    
-    // Ensure amount doesn't exceed outstanding balance
-    const finalAmount = Math.min(amount, maxAmount);
-    
-    if (paymentInput) {
-        paymentInput.value = finalAmount;
-        paymentInput.dispatchEvent(new Event('input'));
+    if (!paymentInput) {
+        console.error('Payment input not found');
+        return;
     }
+    
+    const maxAmount = {{ $actualOutstanding }};
+    const finalAmount = Math.min(parseFloat(amount), maxAmount);
+    
+    // Set value with 2 decimal places
+    paymentInput.value = finalAmount.toFixed(2);
+    
+    // Trigger events
+    paymentInput.dispatchEvent(new Event('input', { bubbles: true }));
+    paymentInput.dispatchEvent(new Event('change', { bubbles: true }));
+    
+    // Visual feedback
+    paymentInput.classList.add('border-success');
+    setTimeout(() => paymentInput.classList.remove('border-success'), 300);
+    
+    console.log(`Quick amount set: KSh ${finalAmount.toLocaleString()}`);
 }
 
 // Quick payment function for payment schedule

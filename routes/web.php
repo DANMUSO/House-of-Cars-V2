@@ -30,7 +30,7 @@ Route::get('/redirect-home', function () {
         'Showroom-Manager' => '/manager/dashboard',
         'Salesperson' => '/operations/dashboard',
         'clients' => '/clients/dashboard',
-        'Suppport-Staff' => '/admin/dashboard',
+        'Support-Staff' => '/admin/dashboard',
         'General-Manager' => '/admin/dashboard',
         'Sales-Supervisor' => '/Facilitation/requests',
     ];
@@ -672,3 +672,6 @@ Route::middleware(['auth'])->prefix('api/dashboard')->group(function () {
 });
 });
 
+Route::fallback(function () {
+    return redirect()->route('login');
+});
