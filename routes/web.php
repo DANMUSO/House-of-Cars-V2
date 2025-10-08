@@ -35,7 +35,7 @@ Route::get('/redirect-home', function () {
         'Sales-Supervisor' => '/Facilitation/requests',
     ];
 
-    $destination = $routes[$role] ?? '/dashboard';
+    $destination = $routes[$role] ?? '/Facilitation/requests';
 
     return redirect($destination);
 })->middleware(['auth']);
