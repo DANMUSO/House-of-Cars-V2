@@ -813,12 +813,18 @@ document.addEventListener('DOMContentLoaded', function() {
         <i class="fas fa-exclamation-triangle"></i> Penalties
        
     </button>
+    </li>
     <li class="nav-item" role="presentation">
                     <button class="nav-link" id="repossession-tab" data-bs-toggle="tab" 
                             data-bs-target="#repossession" type="button" role="tab">
                          <i class="fas fa-car-crash"></i>  Repossession
                     </button>
                 </li>
+<li class="nav-item" role="presentation">
+    <button class="nav-link" id="sms-tab" data-bs-toggle="tab" 
+            data-bs-target="#sms-communication" type="button" role="tab">
+        <i class="fas fa-sms"></i> SMS Communication
+    </button>
 </li>
             </ul>
         </div>
@@ -928,7 +934,140 @@ document.addEventListener('DOMContentLoaded', function() {
                         </table>
                     </div>
                 </div>
+<!-- SMS Communication Tab -->
+<div class="tab-pane fade" id="sms-communication" role="tabpanel">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5>SMS Communication</h5>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#composeSmsModal">
+            <i class="fas fa-paper-plane me-1"></i>Send SMS
+        </button>
+    </div>
 
+
+    <!-- SMS History Table -->
+    <div class="card">
+        <div class="card-header">
+            <h6 class="card-title mb-0">SMS History</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped" id="smsHistoryTable">
+                    <thead>
+                        <tr>
+                            <th>Date/Time</th>
+                            <th>Message</th>
+                            <th>Recipient</th>
+                            <th>Status</th>
+                            <th>Sent By</th>
+                            <th>Type</th>
+                        </tr>
+                    </thead>
+                    <tbody id="smsHistoryBody">
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading SMS history...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Loading SMS history...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Compose SMS Modal -->
+<div class="modal fade" id="composeSmsModal" tabindex="-1" aria-labelledby="composeSmsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="composeSmsModalLabel">
+                    <i class="fas fa-sms me-2"></i>Compose SMS
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="composeSmsForm">
+                    @csrf
+                    <input type="hidden" name="agreement_id" value="{{ $agreement->id }}">
+                    <input type="hidden" name="agreement_type" value="hire_purchase">
+                    
+                    <!-- Client Info Display -->
+                    <div class="alert alert-info">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Client:</strong> {{ $agreement->client_name }}<br>
+                                <strong>Phone:</strong> {{ $agreement->phone_number }}
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Vehicle:</strong> {{ $agreement->vehicle_make }} {{ $agreement->vehicle_model }}<br>
+                                <strong>Outstanding:</strong> KSh {{ number_format($actualOutstanding, 2) }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SMS Template Selection -->
+                    <div class="mb-3">
+                        <label class="form-label">SMS Template (Optional)</label>
+                        <select class="form-select" id="smsTemplate" onchange="loadSmsTemplate()">
+                            <option value="">-- Custom Message --</option>
+                            <option value="payment_reminder">Payment Reminder</option>
+                            <option value="overdue_notice">Overdue Notice</option>
+                            <option value="payment_confirmation">Payment Confirmation</option>
+                            <option value="balance_update">Balance Update</option>
+                            <option value="custom_greeting">Custom Greeting</option>
+                        </select>
+                    </div>
+
+                    <!-- Message Textarea with Character Counter -->
+                    <div class="mb-3">
+                        <label class="form-label">Message <span class="text-danger">*</span></label>
+                        <textarea class="form-control" 
+                                  name="message" 
+                                  id="smsMessage"
+                                  rows="6" 
+                                  required
+                                  maxlength="640"
+                                  placeholder="Type your message here..."></textarea>
+                        <div class="d-flex justify-content-between mt-1">
+                            <small class="text-muted">
+                                <span id="charCount">0</span>/640 characters | 
+                                <span id="smsCount">0</span> SMS
+                            </small>
+                            <small class="text-muted" id="estimatedCost">Cost: KSh 0.00</small>
+                        </div>
+                    </div>
+
+
+                    <!-- Schedule Option -->
+                   
+
+                    <!-- Preview Section -->
+                    <div class="card bg-light">
+                        <div class="card-header">
+                            <small class="text-muted">Preview (placeholders will be replaced)</small>
+                        </div>
+                        <div class="card-body">
+                            <div id="smsPreview" class="text-muted fst-italic">
+                                Your message preview will appear here...
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="sendCustomSms()">
+                    <i class="fas fa-paper-plane me-1"></i>Send SMS
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
                 <!-- Payment Schedule Tab -->
                 <div class="tab-pane fade" id="payment-schedule" role="tabpanel">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -6290,6 +6429,313 @@ window[`showLogbookUploadSection${{{ $agreement->id }}}`] = function() {
     showLogbookUploadSection({{ $agreement->id }});
 };
     </script>
+    <script>
+// SMS Communication Functions
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize SMS tab
+    const smsTab = document.getElementById('sms-tab');
+    if (smsTab) {
+        smsTab.addEventListener('shown.bs.tab', function() {
+            loadSmsHistory();
+            loadSmsStatistics();
+        });
+    }
+    
+    // Character counter
+    const smsMessage = document.getElementById('smsMessage');
+    if (smsMessage) {
+        smsMessage.addEventListener('input', updateCharacterCount);
+    }
+    
+    // Schedule checkbox
+    const scheduleSms = document.getElementById('scheduleSms');
+    if (scheduleSms) {
+        scheduleSms.addEventListener('change', function() {
+            document.getElementById('scheduleDateTime').style.display = 
+                this.checked ? 'block' : 'none';
+        });
+    }
+});
+
+// Load SMS History
+function loadSmsHistory() {
+    const agreementId = {{ $agreement->id }};
+    
+    fetch(`/gentleman/${agreementId}/sms-history`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displaySmsHistory(data.messages);
+            } else {
+                showSmsError('Failed to load SMS history');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading SMS history:', error);
+            showSmsError('Network error loading SMS history');
+        });
+}
+
+// Display SMS History
+function displaySmsHistory(messages) {
+    const tbody = document.getElementById('smsHistoryBody');
+    
+    if (!messages || messages.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center py-4">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <h6 class="text-muted">No SMS messages found</h6>
+                    <p class="text-muted">SMS messages will appear here once sent.</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    let html = '';
+    messages.forEach(msg => {
+        const statusBadge = getStatusBadge(msg.status);
+        const typeBadge = getTypeBadge(msg.type);
+        
+        html += `
+            <tr>
+                <td>${formatDateTime(msg.sent_at)}</td>
+                <td>
+                    <div class="message-preview" style="max-width: 300px;">
+                        ${msg.message.substring(0, 100)}${msg.message.length > 100 ? '...' : ''}
+                    </div>
+                    <button class="btn btn-link btn-sm p-0" onclick="viewFullMessage('${escapeHtml(msg.message)}')">
+                        View Full
+                    </button>
+                </td>
+                <td>${msg.phone_number}</td>
+                <td>${statusBadge}</td>
+                <td>${msg.sent_by_name || 'System'}</td>
+                <td>${typeBadge}</td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+// Load SMS Statistics
+function loadSmsStatistics() {
+    const agreementId = {{ $agreement->id }};
+    
+    fetch(`/gentleman/${agreementId}/sms-statistics`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('totalSmsSent').textContent = data.stats.total || 0;
+                document.getElementById('smsDelivered').textContent = data.stats.delivered || 0;
+                document.getElementById('smsPending').textContent = data.stats.pending || 0;
+                document.getElementById('smsFailed').textContent = data.stats.failed || 0;
+            }
+        })
+        .catch(error => console.error('Error loading SMS statistics:', error));
+}
+
+
+
+// Load SMS Template
+function loadSmsTemplate() {
+    const template = document.getElementById('smsTemplate').value;
+    const messageField = document.getElementById('smsMessage');
+    
+    if (template && smsTemplates[template]) {
+        messageField.value = smsTemplates[template];
+        updateCharacterCount();
+        updatePreview();
+    }
+}
+
+// Insert Placeholder
+function insertPlaceholder(placeholder) {
+    const messageField = document.getElementById('smsMessage');
+    const cursorPos = messageField.selectionStart;
+    const textBefore = messageField.value.substring(0, cursorPos);
+    const textAfter = messageField.value.substring(cursorPos);
+    
+    messageField.value = textBefore + placeholder + textAfter;
+    messageField.focus();
+    messageField.setSelectionRange(cursorPos + placeholder.length, cursorPos + placeholder.length);
+    
+    updateCharacterCount();
+    updatePreview();
+}
+
+// Update Character Count
+function updateCharacterCount() {
+    const message = document.getElementById('smsMessage').value;
+    const charCount = message.length;
+    const smsCount = Math.ceil(charCount / 160);
+    const cost = smsCount * 1; // KSh 1 per SMS
+    
+    document.getElementById('charCount').textContent = charCount;
+    document.getElementById('smsCount').textContent = smsCount;
+    document.getElementById('estimatedCost').textContent = `Cost: KSh ${cost.toFixed(2)}`;
+    
+    updatePreview();
+}
+
+// Update Preview
+function updatePreview() {
+    const message = document.getElementById('smsMessage').value;
+    const preview = message
+        .replace(/{client_name}/g, '{{ $agreement->client_name }}')
+        .replace(/{vehicle}/g, '{{ $agreement->vehicle_make }} {{ $agreement->vehicle_model }}')
+        .replace(/{outstanding}/g, '{{ number_format($actualOutstanding, 2) }}')
+        .replace(/{monthly_payment}/g, '{{ number_format($agreement->monthly_payment, 2) }}')
+        .replace(/{next_due_date}/g, '{{ $nextDueInstallment ? \Carbon\Carbon::parse($nextDueInstallment->due_date)->format("M d, Y") : "N/A" }}');
+    
+    document.getElementById('smsPreview').innerHTML = preview || '<em class="text-muted">Your message preview will appear here...</em>';
+}
+
+// Send Custom SMS
+function sendCustomSms() {
+    const form = document.getElementById('composeSmsForm');
+    const formData = new FormData(form);
+    
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Sending SMS...',
+            text: 'Please wait while we send your message.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    }
+    
+    fetch('/gentleman/send-sms', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('composeSmsModal'));
+        modal.hide();
+        
+        if (data.success) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Success!',
+                    text: data.message || 'SMS sent successfully!',
+                    icon: 'success',
+                    confirmButtonColor: '#28a745'
+                }).then(() => {
+                    loadSmsHistory();
+                    loadSmsStatistics();
+                    form.reset();
+                });
+            } else {
+                alert('SMS sent successfully!');
+                loadSmsHistory();
+                loadSmsStatistics();
+                form.reset();
+            }
+        } else {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Error!',
+                    text: data.message || 'Failed to send SMS',
+                    icon: 'error',
+                    confirmButtonColor: '#dc3545'
+                });
+            } else {
+                alert('Error: ' + (data.message || 'Failed to send SMS'));
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error sending SMS:', error);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Error!',
+                text: 'Network error sending SMS',
+                icon: 'error',
+                confirmButtonColor: '#dc3545'
+            });
+        } else {
+            alert('Network error sending SMS');
+        }
+    });
+}
+
+// Helper Functions
+function getStatusBadge(status) {
+    const badges = {
+        'sent': '<span class="badge bg-success">Sent</span>',
+        'delivered': '<span class="badge bg-success">Delivered</span>',
+        'pending': '<span class="badge bg-warning">Pending</span>',
+        'failed': '<span class="badge bg-danger">Failed</span>',
+        'scheduled': '<span class="badge bg-info">Scheduled</span>'
+    };
+    return badges[status] || '<span class="badge bg-secondary">Unknown</span>';
+}
+
+function getTypeBadge(type) {
+    const badges = {
+        'manual': '<span class="badge bg-primary">Manual</span>',
+        'automated': '<span class="badge bg-info">Automated</span>',
+        'reminder': '<span class="badge bg-warning">Reminder</span>',
+        'notification': '<span class="badge bg-secondary">Notification</span>'
+    };
+    return badges[type] || '<span class="badge bg-secondary">Other</span>';
+}
+
+function viewFullMessage(message) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'Full Message',
+            text: message,
+            icon: 'info',
+            confirmButtonColor: '#007bff'
+        });
+    } else {
+        alert(message);
+    }
+}
+
+function formatDateTime(dateTimeString) {
+    if (!dateTimeString) return '-';
+    return new Date(dateTimeString).toLocaleString('en-GB');
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+function showSmsError(message) {
+    const tbody = document.getElementById('smsHistoryBody');
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="6" class="text-center py-4">
+                <div class="alert alert-warning mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>${message}
+                </div>
+            </td>
+        </tr>
+    `;
+}
+</script>
 <!-- Additional Styling -->
 <style>
 /* Custom styles for Gentleman's Agreement */

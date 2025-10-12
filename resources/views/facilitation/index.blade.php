@@ -464,7 +464,6 @@
 
 <!-- Also fix this line in the statistics section - change from user_id to request_id -->
 <!-- Line ~120: Change this line -->
-<h5 class="mb-1">{{ $facilitations->pluck('request_id')->unique()->count() }}</h5>
         <!-- New Request Modal -->
         <div class="modal fade" id="standard-modal" tabindex="-1" aria-labelledby="standard-modalLabel" aria-hidden="true">
             <div class="modal-dialog">

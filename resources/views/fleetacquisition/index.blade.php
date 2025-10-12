@@ -1,8 +1,6 @@
 <x-app-layout>
 <div class="container-fluid">
-    <!-- SweetAlert2 CSS and JS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     
     <div class="py-3 d-flex align-items-sm-center flex-sm-row flex-column">
         <div class="flex-grow-1">
@@ -230,13 +228,126 @@
             </div>
         </div>
     </div>
+<!-- Statistics Cards Section -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="text-muted mb-2">Total Fleet</p>
+                        <h3 class="mb-0">{{ $statistics['total_fleet'] }}</h3>
+                    </div>
+                    <div class="avatar-sm">
+                        <span class="avatar-title bg-primary-subtle text-primary rounded-3">
+                            <i class="fas fa-car fa-2x"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <div class="col-xl-3 col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="text-muted mb-2">Total Investment</p>
+                        <h3 class="mb-0">Ksh {{ number_format($statistics['total_investment'], 0) }}</h3>
+                    </div>
+                    <div class="avatar-sm">
+                        <span class="avatar-title bg-success-subtle text-success rounded-3">
+                            <i class="fas fa-money-bill-wave fa-2x"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="text-muted mb-2">Total Paid</p>
+                        <h3 class="mb-0 text-success">Ksh {{ number_format($statistics['total_paid'], 0) }}</h3>
+                    </div>
+                    <div class="avatar-sm">
+                        <span class="avatar-title bg-info-subtle text-info rounded-3">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="text-muted mb-2">Outstanding Balance</p>
+                        <h3 class="mb-0 text-danger">Ksh {{ number_format($statistics['total_outstanding'], 0) }}</h3>
+                    </div>
+                    <div class="avatar-sm">
+                        <span class="avatar-title bg-danger-subtle text-danger rounded-3">
+                            <i class="fas fa-exclamation-circle fa-2x"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Statistics Row -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="card">
+            <div class="card-body text-center">
+                <p class="text-muted mb-2">Active Loans</p>
+                <h4 class="mb-0 text-primary">{{ $statistics['active_loans'] }}</h4>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card">
+            <div class="card-body text-center">
+                <p class="text-muted mb-2">Completed</p>
+                <h4 class="mb-0 text-success">{{ $statistics['completed_loans'] }}</h4>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card">
+            <div class="card-body text-center">
+                <p class="text-muted mb-2">Pending Approvals</p>
+                <h4 class="mb-0 text-warning">{{ $statistics['pending_approvals'] }}</h4>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xl-3 col-md-6">
+        <div class="card">
+            <div class="card-body text-center">
+                <p class="text-muted mb-2">Avg Interest Rate</p>
+                <h4 class="mb-0">{{ number_format($statistics['avg_interest_rate'], 2) }}%</h4>
+            </div>
+        </div>
+    </div>
+</div>
     <div class="row">
         <div class="col-12">
             <div class="card">
                 <div class="card-body">
                     <div class="table-responsive"> 
-                        <table id="fleetTable" class="table table-bordered table-hover nowrap w-100">
+                        <!-- In your fleet acquisition blade -->
+                        <table id="responsive-datatable" class="table table-bordered table-hover nowrap w-100">
                             <thead>
                                 <tr>
                                     <th>#</th>

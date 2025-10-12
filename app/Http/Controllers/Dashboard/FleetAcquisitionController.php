@@ -11,12 +11,69 @@ use Illuminate\Support\Facades\Storage;
 
 class FleetAcquisitionController extends Controller
 {
-    public function index()
-    {
-        $fleetAcquisitions = FleetAcquisition::orderBy('created_at', 'desc')->get();
-        
-        return view('fleetacquisition.index', compact('fleetAcquisitions'));
+   public function index(Request $request)
+{
+    // Base query
+    $query = FleetAcquisition::query();
+    
+    // Apply filters
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
     }
+    
+    if ($request->filled('financing_institution')) {
+        $query->where('financing_institution', 'LIKE', '%' . $request->financing_institution . '%');
+    }
+    
+    if ($request->filled('vehicle_category')) {
+        $query->where('vehicle_category', $request->vehicle_category);
+    }
+    
+    if ($request->filled('date_from')) {
+        $query->whereDate('created_at', '>=', $request->date_from);
+    }
+    
+    if ($request->filled('date_to')) {
+        $query->whereDate('created_at', '<=', $request->date_to);
+    }
+    
+    if ($request->filled('search')) {
+        $search = $request->search;
+        $query->where(function($q) use ($search) {
+            $q->where('vehicle_make', 'LIKE', "%{$search}%")
+              ->orWhere('vehicle_model', 'LIKE', "%{$search}%")
+              ->orWhere('chassis_number', 'LIKE', "%{$search}%")
+              ->orWhere('registration_number', 'LIKE', "%{$search}%");
+        });
+    }
+    
+    // Get filtered results
+    $fleetAcquisitions = $query->orderBy('created_at', 'desc')->get();
+    
+    // Calculate statistics
+    $statistics = [
+        'total_fleet' => FleetAcquisition::count(),
+        'total_investment' => FleetAcquisition::sum('purchase_price'),
+        'total_outstanding' => FleetAcquisition::sum('outstanding_balance'),
+        'total_paid' => FleetAcquisition::sum('amount_paid'),
+        'active_loans' => FleetAcquisition::where('status', 'active')->count(),
+        'completed_loans' => FleetAcquisition::where('status', 'completed')->count(),
+        'pending_approvals' => FleetAcquisition::where('status', 'pending')->count(),
+        'avg_interest_rate' => FleetAcquisition::avg('interest_rate'),
+        'avg_loan_duration' => FleetAcquisition::avg('loan_duration_months'),
+    ];
+    
+    // Get unique financing institutions for filter dropdown
+    $financingInstitutions = FleetAcquisition::distinct()
+        ->pluck('financing_institution')
+        ->filter();
+    
+    return view('fleetacquisition.index', compact(
+        'fleetAcquisitions',
+        'statistics',
+        'financingInstitutions'
+    ));
+}
 
 public function store(Request $request)
 {

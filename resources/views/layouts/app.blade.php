@@ -1337,7 +1337,7 @@
                             </li>
                             @endif
                             @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director','General-Manager']))
-                            <li>
+                            <!--<li>
                                 <a href="#sidebarForms" data-bs-toggle="collapse">
                                 <i class="fa-solid fa-chart-column"></i>
                                     <span> Reports </span>
@@ -1377,7 +1377,7 @@
                                         </li>
                                     </ul>
                                 </div>
-                            </li>
+                            </li>-->
                             @endif
                             {{-- HR, Managing-Director and General-Manager --}}
                             @if(in_array(Auth::user()->role, ['HR','Managing-Director','General-Manager']))
@@ -1587,17 +1587,7 @@ if (window.location.pathname === '/fleetacquisition' || window.location.pathname
     // Fleet Acquisition AJAX Functions
     $(document).ready(function() {
         
-        // Initialize DataTable
-        if (typeof $.fn.DataTable !== 'undefined' && $('#responsive-datatable').length) {
-            $('#responsive-datatable').DataTable({
-                responsive: true,
-                pageLength: 25,
-                order: [[0, 'desc']],
-                columnDefs: [
-                    { orderable: false, targets: [1, -1] }
-                ]
-            });
-        }
+       
 
         // Submit Fleet Acquisition Form
         $('#FleetAcquisitionForm').on('submit', function(e) {

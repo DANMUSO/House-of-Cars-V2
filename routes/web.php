@@ -116,6 +116,14 @@ Route::post('/password/reset/sms', [App\Http\Controllers\Dashboard\UsersControll
     ->name('password.sms.send')
     ->middleware('guest');
 Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Support-Staff,HR,General-Manager,Yard-Supervisor,Sales-Supervisor'])->group(function () {
+    // SMS Communication Routes Hire Purchase
+Route::get('/hire-purchase/{id}/sms-history', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'getSmsHistory'])->name('hire-purchase.sms-history');
+Route::get('/hire-purchase/{id}/sms-statistics', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'getSmsStatistics'])->name('hire-purchase.sms-statistics');
+Route::post('/hire-purchase/send-sms', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'sendCustomSms'])->name('hire-purchase.send-sms');
+    // SMS Communication Routes Gentleman Agreement
+Route::get('/gentleman/{id}/sms-history', [App\Http\Controllers\Dashboard\GentlemanAgreementController::class, 'getSmsHistory'])->name('gentleman.sms-history');
+Route::get('/gentleman/{id}/sms-statistics', [App\Http\Controllers\Dashboard\GentlemanAgreementController::class, 'getSmsStatistics'])->name('gentleman.sms-statistics');
+Route::post('/gentleman/send-sms', [App\Http\Controllers\Dashboard\GentlemanAgreementController::class, 'sendCustomSms'])->name('gentleman.send-sms');
    Route::prefix('gate-pass-inspection')->group(function () {
         Route::post('/save', [App\Http\Controllers\Dashboard\InspectionController::class, 'savegatepass']);
         Route::post('/load', [App\Http\Controllers\Dashboard\InspectionController::class, 'loadgatepass']);

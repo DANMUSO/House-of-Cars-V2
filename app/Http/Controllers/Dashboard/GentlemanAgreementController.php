@@ -1722,7 +1722,155 @@ private function getCarDetails($car_type, $car_id)
             'agreements' => $agreements
         ]);
     }
+/**
+ * Get SMS history for an agreement
+ */
+public function getSmsHistory($agreementId)
+{
+    try {
+        $messages = DB::table('sms_logs')
+            ->where('agreement_id', $agreementId)
+            ->where('agreement_type', 'gentleman_agreement')
+            ->orderBy('sent_at', 'desc')
+            ->get();
+        
+        return response()->json([
+            'success' => true,
+            'messages' => $messages
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Error fetching SMS history: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch SMS history'
+        ], 500);
+    }
+}
 
+/**
+ * Get SMS statistics for an agreement
+ */
+public function getSmsStatistics($agreementId)
+{
+    try {
+        $stats = DB::table('sms_logs')
+            ->where('agreement_id', $agreementId)
+            ->where('agreement_type', 'gentleman_agreement')
+            ->selectRaw('
+                COUNT(*) as total,
+                SUM(CASE WHEN status = "delivered" THEN 1 ELSE 0 END) as delivered,
+                SUM(CASE WHEN status = "pending" THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = "failed" THEN 1 ELSE 0 END) as failed
+            ')
+            ->first();
+        
+        return response()->json([
+            'success' => true,
+            'stats' => $stats
+        ]);
+        
+    } catch (\Exception $e) {
+        Log::error('Error fetching SMS statistics: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch SMS statistics'
+        ], 500);
+    }
+}
+
+/**
+ * Send custom SMS for Gentleman Agreement
+ */
+public function sendCustomSms(Request $request)
+{
+    $validated = $request->validate([
+        'agreement_id' => 'required|exists:gentlemanagreements,id',
+        'message' => 'required|string|max:640',
+        'schedule_sms' => 'nullable|boolean',
+        'scheduled_for' => 'nullable|date|after:now'
+    ]);
+
+    try {
+        $agreement = GentlemanAgreement::findOrFail($request->agreement_id);
+        
+        // Replace placeholders
+        $message = str_replace(
+            ['{client_name}', '{vehicle}', '{outstanding}', '{monthly_payment}', '{next_due_date}'],
+            [
+                $agreement->client_name,
+                $agreement->vehicle_make . ' ' . $agreement->vehicle_model,
+                number_format($this->calculateCurrentOutstandingFromSchedule($agreement), 2),
+                number_format($agreement->monthly_payment, 2),
+                $agreement->paymentSchedule()->whereIn('status', ['pending', 'overdue'])->first()->due_date ?? 'N/A'
+            ],
+            $request->message
+        );
+        
+        if ($request->schedule_sms && $request->scheduled_for) {
+            // Schedule SMS for later
+            DB::table('sms_logs')->insert([
+                'agreement_id' => $agreement->id,
+                'agreement_type' => 'gentleman_agreement',
+                'phone_number' => $agreement->phone_number,
+                'message' => $message,
+                'status' => 'scheduled',
+                'type' => 'manual',
+                'sent_by' => auth()->id(),
+                'scheduled_for' => $request->scheduled_for,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'SMS scheduled successfully for ' . date('M d, Y H:i', strtotime($request->scheduled_for))
+            ]);
+        } else {
+            // Send SMS immediately
+            $smsSent = SmsService::send($agreement->phone_number, $message);
+            
+            // Log SMS
+            DB::table('sms_logs')->insert([
+                'agreement_id' => $agreement->id,
+                'agreement_type' => 'gentleman_agreement',
+                'phone_number' => $agreement->phone_number,
+                'message' => $message,
+                'status' => $smsSent ? 'sent' : 'failed',
+                'type' => 'manual',
+                'sent_by' => auth()->id(),
+                'sent_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+            
+            if ($smsSent) {
+                Log::info('Custom SMS sent for Gentleman Agreement', [
+                    'agreement_id' => $agreement->id,
+                    'client' => $agreement->client_name,
+                    'sent_by' => auth()->user()->name ?? 'System'
+                ]);
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'SMS sent successfully!'
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to send SMS. Please try again.'
+                ], 500);
+            }
+        }
+        
+    } catch (\Exception $e) {
+        Log::error('Error sending custom SMS for Gentleman Agreement: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to send SMS: ' . $e->getMessage()
+        ], 500);
+    }
+}
     /**
      * Bulk operations on agreements
      */
