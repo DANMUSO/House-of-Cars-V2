@@ -153,7 +153,7 @@ private function getAgreementDetails($agreementId)
         if ($hp) {
             return [
                 'client_name' => $hp->client_name,
-                'vehicle' => trim("{$hp->vehicle_make} {$hp->vehicle_model}"),
+                'vehicle' => trim("{$hp->vehicle_make} {$hp->model}"),
                 'type' => 'HP'
             ];
         }
@@ -163,7 +163,7 @@ private function getAgreementDetails($agreementId)
         if ($ga) {
             return [
                 'client_name' => $ga->client_name,
-                'vehicle' => trim("{$ga->vehicle_make} {$ga->vehicle_model}"),
+                'vehicle' => trim("{$ga->vehicle_make} {$ga->model}"),
                 'type' => 'GA'
             ];
         }
@@ -175,7 +175,7 @@ private function getAgreementDetails($agreementId)
         if ($ga) {
             return [
                 'client_name' => $ga->client_name,
-                'vehicle' => trim("{$ga->vehicle_make} {$ga->vehicle_model}"),
+                'vehicle' => trim("{$ga->vehicle_make} {$ga->model}"),
                 'type' => 'GA'
             ];
         }
@@ -184,7 +184,7 @@ private function getAgreementDetails($agreementId)
         if ($hp) {
             return [
                 'client_name' => $hp->client_name,
-                'vehicle' => trim("{$hp->vehicle_make} {$hp->vehicle_model}"),
+                'vehicle' => trim("{$hp->vehicle_make} {$hp->model}"),
                 'type' => 'HP'
             ];
         }
