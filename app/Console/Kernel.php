@@ -13,6 +13,7 @@ class Kernel extends ConsoleKernel
     
     protected function schedule(Schedule $schedule)
     {
+         $schedule->command('installments:notify')->dailyAt('08:00');
         // Run fleet reminders daily at 8:00 AM
         $schedule->command('fleet:send-reminders')
                 ->dailyAt('08:00')
