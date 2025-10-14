@@ -3645,7 +3645,7 @@ function exportRepossessionReport() {
                         <tr>
                             <th>Due Date</th>
                             <th>Days Overdue</th>
-                            <th>Expected Amount</th>
+                            <th>Cumulative Unpaid Amount</th>
                             <th>Penalty Rate</th>
                             <th>Penalty Amount</th>
                             <th>Amount Paid</th>
@@ -3887,7 +3887,7 @@ function displayPenalties() {
                 <td>
                     <span class="badge bg-danger">${penalty.days_overdue} days</span>
                 </td>
-                <td>KSh ${formatNumber(penalty.expected_amount)}</td>
+                <td>KSh ${formatNumber(penalty.cumulative_unpaid_amount)}</td>
                 <td>${penalty.penalty_rate}%</td>
                 <td>KSh ${formatNumber(penalty.penalty_amount)}</td>
                 <td>KSh ${formatNumber(penalty.amount_paid)}</td>
@@ -4093,7 +4093,7 @@ function openPenaltyPaymentModal(penaltyId) {
                 <strong>Days Overdue:</strong> ${penalty.days_overdue} days
             </div>
             <div class="col-md-6">
-                <strong>Expected Amount:</strong> KSh ${formatNumber(penalty.expected_amount)}<br>
+                <strong>Cumulative Unpaid Amount:</strong> KSh ${formatNumber(penalty.cumulative_unpaid_amount)}<br>
                 <strong>Penalty Rate:</strong> ${penalty.penalty_rate}%
             </div>
         </div>
@@ -4215,7 +4215,7 @@ function openPenaltyWaiverModal(penaltyId) {
                     <div class="col-md-6">
                         <strong>Due Date:</strong> ${formatDate(penalty.due_date)}<br>
                         <strong>Days Overdue:</strong> ${penalty.days_overdue} days<br>
-                        <strong>Expected Amount:</strong> KSh ${formatNumber(penalty.expected_amount)}
+                        <strong>Cumulative Unpaid Amount:</strong> KSh ${formatNumber(penalty.cumulative_unpaid_amount)}
                     </div>
                     <div class="col-md-6">
                         <strong>Penalty Rate:</strong> ${penalty.penalty_rate}%<br>
@@ -4347,7 +4347,7 @@ function viewPenaltyDetails(penaltyId) {
                 <h6>Payment Schedule Details</h6>
                 <p><strong>Due Date:</strong> ${formatDate(penalty.due_date)}</p>
                 <p><strong>Days Overdue:</strong> ${penalty.days_overdue} days</p>
-                <p><strong>Expected Amount:</strong> KSh ${formatNumber(penalty.expected_amount)}</p>
+                <p><strong>Cumulative Unpaid Amount:</strong> KSh ${formatNumber(penalty.cumulative_unpaid_amount)}</p>
             </div>
             <div class="col-md-6">
                 <h6>Penalty Details</h6>
@@ -7229,7 +7229,7 @@ function exportPenalties() {
     const penaltiesData = currentPenalties.map(penalty => ({
         'Due Date': penalty.due_date,
         'Days Overdue': penalty.days_overdue,
-        'Expected Amount': penalty.expected_amount,
+        'Cumulative Unpaid Amount': penalty.cumulative_unpaid_amount,
         'Penalty Rate': penalty.penalty_rate + '%',
         'Penalty Amount': penalty.penalty_amount,
         'Amount Paid': penalty.amount_paid,
@@ -7576,7 +7576,7 @@ function exportPenalties() {
     const penaltiesData = currentPenalties.map(penalty => ({
         dueDate: formatDate(penalty.due_date),
         daysOverdue: penalty.days_overdue,
-        expectedAmount: penalty.expected_amount,
+        expectedAmount: penalty.cumulative_unpaid_amount,
         penaltyRate: penalty.penalty_rate + '%',
         penaltyAmount: penalty.penalty_amount,
         amountPaid: penalty.amount_paid,
@@ -7598,7 +7598,7 @@ function exportPenaltiesCSV() {
     const penaltiesData = currentPenalties.map(penalty => ({
         'Due Date': penalty.due_date,
         'Days Overdue': penalty.days_overdue,
-        'Expected Amount (KSh)': penalty.expected_amount,
+        'Cumulative Unpaid Amount (KSh)': penalty.cumulative_unpaid_amount,
         'Penalty Rate': penalty.penalty_rate + '%',
         'Penalty Amount (KSh)': penalty.penalty_amount,
         'Amount Paid (KSh)': penalty.amount_paid,
@@ -7721,7 +7721,7 @@ function generatePenaltiesPDF(penaltiesData, clientName) {
     doc.text(`Agreement ID: {{ $agreement->id }}`, 20, 60);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 70);
     
-    const headers = [['Due Date', 'Days Overdue', 'Expected Amount', 'Rate', 'Penalty Amount', 'Outstanding', 'Status']];
+    const headers = [['Due Date', 'Days Overdue', 'Cumulative Unpaid Amount', 'Rate', 'Penalty Amount', 'Outstanding', 'Status']];
     const rows = penaltiesData.map(penalty => [
         penalty.dueDate,
         penalty.daysOverdue,
