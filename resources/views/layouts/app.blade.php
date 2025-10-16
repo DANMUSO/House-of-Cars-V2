@@ -3812,28 +3812,6 @@ $(document).ready(function() {
     });
 </script>
       
-     <script>
-        $('#FrequestForm').on('submit', function (e) {
-            e.preventDefault();
-
-            let formData = $(this).serialize(); // Automatically collects all inputs and CSRF
-
-            $.ajax({
-                url: '{{ route("frequest.store") }}', // Adjust to your route
-                type: 'POST',
-                data: formData,
-                success: function (response) {
-                    Swal.fire('Success!', response.message || 'Request submitted successfully!', 'success');
-                    $('#FrequestForm')[0].reset();
-                    location.reload();
-                },
-                error: function (xhr) {
-                    let msg = xhr.responseJSON?.message || 'An error occurred.';
-                    Swal.fire('Error', msg, 'error');
-                }
-            });
-        });
-    </script>
   
 
         <script>

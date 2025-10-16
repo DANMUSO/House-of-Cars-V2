@@ -520,7 +520,7 @@ public function index()
         $carDetails = $this->getCarDetails($cash->car_type, $cash->car_id);
         
         // Send approval SMS
-        $message = "Dear {$cash->Client_Name}, we are delighted to confirm your purchase of the   {$carDetails}. Thank you for choosing House of Cars - a trusted name in premium automobiles. Your confidence in us is highly valued.";
+        $message = "Dear {$cash->Client_Name}, we are delighted to confirm your purchase of the   {$carDetails}. Thank you for choosing House of Cars, a trusted name in premium automobiles. Your confidence in us is highly valued.";
         
         $smsSent = SmsService::send($cash->Phone_No, $message);
         

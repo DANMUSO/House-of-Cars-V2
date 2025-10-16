@@ -1158,4 +1158,36 @@ $(document).ready(function() {
     });
 });
 </script>
+<script>
+    $('#FrequestForm').on('submit', function (e) {
+    e.preventDefault();
+
+    let formData = $(this).serialize();
+    const submitBtn = $(this).find('button[type="submit"]');
+    const originalText = submitBtn.html();
+    
+    // Show processing state
+    submitBtn.prop('disabled', true)
+              .html('<i class="fas fa-spinner fa-spin me-1"></i>Processing...');
+
+    $.ajax({
+        url: '{{ route("frequest.store") }}',
+        type: 'POST',
+        data: formData,
+        success: function (response) {
+            Swal.fire('Success!', response.message || 'Request submitted successfully!', 'success');
+            $('#FrequestForm')[0].reset();
+            location.reload();
+        },
+        error: function (xhr) {
+            let msg = xhr.responseJSON?.message || 'An error occurred.';
+            Swal.fire('Error', msg, 'error');
+        },
+        complete: function() {
+            // Restore button state (only needed if not reloading)
+            submitBtn.prop('disabled', false).html(originalText);
+        }
+    });
+});
+</script>
 </x-app-layout>
