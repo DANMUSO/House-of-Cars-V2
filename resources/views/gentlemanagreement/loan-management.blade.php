@@ -945,37 +945,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
     <!-- SMS History Table -->
-    <div class="card">
-        <div class="card-header">
-            <h6 class="card-title mb-0">SMS History</h6>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped" id="smsHistoryTable">
-                    <thead>
-                        <tr>
-                            <th>Date/Time</th>
-                            <th>Message</th>
-                            <th>Recipient</th>
-                            <th>Status</th>
-                            <th>Sent By</th>
-                            <th>Type</th>
-                        </tr>
-                    </thead>
-                    <tbody id="smsHistoryBody">
-                        <tr>
-                            <td colspan="6" class="text-center py-4">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Loading SMS history...</span>
-                                </div>
-                                <p class="mt-2 text-muted">Loading SMS history...</p>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+    <!-- SMS History Table -->
+<div class="card">
+    <div class="card-header">
+        <h6 class="card-title mb-0">SMS History</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped" id="smsHistoryTable">
+                <thead>
+                    <tr>
+                        <th>Date/Time</th>
+                        <th style="width: 40%;">Message</th>
+                        <th>Recipient</th>
+                        <th>Status</th>
+                        <th>Sent By</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody id="smsHistoryBody">
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading SMS history...</span>
+                            </div>
+                            <p class="mt-2 text-muted">Loading SMS history...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
+</div>
 </div>
 
 <!-- Compose SMS Modal -->
