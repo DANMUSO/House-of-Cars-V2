@@ -532,21 +532,95 @@
         </div>
 
         <!-- Status Filter Buttons -->
-        <div class="row mb-3">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div class="btn-group" role="group" aria-label="Status filters">
-                        <button type="button" class="btn btn-outline-primary status-filter active" data-status="all">
-                            <i class="fas fa-list me-1"></i> All Requests
-                        </button>
+         <div class="row mb-3">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="card-title mb-3">
+                    <i class="fas fa-filter me-2"></i>Filter Requests
+                </h6>
+                
+                <div class="row g-3">
+                    <!-- Status Filter -->
+                    <div class="col-lg-3 col-md-6">
+                        <label class="form-label small text-muted mb-1">Status</label>
+                        <select class="form-select form-select-sm" id="filter-status">
+                            <option value="">All Status</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
                     </div>
                     
-                    <div class="text-muted">
-                        <small>Total: {{ $facilitations->count() }} requests</small>
+                    <!-- Request Type Filter -->
+                    <div class="col-lg-3 col-md-6">
+                        <label class="form-label small text-muted mb-1">Request Type</label>
+                        <select class="form-select form-select-sm" id="filter-request-type">
+                            <option value="">All Types</option>
+                            <option value="Fuel">Fuel</option>
+                            <option value="Transport">Transport</option>
+                            <option value="Repairs">Repairs</option>
+                            <option value="Amount">Amount</option>
+                            <option value="Allowance">Allowance</option>
+                            <option value="Airtime">Airtime</option>
+                            <option value="Advance">Advance</option>
+                            <option value="Miscellaneous">Miscellaneous</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Requester Filter -->
+                    <div class="col-lg-3 col-md-6">
+                        <label class="form-label small text-muted mb-1">Requester</label>
+                        <select class="form-select form-select-sm" id="filter-requester">
+                            <option value="">All Requesters</option>
+                            <!-- Will be populated dynamically -->
+                        </select>
+                    </div>
+                    
+                    <!-- Date Range Filter -->
+                    <div class="col-lg-3 col-md-6">
+                        <label class="form-label small text-muted mb-1">Date Range</label>
+                        <select class="form-select form-select-sm" id="filter-date-range">
+                            <option value="">All Time</option>
+                            <option value="today">Today</option>
+                            <option value="yesterday">Yesterday</option>
+                            <option value="last7days">Last 7 Days</option>
+                            <option value="last30days">Last 30 Days</option>
+                            <option value="thismonth">This Month</option>
+                            <option value="lastmonth">Last Month</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Custom Date Inputs (hidden by default) -->
+                    <div class="col-lg-6 col-md-6" id="custom-date-range" style="display: none;">
+                        <label class="form-label small text-muted mb-1">From Date</label>
+                        <input type="date" class="form-control form-control-sm" id="filter-date-from">
+                    </div>
+                    <div class="col-lg-6 col-md-6" id="custom-date-range-to" style="display: none;">
+                        <label class="form-label small text-muted mb-1">To Date</label>
+                        <input type="date" class="form-control form-control-sm" id="filter-date-to">
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="reset-filters">
+                                <i class="fas fa-redo me-1"></i>Reset All Filters
+                            </button>
+                            <div class="text-muted">
+                                <small>
+                                    Showing <strong id="showing-count">0</strong> of 
+                                    <strong id="total-count">0</strong> requests
+                                </small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
+</div>
 
         <!-- Main Table -->
         <div class="row">
@@ -1190,4 +1264,301 @@ $(document).ready(function() {
     });
 });
 </script>
+<script>
+$(document).ready(function() {
+    console.log('=== FILTER INITIALIZATION STARTED ===');
+    
+    let table;
+    let filterSearchFunction = null;
+    
+    // Initialize filters
+    function initializeFilters() {
+        if ($.fn.DataTable.isDataTable('#responsive-datatable')) {
+            table = $('#responsive-datatable').DataTable();
+            console.log('DataTable found, setting up filters...');
+            setupFilters();
+        } else {
+            console.log('DataTable not ready, waiting...');
+            setTimeout(initializeFilters, 100);
+        }
+    }
+    
+    function setupFilters() {
+        // Populate requester dropdown first
+        populateRequesterFilter();
+        updateCounts();
+        
+        // Remove any existing search functions first
+        if (filterSearchFunction !== null) {
+            const index = $.fn.dataTable.ext.search.indexOf(filterSearchFunction);
+            if (index > -1) {
+                $.fn.dataTable.ext.search.splice(index, 1);
+            }
+        }
+        
+        // Define the filter function
+        filterSearchFunction = function(settings, data, dataIndex) {
+            const statusFilter = $('#filter-status').val();
+            const typeFilter = $('#filter-request-type').val();
+            const requesterFilter = $('#filter-requester').val();
+            const dateRangeFilter = $('#filter-date-range').val();
+            const dateFrom = $('#filter-date-from').val();
+            const dateTo = $('#filter-date-to').val();
+            
+            // Get the actual row element
+            const row = table.row(dataIndex).node();
+            
+            // Extract data from the row
+            const $row = $(row);
+            
+            // Get requester name from the h6 tag in first column
+            const requesterName = $row.find('td:eq(0) h6').text().trim();
+            
+            // Get request type from badge in second column (remove emoji)
+            const requestTypeText = $row.find('td:eq(1) .badge').text().trim();
+            const requestType = requestTypeText.replace(/[^\w\s-]/g, '').trim();
+            
+            // Get status from badge in fourth column
+            const statusBadge = $row.find('td:eq(3) .badge');
+            let status = '';
+            if (statusBadge.length > 0) {
+                const badgeText = statusBadge.text().trim();
+                if (badgeText.includes('Pending')) status = 'Pending';
+                else if (badgeText.includes('Approved')) status = 'Approved';
+                else if (badgeText.includes('Rejected')) status = 'Rejected';
+            }
+            
+            // Get date from the last small tag in date column (format: YYYY-MM-DD HH:MM:SS)
+            const dateText = $row.find('td:eq(6) small:last').text().trim();
+            
+            // Log for debugging
+            if (dateRangeFilter) {
+                console.log('Row data:', {
+                    requester: requesterName,
+                    type: requestType,
+                    status: status,
+                    dateText: dateText,
+                    filters: {
+                        statusFilter,
+                        typeFilter,
+                        requesterFilter,
+                        dateRangeFilter
+                    }
+                });
+            }
+            
+            // Status filter
+            if (statusFilter && status !== statusFilter) {
+                console.log('❌ Status filter failed:', status, '!==', statusFilter);
+                return false;
+            }
+            
+            // Request type filter
+            if (typeFilter && requestType !== typeFilter) {
+                console.log('❌ Type filter failed:', requestType, '!==', typeFilter);
+                return false;
+            }
+            
+            // Requester filter - EXACT match
+            if (requesterFilter && requesterName !== requesterFilter) {
+                console.log('❌ Requester filter failed:', requesterName, '!==', requesterFilter);
+                return false;
+            }
+            
+            // Date range filter
+            if (dateRangeFilter && dateRangeFilter !== '') {
+                // Parse the date (format: 2025-01-15 10:30:45)
+                const rowDate = new Date(dateText);
+                
+                // Validate date
+                if (isNaN(rowDate.getTime())) {
+                    console.log('⚠️ Invalid date format:', dateText);
+                    return false; // Skip rows with invalid dates
+                }
+                
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                let passDateFilter = true;
+                
+                console.log('Date comparison:', {
+                    rowDate: rowDate.toISOString(),
+                    rowDateFormatted: rowDate.toLocaleDateString(),
+                    today: today.toLocaleDateString(),
+                    filter: dateRangeFilter
+                });
+                
+                switch(dateRangeFilter) {
+                    case 'today':
+                        passDateFilter = rowDate >= today;
+                        console.log('Today filter:', rowDate >= today, 'rowDate:', rowDate, 'today:', today);
+                        break;
+                        
+                    case 'yesterday':
+                        const yesterday = new Date(today);
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        passDateFilter = (rowDate >= yesterday && rowDate < today);
+                        console.log('Yesterday filter:', passDateFilter);
+                        break;
+                        
+                    case 'last7days':
+                        const last7 = new Date(today);
+                        last7.setDate(last7.getDate() - 7);
+                        passDateFilter = rowDate >= last7;
+                        console.log('Last 7 days filter:', passDateFilter, 'rowDate:', rowDate, 'last7:', last7);
+                        break;
+                        
+                    case 'last30days':
+                        const last30 = new Date(today);
+                        last30.setDate(last30.getDate() - 30);
+                        passDateFilter = rowDate >= last30;
+                        console.log('Last 30 days filter:', passDateFilter);
+                        break;
+                        
+                    case 'thismonth':
+                        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                        passDateFilter = rowDate >= monthStart;
+                        console.log('This month filter:', passDateFilter, 'rowDate:', rowDate, 'monthStart:', monthStart);
+                        break;
+                        
+                    case 'lastmonth':
+                        const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                        const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 1);
+                        passDateFilter = (rowDate >= lastMonthStart && rowDate < lastMonthEnd);
+                        console.log('Last month filter:', passDateFilter);
+                        break;
+                        
+                    case 'custom':
+                        if (dateFrom) {
+                            const fromDate = new Date(dateFrom);
+                            fromDate.setHours(0, 0, 0, 0);
+                            passDateFilter = passDateFilter && (rowDate >= fromDate);
+                            console.log('From date filter:', passDateFilter, 'rowDate:', rowDate, 'fromDate:', fromDate);
+                        }
+                        if (dateTo) {
+                            const toDate = new Date(dateTo);
+                            toDate.setHours(23, 59, 59, 999);
+                            passDateFilter = passDateFilter && (rowDate <= toDate);
+                            console.log('To date filter:', passDateFilter, 'rowDate:', rowDate, 'toDate:', toDate);
+                        }
+                        break;
+                }
+                
+                if (!passDateFilter) {
+                    console.log('❌ Date filter failed for row with date:', dateText);
+                    return false;
+                }
+            }
+            
+            console.log('✅ Row passed all filters');
+            return true;
+        };
+        
+        // Add the filter function
+        $.fn.dataTable.ext.search.push(filterSearchFunction);
+        
+        // Show/hide custom date inputs
+        $('#filter-date-range').on('change', function() {
+            if ($(this).val() === 'custom') {
+                $('#custom-date-range, #custom-date-range-to').show();
+            } else {
+                $('#custom-date-range, #custom-date-range-to').hide();
+                console.log('Date range changed to:', $(this).val());
+                table.draw();
+            }
+        });
+        
+        // Apply filters on change
+        $('#filter-status, #filter-request-type, #filter-requester, #filter-date-range').on('change', function() {
+            const filterName = $(this).attr('id').replace('filter-', '');
+            const filterValue = $(this).val();
+            console.log(`\n=== ${filterName.toUpperCase()} FILTER CHANGED TO: "${filterValue}" ===`);
+            table.draw();
+        });
+        
+        $('#filter-date-from, #filter-date-to').on('change', function() {
+            console.log('Custom date changed');
+            table.draw();
+        });
+        
+        // Reset all filters
+        $('#reset-filters').on('click', function() {
+            console.log('=== RESETTING ALL FILTERS ===');
+            $('#filter-status').val('');
+            $('#filter-request-type').val('');
+            $('#filter-requester').val('');
+            $('#filter-date-range').val('');
+            $('#filter-date-from').val('');
+            $('#filter-date-to').val('');
+            $('#custom-date-range, #custom-date-range-to').hide();
+            table.draw();
+        });
+        
+        // Update counts after draw
+        table.on('draw', function() {
+            updateCounts();
+        });
+        
+        console.log('✅ Filters setup complete');
+    }
+    
+    // Populate requester dropdown
+    function populateRequesterFilter() {
+        const requesters = new Set();
+        
+        // IMPORTANT: Get ALL rows from DataTable, not just visible ones
+        table.rows().every(function() {
+            const row = this.node();
+            const $row = $(row);
+            const requesterName = $row.find('td:eq(0) h6').text().trim();
+            if (requesterName && requesterName !== '') {
+                requesters.add(requesterName);
+                console.log('Found requester:', requesterName);
+            }
+        });
+        
+        const $select = $('#filter-requester');
+        $select.find('option:not(:first)').remove();
+        
+        const sortedRequesters = Array.from(requesters).sort();
+        sortedRequesters.forEach(requester => {
+            $select.append(`<option value="${requester}">${requester}</option>`);
+        });
+        
+        console.log('📋 Populated requester dropdown with', requesters.size, 'requesters:', sortedRequesters);
+    }
+    
+    // Update count display
+    function updateCounts() {
+        if (table) {
+            const info = table.page.info();
+            const showing = info.recordsDisplay;
+            const total = info.recordsTotal;
+            
+            $('#showing-count').text(showing);
+            $('#total-count').text(total);
+            
+            console.log(`📊 Counts: Showing ${showing} of ${total} requests`);
+        }
+    }
+    
+    // Start initialization
+    initializeFilters();
+});
+</script>
+
+<!-- CSS -->
+<style>
+.form-select-sm, .form-control-sm {
+    font-size: 0.875rem;
+}
+
+.card {
+    transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+</style>
 </x-app-layout>

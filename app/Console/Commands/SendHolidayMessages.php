@@ -205,7 +205,7 @@ class SendHolidayMessages extends Command
     {
         $this->info('Collecting staff members...');
         
-        $staffMembers = User::whereIn('role', ['Managing-Director', 'Accountant', 'General Manager'])
+        $staffMembers = User::whereIn('role', ['Managing-Director', 'Accountant', 'General-Manager'])
             ->whereNotNull('phone')
             ->get();
         
