@@ -16,7 +16,7 @@ class FacilitationController extends Controller
     {
         $userRole = Auth::user()->role;
         
-        if (in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant'])) {
+        if (in_array($userRole, ['Managing-Director','General-Manager', 'Accountant'])) {
             // Show all facilitations 
             $facilitations = Facilitation::with('requester')
                                     ->orderBy('created_at', 'desc')
