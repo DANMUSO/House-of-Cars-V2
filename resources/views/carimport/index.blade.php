@@ -227,7 +227,7 @@
                      <td>{{ number_format($bid->fullamount, 2) }}</td>
                     <td>{{ $bid->bid_start_date }}</td>
                     <td>{{ $bid->bid_end_date }}</td>
-                    <td>{{ number_format($bid->mileage) }} miles</td>
+                    <td>{{ number_format($bid->mileage) }} Km</td>
                     <td>{{ $bid->created_at->format('Y-m-d') }}</td>
                     <td>
                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#standard-modal{{$bid->id}}">
