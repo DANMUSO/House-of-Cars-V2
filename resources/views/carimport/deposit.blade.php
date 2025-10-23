@@ -108,7 +108,7 @@
                     <td>{{ number_format($bid->fullamount, 2) }}</td>
                     <td>{{ $bid->bid_start_date }}</td>
                     <td>{{ $bid->bid_end_date }}</td>
-                    <td>{{ number_format($bid->mileage) }} miles</td>
+                    <td>{{ number_format($bid->mileage) }} km</td>
                     <td>
                         <span class="badge 
                             @if($bid->status == 'Pending') bg-secondary-subtle text-primary 
