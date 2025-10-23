@@ -29,7 +29,15 @@
                                                             
                                                             <form id="carForm" class="row g-3" enctype="multipart/form-data">
                                                             @csrf
-
+                                                        <!-- Add progress indicator here -->
+                                                            <div id="createProgress" class="col-12" style="display: none;">
+                                                                <div class="alert alert-info d-flex align-items-center" role="alert">
+                                                                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                                                                        <span class="visually-hidden">Loading...</span>
+                                                                    </div>
+                                                                    <div>Uploading car details and photos... Please wait.</div>
+                                                                </div>
+                                                            </div>
                                                             <div class="col-md-6">
                                                                 <label class="form-label">Car Exporter</label>
                                                                 <input type="text" class="form-control" id="bidder_name" name="bidder_name" required>
@@ -104,9 +112,12 @@
                                                                 <input type="file" class="form-control" id="photos" name="photos[]" multiple required>
                                                             </div>
 
-                                                            <div class="col-12">
-                                                                <button type="submit" class="btn btn-primary">Submit</button>
-                                                            </div>
+                                                             <div class="col-12">
+                                                                    <button type="submit" class="btn btn-primary" id="createSubmitBtn">
+                                                                        <span class="btn-text">Submit</span>
+                                                                        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                                                                    </button>
+                                                                </div>
                                                         </form>
                                                             </div> <!-- end card-body -->
                                                         </div> <!-- end card-->
@@ -211,9 +222,7 @@
                     <td>{{ $bid->year }} {{ $bid->make }} {{ $bid->model }}</td>
                     <td>{{ $bid->vin }}</td>
                     <td>{{ number_format($bid->bid_amount, 2) }}</td>
-                     <td>{{ number_format($bid->bid_amount *0.3, 2) }}
-                          <br>
-                        {{ number_format($bid->deposit, 2) }}
+                     <td>{{ number_format($bid->deposit, 2) }}
                     </td>
                      <td>{{ number_format($bid->fullamount, 2) }}</td>
                     <td>{{ $bid->bid_start_date }}</td>
@@ -240,6 +249,15 @@
 
                                                             @csrf
                                                             <input type="hidden" name="id" value="{{ $bid->id }}">
+                                                            <!-- Add progress indicator here -->
+                                                            <div id="editProgress{{$bid->id}}" class="col-12" style="display: none;">
+                                                                <div class="alert alert-info d-flex align-items-center" role="alert">
+                                                                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                                                                        <span class="visually-hidden">Loading...</span>
+                                                                    </div>
+                                                                    <div>Updating bid information... Please wait.</div>
+                                                                </div>
+                                                            </div>
                                                              <!--complete this form follow above form for creation -->
                                                              <div class="col-md-6">
                                                                 <label class="form-label">Car Exporter</label>
@@ -351,6 +369,15 @@
 
                                                             @csrf
                                                             <input type="hidden" name="id" value="{{$bid->id }}">
+                                                            <!-- Add progress indicator here -->
+                                                            <div id="paymentProgress{{$bid->id}}" class="col-12" style="display: none;">
+                                                                <div class="alert alert-info d-flex align-items-center" role="alert">
+                                                                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                                                                        <span class="visually-hidden">Loading...</span>
+                                                                    </div>
+                                                                    <div>Processing payment... Please wait.</div>
+                                                                </div>
+                                                            </div>
                                                             <div class="col-md-12">
                                                                 <label class="form-label">Deposit Amount (USD)</label>
                                                                 <input type="number" class="form-control" id="depositamount"
@@ -382,8 +409,38 @@
                             </div>
                         </div>
 
-                    </div> <!-- container-fluid -->
-</x-app-layout>
-<script>
+                    </div> 
+                    <script>
+// Create Bid Form
+document.getElementById('carForm').addEventListener('submit', function(e) {
+    document.getElementById('createProgress').style.display = 'block';
+    document.getElementById('createSubmitBtn').disabled = true;
+    document.querySelector('#createSubmitBtn .btn-text').textContent = 'Uploading...';
+});
 
-        </script>
+// Edit Bid Forms (multiple instances)
+document.querySelectorAll('[id^="editcarForm"]').forEach(form => {
+    form.addEventListener('submit', function(e) {
+        const bidId = this.querySelector('input[name="id"]').value;
+        const progressDiv = document.getElementById('editProgress' + bidId);
+        if (progressDiv) {
+            progressDiv.style.display = 'block';
+        }
+        this.querySelector('button[type="submit"]').disabled = true;
+    });
+});
+
+// Partial Payment Forms (multiple instances)
+document.querySelectorAll('[id="updatestatus"]').forEach(form => {
+    form.addEventListener('submit', function(e) {
+        const bidId = this.querySelector('input[name="id"]').value;
+        const progressDiv = document.getElementById('paymentProgress' + bidId);
+        if (progressDiv) {
+            progressDiv.style.display = 'block';
+        }
+        this.querySelector('button[type="submit"]').disabled = true;
+    });
+});
+</script>
+                    <!-- container-fluid -->
+</x-app-layout>

@@ -455,7 +455,7 @@ public function storePayment(Request $request)
         DB::commit();
                     // Send SMS notification
             try {
-                $message = "Dear {$agreement->client_name}, installment payment of KSh " . number_format($request->payment_amount, 2) . " has been received on " . date('M d, Y', strtotime($request->payment_date)) . ". Your remaining balance is KSh " . number_format(max(0, $newOutstanding), 2) . ". Thank you for your payment.";
+                $message = "Dear {$agreement->client_name}, installment payment of KSh " . number_format($request->payment_amount, 2) . " has been received on " . date('M d, Y', strtotime($request->payment_date)) .". Thank you for your payment.";
                 
                 $smsSent = SmsService::send($agreement->phone_number, $message);
                 
