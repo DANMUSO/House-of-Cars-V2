@@ -1989,7 +1989,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <h5>Payment History</h5>
     <div class="btn-group">
         @if($agreement->status !== 'completed')
-         @if(in_array(Auth::user()->role, ['Accountant','Managing-Director']))
+         @if(in_array(Auth::user()->role, ['Accountant','Managing-Director','General-Manager']))
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#recordPaymentModal">
                 <i class="fas fa-plus"></i> Add Payment
             </button>
@@ -2382,7 +2382,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5>Repossession Management</h5>
         <div class="btn-group">
-            @if($agreement->status !== 'defaulted' && $agreement->status !== 'completed' && in_array(Auth::user()->role, ['Accountant','Managing-Director']))
+            @if($agreement->status !== 'defaulted' && $agreement->status !== 'completed' && in_array(Auth::user()->role, ['Accountant','Managing-Director','General-Manager']))
                 <!-- CORRECTED BUTTONS -->
                 <button class="btn btn-secondary btn-sm" onclick="openInstructionLetterModal()">
                     <i class="fas fa-car-crash"></i> Instruction Letter
@@ -2551,7 +2551,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 @endif
 
-                @if($repossession->status !== 'sold' && in_array(Auth::user()->role, ['Accountant','Managing-Director']))
+                @if($repossession->status !== 'sold' && in_array(Auth::user()->role, ['Accountant','Managing-Director','General-Manager']))
                 <div class="row mt-3">
                     <div class="col-12">
                         <button class="btn btn-success" onclick="openSaleModal({{ $repossession->id }})">

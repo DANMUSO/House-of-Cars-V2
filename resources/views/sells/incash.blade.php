@@ -1084,7 +1084,7 @@
                                                 @endif
                                                  <br><br>
                                                 <div class="text-center">
-                                                    @if(in_array(Auth::user()->role, ['Accountant','Managing-Director','Showroom-Manager']))
+                                                    @if(in_array(Auth::user()->role, ['Accountant','Managing-Director','General-Manager']))
                                                    <button type="button" class="btn btn-primary btn-sm agreementBtn" 
                                                             data-cash-id="{{ $cash->id }}"
                                                             data-bs-toggle="modal" 
