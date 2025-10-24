@@ -236,46 +236,49 @@ class LeadsController extends Controller
      * Update the specified resource in storage.
      */
     public function update(Request $request, Lead $lead)
-    {
-        // Check if user can update this lead
-        $this->authorizeLeadAccess($lead);
-        
-        $userRole = Auth::user()->role;
-        
-        $validated = $request->validate([
-            'car_model' => 'required|string|max:255',
-            'client_name' => 'required|string|max:255',
-            'client_phone' => 'required|string|max:20',
-            'client_email' => 'nullable|email|max:255',
-            'purchase_type' => ['required', Rule::in(['Cash', 'Finance'])],
-            'client_budget' => 'required|numeric|min:0',
-            'status' => ['required', Rule::in(['Active', 'Closed', 'Unsuccessful'])],
-            'salesperson_id' => 'required|exists:users,id',
-            'follow_up_required' => 'boolean',
-            'notes' => 'nullable|string|max:1000',
-            'commitment_amount' => 'required|numeric|min:0',
-        ]);
+{
+    // Check if user can update this lead
+    $this->authorizeLeadAccess($lead);
+    
+    $userRole = Auth::user()->role;
+    
+    $validated = $request->validate([
+        'car_model' => 'required|string|max:255',
+        'client_name' => 'required|string|max:255',
+        'client_phone' => 'required|string|max:20',
+        'client_email' => 'nullable|email|max:255',
+        'purchase_type' => ['required', Rule::in(['Cash', 'Finance'])],
+        'client_budget' => 'required|numeric|min:0',
+        'status' => ['required', Rule::in(['Active', 'Closed', 'Unsuccessful'])],
+        'salesperson_id' => 'nullable|exists:users,id', // Changed from 'required' to 'nullable'
+        'follow_up_required' => 'boolean',
+        'notes' => 'nullable|string|max:1000',
+        'commitment_amount' => 'required|numeric|min:0',
+    ]);
 
-        // For regular users, don't allow changing the salesperson
-        if (!in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
-            unset($validated['salesperson_id']);
-        }
-
-        $validated['follow_up_required'] = $request->has('follow_up_required');
-
-        $lead->update($validated);
-
-        if ($request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Lead updated successfully!',
-                'lead' => $lead->load('users'),
-                'statistics' => $this->getStatisticsBasedOnRole(),
-            ]);
-        }
-
-        return redirect()->route('dashboard.leads.index')->with('success', 'Lead updated successfully!');
+    // For regular users, don't allow changing the salesperson
+    if (!in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
+        unset($validated['salesperson_id']);
+    } else if (!isset($validated['salesperson_id'])) {
+        // If salesperson_id not provided, keep the existing one
+        $validated['salesperson_id'] = $lead->salesperson_id;
     }
+
+    $validated['follow_up_required'] = $request->has('follow_up_required');
+
+    $lead->update($validated);
+
+    if ($request->ajax()) {
+        return response()->json([
+            'success' => true,
+            'message' => 'Lead updated successfully!',
+            'lead' => $lead->load('users'),
+            'statistics' => $this->getStatisticsBasedOnRole(),
+        ]);
+    }
+
+    return redirect()->route('dashboard.leads.index')->with('success', 'Lead updated successfully!');
+}
 
     /**
      * Remove the specified resource from storage.

@@ -315,7 +315,7 @@ Route::prefix('gentleman-loan-restructuring')->name('gentleman-loan-restructurin
 
     Route::post('/leads', [App\Http\Controllers\Dashboard\LeadsController::class, 'store'])->name('leads.store');
     Route::get('/leads/{lead}', [App\Http\Controllers\Dashboard\LeadsController::class, 'show'])->name('leads.show');
-    Route::post('/leads/{lead}', [App\Http\Controllers\Dashboard\LeadsController::class, 'update'])->name('leads.update');
+    Route::put('/leads/{lead}', [App\Http\Controllers\Dashboard\LeadsController::class, 'update'])->name('leads.update');
     Route::delete('/leads/{lead}', [App\Http\Controllers\Dashboard\LeadsController::class, 'destroy'])->name('leads.destroy');
     
     // Additional routes

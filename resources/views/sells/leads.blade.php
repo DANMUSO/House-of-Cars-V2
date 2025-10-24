@@ -545,7 +545,9 @@
             <div class="modal-dialog modal-lg">
                 <form id="updateLeadsForm" method="POST">
                     @csrf
-                    @method('POST')
+                    @method('PUT')
+                    <input type="hidden" name="id" id="recordId">
+                    <input type="hidden" name="salesperson_id" id="editSalespersonId">
                     <div class="modal-content">
                         <div class="modal-header bg-light">
                             <h5 class="modal-title" id="editModalLabel">
@@ -1165,31 +1167,97 @@ function clearAllFilters() {
                 location.reload(); // For now, reload to get updated pagination
             }
 
-            // Edit button functionality
-            $(document).on('click', '.editBtn', function() {
-                const data = $(this).data();
-                
-                $('#recordId').val(data.id);
-                $('#editClientName').val(data.clientName);
-                $('#editClientPhone').val(data.clientPhone);
-                $('#editClientEmail').val(data.clientEmail);
-                $('#editCarModel').val(data.carModel);
-                $('#editPurchaseType').val(data.purchaseType); 
-                $('#editCommitmentAmount').val(data.commitmentAmount);
-                $('#editClientBudget').val(data.clientBudget);
-                $('#editSalesperson').val(data.salespersonId);
-                $('#editStatus').val(data.status);
-                $('#editFollowUpRequired').prop('checked', data.followUp == 1);
-                $('#editNotes').val(data.notes);
-                
-                
-                // Show modal
-                new bootstrap.Modal(document.getElementById('editModal')).show();
-             
+           // REPLACE YOUR EXISTING EDIT BUTTON CLICK HANDLER WITH THIS:
 
-                
+$(document).on('click', '.editBtn', function() {
+    const data = $(this).data();
+    
+    $('#recordId').val(data.id);
+    $('#editClientName').val(data.clientName);
+    $('#editClientPhone').val(data.clientPhone);
+    $('#editClientEmail').val(data.clientEmail);
+    $('#editCarModel').val(data.carModel);
+    $('#editPurchaseType').val(data.purchaseType); 
+    $('#editCommitmentAmount').val(data.commitmentAmount);
+    $('#editClientBudget').val(data.clientBudget);
+    $('#editSalespersonId').val(data.salespersonId); // Set the hidden salesperson_id field
+    $('#editStatus').val(data.status);
+    $('#editFollowUpRequired').prop('checked', data.followUp == 1);
+    $('#editNotes').val(data.notes);
+    
+    // CRITICAL FIX: Set the correct form action URL with the lead ID
+    $('#updateLeadsForm').attr('action', `/leads/${data.id}`);
+    
+    // Show modal
+    new bootstrap.Modal(document.getElementById('editModal')).show();
+});
+
+// REPLACE YOUR EXISTING UPDATE FORM SUBMIT HANDLER WITH THIS:
+
+$('#updateLeadsForm').on('submit', function(e) {
+    e.preventDefault();
+    
+    const button = $(this).find('button[type="submit"]');
+    const originalText = button.html();
+    
+    button.html('<i class="fas fa-spinner fa-spin me-1"></i> Updating...');
+    button.prop('disabled', true);
+    
+    // Get the form action URL (which now includes the lead ID)
+    const actionUrl = $(this).attr('action');
+    
+    $.ajax({
+        url: actionUrl,
+        type: 'POST',
+        data: $(this).serialize(),
+        success: function(response) {
+            // Properly hide modal and cleanup
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Ensure cleanup
+            setTimeout(function() {
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open');
+                $('body').css('padding-right', '');
+            }, 300);
+            
+            Swal.fire(
+                'Success!',
+                'Lead updated successfully!',
+                'success'
+            ).then(() => {
+                location.reload();
             });
-
+        },
+        error: function(xhr, status, error) {
+            button.html(originalText);
+            button.prop('disabled', false);
+            
+            if (xhr.responseJSON && xhr.responseJSON.errors) {
+                let errorMessages = [];
+                Object.values(xhr.responseJSON.errors).forEach(error => {
+                    errorMessages.push('• ' + error[0]);
+                });
+                
+                Swal.fire({
+                    title: 'Validation Errors',
+                    html: errorMessages.join('<br>'),
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            } else {
+                Swal.fire(
+                    'Error!',
+                    'Error updating lead. Please try again.',
+                    'error'
+                );
+            }
+        }
+    });
+});
             // Notes button functionality
             $(document).on('click', '.notesBtn', function() {
                 const notes = $(this).data('notes');
@@ -1309,60 +1377,7 @@ function clearAllFilters() {
                 });
             });
 
-            $('#updateLeadsForm').on('submit', function(e) {
-                e.preventDefault();
-                
-                const button = $(this).find('button[type="submit"]');
-                const originalText = button.html();
-                
-                button.html('<i class="fas fa-spinner fa-spin me-1"></i> Updating...');
-                button.prop('disabled', true);
-                
-                $.ajax({
-                    url: $(this).attr('action'),
-                    type: 'POST',
-                    data: $(this).serialize(),
-                    success: function(response) {
-                        // Properly hide modal and cleanup
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
-                        if (modal) {
-                            modal.hide();
-                        }
-                        
-                        // Ensure cleanup
-                        setTimeout(function() {
-                            $('.modal-backdrop').remove();
-                            $('body').removeClass('modal-open');
-                            $('body').css('padding-right', '');
-                        }, 300);
-                        
-                        Swal.fire(
-                            'Success!',
-                            'Lead updated successfully!',
-                            'success'
-                        );
-                        location.reload();
-                    },
-                    error: function(xhr, status, error) {
-                        button.html(originalText);
-                        button.prop('disabled', false);
-                        
-                        if (xhr.responseJSON && xhr.responseJSON.errors) {
-                            let errorMessages = [];
-                            Object.values(xhr.responseJSON.errors).forEach(error => {
-                                errorMessages.push('• ' + error[0]);
-                            });
-                            
-                            Swal.fire({
-                                title: 'Validation Errors',
-                                html: errorMessages.join('<br>'),
-                                icon: 'error',
-                                confirmButtonText: 'OK'
-                            });
-                        } 
-                    }
-                });
-            });
+           
 
             // Budget formatting
             $('#client_budget, #editClientBudget').on('input', function() {

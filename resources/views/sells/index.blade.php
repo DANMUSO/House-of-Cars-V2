@@ -428,6 +428,17 @@
         <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Date:</div>
         <div class="delivered-by-date" style="height: 25px; border-bottom: 1px solid #000; width: 120px;"></div>
     </div>
+    <br>
+                             <div class="signature-box delivered-by-section" style="padding: 20px;  background-color: white;">
+                                <div style="margin-bottom: 15px; font-weight: bold;  color: black !important;" >
+                                    Vehicle released by:
+                                </div>
+                                <div class="form-group mb-3">
+                                    <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Name:</div>
+                                    <div  style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px;"></div>
+                                </div>
+                                
+                            </div>
 </div>
                     </div>
                     <div class="col-md-6">
@@ -469,6 +480,25 @@
                                 <div style="height: 25px; border-bottom: 1px solid #000; width: 120px;"></div>
                             </div>
                         </div>
+                        <br><br><br>
+                                    <div class="signature-box" style="padding: 20px; height: 200px; background-color: white;">
+                                        <div style="margin-bottom: 15px; font-weight: bold;   color: black !important;">
+                                            Vehicle received on Behalf:
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <div style="margin-bottom: 5px; font-size: 14px;   color: black !important;">ID : 
+                                               
+                                                </div>
+                                            <div style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px; color: black !important;"></div>
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <div style="margin-bottom: 5px; font-size: 14px;   color: black !important;">Sign: 
+                                               
+                                            </div>
+                                            <div style="height: 35px; border-bottom: 1px solid #000; margin-bottom: 10px; color: black !important;"></div>
+                                        </div>
+                                        
+                                    </div>  
                     </div>
                 </div>
                 
