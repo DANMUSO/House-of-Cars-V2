@@ -8,7 +8,7 @@
 
 
         <meta charset="utf-8" />
-        <title>House of Cars System Management</title>
+        <title>Qloud Point Solutions Ltd System Management</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="description" content="A fully featured admin theme which can be used to build CRM, CMS, etc."/>
         <meta name="author" content="Zoyothemes"/>
@@ -1109,10 +1109,10 @@
                         <div class="logo-box">
                             <a class='logo logo-light' href='#'>
                                 <span class="logo-sm">
-                                    <img src="{{asset('dashboardv1/assets/images/hv1.png')}}" alt="" height="50">
+                                    <img src="{{asset('dashboardv1/assets/images/hv1.png')}}" alt="" height="100">
                                 </span>
                                 <span class="logo-lg">
-                                    <img src="{{asset('dashboardv1/assets/images/hv1.png')}}" alt="" height="50">
+                                    <img src="{{asset('dashboardv1/assets/images/hv1.png')}}" alt="" height="100">
                                 </span>
                             </a>
                             <a class='logo logo-dark' href='#'>

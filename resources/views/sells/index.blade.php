@@ -102,18 +102,18 @@
                 <div class="row">
     <div class="col-md-4">
         <div class="company-logo">
-            <img src="{{asset('dashboardv1/assets/images/houseofcars.png')}}" alt="House of Cars" class="logo-img" style="height:160px; width:auto">
+            <img src="{{asset('dashboardv1/assets/images/houseofcars.png')}}" alt="Qloud Point Solutions Ltd" class="logo-img" style="height:160px; width:auto">
         </div>
     </div>
     <div class="col-md-8">
         <div class="company-details">
             <br>
             <div style="color:#000">
-                <span>📞 +254 715 400 709 | +254735 400 709</span><br>
-                <span>📧 Email: houseofcarske@gmail.com</span><br>
-                <span>🌐 houseofcars.co.ke</span><br>
-                <span>📍 Jabavu Lane, Hurlingham<br>
-                    P.O Box 9215 - 00100, Nairobi - Kenya
+                <span>📞 +254 703 894 372 </span><br>
+                <span>📧 Email: info@qloudpointsolutions.com</span><br>
+                <span>🌐 qloudpointsolutions.com</span><br>
+                <span>📍 Westland <br>
+                    Nairobi - Kenya
                 </span>
             </div>
         </div>
@@ -550,19 +550,19 @@
         <div class="row">
             <div class="col-md-4">
                 <div class="company-logo">
-                    <img src="{{asset('dashboardv1/assets/images/houseofcars.png')}}" alt="House of Cars" class="logo-img" style="height:160px; width:auto">
+                    <img src="{{asset('dashboardv1/assets/images/houseofcars.png')}}" alt="Qloud Point Solutions Ltd" class="logo-img" style="height:160px; width:auto">
                 </div>
             </div>
             <div class="col-md-8">
                 <div class="company-details">
                     <br>
                     <div style="color:#000">
-                        <span>📞 +254 715 400 709 | +254735 400 709</span><br>
-                        <span>📧 Email: info@kelmercars.co.ke</span><br>
-                        <span>🌐 houseofcars.co.ke</span><br>
-                        <span>📍 Jabavu Lane, Hurlingham<br>
-                            P.O Box 9215 - 00100, Nairobi - Kenya
-                        </span>
+                        <span>📞 +254 703 894 372 </span><br>
+                <span>📧 Email: info@qloudpointsolutions.com</span><br>
+                <span>🌐 qloudpointsolutions.com</span><br>
+                <span>📍 Westland <br>
+                    Nairobi - Kenya
+                </span>
                     </div>
                 </div>
             </div>
@@ -1182,8 +1182,8 @@ async function downloadCard(id, format = 'a4') {
         pdf.setProperties({
             title: `Gate Pass ${passId}`,
             subject: 'Vehicle Gate Pass',
-            author: 'House of Cars',
-            creator: 'House of Cars System'
+            author: 'Qloud Point Solutions Ltd',
+            creator: 'Qloud Point Solutions Ltd System'
         });
         
         // Save the PDF

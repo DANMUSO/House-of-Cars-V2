@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <title>House of Cars System Management</title>
+    <title>Qloud Point Solutions Ltd System Management</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="shortcut icon" href="{{asset('dashboardv1/assets/images/houseofcars.png')}}">

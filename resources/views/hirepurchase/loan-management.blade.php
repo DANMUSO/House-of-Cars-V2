@@ -2021,18 +2021,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #007bff;">
                         <!-- Company Details -->
                         <div style="flex: 1; padding-right: 20px;">
-                            <h2 style="font-size: 18px; font-weight: bold; margin: 0 0 8px 0; color: #2c3e50;">Kelmer's House of Cars LTD</h2>
+                            <h2 style="font-size: 18px; font-weight: bold; margin: 0 0 8px 0; color: #2c3e50;">Qloud Point Solutions LTD</h2>
                             <div style="font-size: 12px; line-height: 1.4; color: #555;">
                                 <div style="margin-bottom: 2px;">Jabavu Lane, Hurlingham</div>
-                                <div style="margin-bottom: 2px;">P.O Box 9215 - 00100, Nairobi - Kenya</div>
-                                <div style="margin: 4px 0 2px 0;"><strong>Email:</strong> info@kelmercars.co.ke</div>
-                                <div><strong>Phone:</strong> +254 700 000 000</div>
+                                <div style="margin-bottom: 2px;">P.O Box 625 - 00100, Nairobi - Kenya</div>
+                                <div style="margin: 4px 0 2px 0;"><strong>Email:</strong> info@qloudpointsolutions.com</div>
+                                <div><strong>Phone:</strong> +254 703 894 372</div>
                             </div>
                         </div>
                         
                         <!-- Logo -->
                         <div style="flex: 0 0 auto; text-align: center;">
-                            <img src="{{ asset('dashboardv1/assets/images/houseofcars.png') }}" alt="Kelmer's House of Cars" style="height: 70px; width: auto;">
+                            <img src="{{ asset('dashboardv1/assets/images/houseofcars.png') }}" alt="Qloud Point Solutions LTD" style="height: 70px; width: auto;">
                         </div>
                     </div>
 
@@ -2138,7 +2138,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                         <div style="text-align: center;">
                             <div style="height: 50px; border-bottom: 2px solid #495057; margin-bottom: 8px;"></div>
-                            <div style="font-size: 12px; font-weight: bold; color: #495057;">For Kelmer's House of Cars</div>
+                            <div style="font-size: 12px; font-weight: bold; color: #495057;">For Qloud Point Solutions LTD</div>
                         </div>
                     </div>
 
@@ -2146,7 +2146,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div style="text-align: center; padding: 12px; background: #f8f9fa; border-radius: 6px; border-top: 2px solid #007bff;">
                         <div style="font-size: 11px; color: #6c757d; margin-bottom: 3px;" id="generatedDateTime"></div>
                         <div style="font-size: 10px; color: #6c757d; font-style: italic;">
-                            Official Receipt from Kelmer's House of Cars Limited
+                            Official Receipt from Qloud Point Solutions LTD
                         </div>
                     </div>
                 </div>
@@ -2650,8 +2650,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div style="margin-bottom: 20px;">
                     <p style="margin-bottom: 5px;" class="mb-2"><strong>2. Name and address of instructing party:</strong></p>
                     <div style="margin-left: 40px;" class="mb-2">
-                        <p style="margin: 2px 0;">KELMER'S HOUSE OF CARS LIMITED</p>
-                        <p style="margin: 2px 0;">P.O BOX 9215-00100</p>
+                        <p style="margin: 2px 0;">Qloud Point Solutions LTD</p>
+                        <p style="margin: 2px 0;">P.O BOX 625-00100</p>
                         <p style="margin: 2px 0;">NAIROBI.</p>
                         <p style="margin: 2px 0;">TEL NO: 0715 400 709</p>
                     </div>
@@ -2671,7 +2671,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div style="margin-bottom: 20px;">
                     <p style="margin-bottom: 5px;" class="mb-2"><strong>4. (a) Name and address of property owner:</strong></p>
                     <div style="margin-left: 40px;" class="mb-2">
-                        <p style="margin: 2px 0;">KELMER'S HOUSE OF CARS</p>
+                        <p style="margin: 2px 0;">Qloud Point Solutions LTD</p>
                         <p style="margin: 2px 0;">P.O BOX 9215-00100</p>
                         <p style="margin: 2px 0;">NAIROBI</p>
                         <p style="margin: 2px 0;">BUSINESS NO: PVT-JZUG6275</p>
@@ -2689,7 +2689,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div style="margin-bottom: 20px;">
                     <p style="margin-bottom: 5px; margin-left: 40px;" class="mb-2"><strong>(c) Person to point out locality and property:</strong></p>
                     <div style="margin-left: 80px;" class="mb-2">
-                        <p style="margin: 2px 0;">KELMER'S HOUSE OF CARS LIMITED</p>
+                        <p style="margin: 2px 0;">Qloud Point Solutions LTD</p>
                     </div>
                 </div>
 
@@ -2809,7 +2809,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="modal-body text-dark" id="demandLetterContent">
                 <!-- Company Logo -->
                 <div class="text-center mb-4">
-                    <img src="{{asset('dashboardv1/assets/images/houseofcars.png')}}" alt="House of Cars" style="height: 300px; width: auto;">
+                    <img src="{{asset('dashboardv1/assets/images/houseofcars.png')}}" alt="Qloud Point Solutions LTD" style="height: 300px; width: auto;">
                 </div>
 
                 <!-- Date -->
@@ -2942,11 +2942,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         </tr>
                         <tr>
                             <td class="pe-3"><strong>ACCOUNT NAME:</strong></td>
-                            <td>KELMER'S HOUSE OF CARS LIMITED</td>
+                            <td>Qloud Point Solutions LTD</td>
                         </tr>
                         <tr>
                             <td class="pe-3"><strong>ACCOUNT NO:</strong></td>
-                            <td>1130281359622(KES)</td>
+                            <td>xxxxxxx9622(KES)</td>
                         </tr>
                         <tr>
                             <td class="pe-3"><strong>ACCOUNT BRANCH:</strong></td>
@@ -2974,7 +2974,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="">
                     <div style="color:#000; width: 200px; height: 100px; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
                         <div class="text-center">
-                            <small class="text-muted d-block">KELMER'S HOUSE OF CARS LTD.</small>
+                            <small class="text-muted d-block">Qloud Point Solutions LTD.</small>
                             <strong class="text-danger" id="demand_stamp_date"></strong>
                             <small class="text-muted d-block">TEL: 0715 400 709</small>
                         </div>
@@ -7001,7 +7001,7 @@ function generateComprehensivePDF(clientName, agreementId) {
     // Title Page
     doc.setFontSize(24);
     doc.setTextColor(44, 62, 80);
-    doc.text("Kelmer's House of Cars LTD", 105, 60, { align: 'center' });
+    doc.text("Qloud Point Solutions LTD", 105, 60, { align: 'center' });
     
     doc.setFontSize(18);
     doc.text('Comprehensive Loan Report', 105, 80, { align: 'center' });
@@ -7620,7 +7620,7 @@ function generatePaymentHistoryPDF(paymentData, clientName) {
     // Header
     doc.setFontSize(20);
     doc.setTextColor(44, 62, 80);
-    doc.text("Kelmer's House of Cars LTD", 20, 20);
+    doc.text("Qloud Point Solutions LTD", 20, 20);
     
     doc.setFontSize(14);
     doc.text('Payment History Report', 20, 35);
@@ -7663,7 +7663,7 @@ function generatePaymentSchedulePDF(scheduleData, clientName) {
     const doc = new jsPDF('landscape');
     
     doc.setFontSize(20);
-    doc.text("Kelmer's House of Cars LTD", 20, 20);
+    doc.text("Qloud Point Solutions LTD", 20, 20);
     doc.setFontSize(14);
     doc.text('Payment Schedule Report', 20, 35);
     
@@ -7712,7 +7712,7 @@ function generatePenaltiesPDF(penaltiesData, clientName) {
     const doc = new jsPDF('landscape');
     
     doc.setFontSize(20);
-    doc.text("Kelmer's House of Cars LTD", 20, 20);
+    doc.text("Qloud Point Solutions LTD", 20, 20);
     doc.setFontSize(14);
     doc.text('Penalties Report', 20, 35);
     

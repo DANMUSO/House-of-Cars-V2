@@ -76,7 +76,7 @@ Route::get('/proxy-image', function(Request $request) {
         $context = stream_context_create([
             'http' => [
                 'timeout' => 30,
-                'user_agent' => 'House of Cars PDF Generator'
+                'user_agent' => 'Qloud Point Solutions Ltd PDF Generator'
             ]
         ]);
         
