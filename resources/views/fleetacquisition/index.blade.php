@@ -341,6 +341,81 @@
         </div>
     </div>
 </div>
+<!-- Filters Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-filter"></i> Filter Fleet Acquisitions
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Status Filter -->
+                    <div class="col-md-4">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="statusFilter">
+                            <option value="">All Statuses</option>
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="active">Active</option>
+                            <option value="completed">Completed</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+
+                    <!-- Financing Institution Filter -->
+                    <div class="col-md-4">
+                        <label class="form-label">Financing Institution</label>
+                        <select class="form-select" id="institutionFilter">
+                            <option value="">All Institutions</option>
+                            @php
+                                $institutions = $fleetAcquisitions->pluck('financing_institution')->unique()->sort();
+                            @endphp
+                            @foreach($institutions as $institution)
+                                @if($institution)
+                                    <option value="{{ $institution }}">{{ $institution }}</option>
+                                @endif
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <!-- Vehicle Category Filter -->
+                    <div class="col-md-4">
+                        <label class="form-label">Vehicle Category</label>
+                        <select class="form-select" id="categoryFilter">
+                            <option value="">All Categories</option>
+                            <option value="commercial">Commercial</option>
+                            <option value="passenger">Passenger</option>
+                            <option value="utility">Utility</option>
+                            <option value="special_purpose">Special Purpose</option>
+                        </select>
+                    </div>
+
+                    <!-- Clear Filters Button -->
+                    <div class="col-md-12 text-end">
+                        <button type="button" class="btn btn-secondary btn-sm" id="clearFilters">
+                            <i class="fas fa-times"></i> Clear Filters
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filter Summary -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div id="filterSummary" class="alert alert-info d-none">
+                            <small>
+                                <strong>Active Filters:</strong>
+                                <span id="filterSummaryText"></span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -367,7 +442,7 @@
                             </thead>
                             <tbody>
                                 @foreach ($fleetAcquisitions as $index => $fleet)
-                                    <tr>
+                                    <tr data-category="{{ $fleet->vehicle_category }}">
                                         <td>{{ $index + 1 }}
                                             <a href="{{ route('fleetacquisition.manage', $fleet->id) }}" class="btn btn-sm btn-outline-primary">
                                                 <i class="fas fa-cog"></i> Manage
@@ -890,5 +965,111 @@
         </div>
     </div>
 
-</div> <!-- container-fluid -->
+</div> 
+
+<!-- container-fluid -->
+<script>
+$(document).ready(function() {
+    // Initialize DataTable
+    var table = $('#responsive-datatable').DataTable({
+        responsive: true,
+        pageLength: 25,
+        order: [[11, 'desc']], // Sort by date column
+        columnDefs: [
+            { orderable: false, targets: [12] } // Disable sorting on Action column
+        ]
+    });
+
+    // Custom filter function
+    $.fn.dataTable.ext.search.push(
+        function(settings, data, dataIndex) {
+            var statusFilter = $('#statusFilter').val().toLowerCase();
+            var institutionFilter = $('#institutionFilter').val().toLowerCase();
+            var categoryFilter = $('#categoryFilter').val().toLowerCase();
+
+            // Get row data
+            var rowStatus = $(table.row(dataIndex).node()).find('td:eq(10) .badge').text().toLowerCase().trim();
+            var rowInstitution = data[9].toLowerCase(); // Column 9 - Financing Institution
+            
+            // Get category from the row (from vehicle details column)
+            var rowCategory = '';
+            var vehicleDetails = data[1]; // Column 1 - Vehicle Details
+            var $row = $(table.row(dataIndex).node());
+            
+            // Try to get category from data attribute if available
+            if ($row.attr('data-category')) {
+                rowCategory = $row.attr('data-category').toLowerCase();
+            }
+
+            // Status filter
+            if (statusFilter !== '' && rowStatus.indexOf(statusFilter) === -1) {
+                return false;
+            }
+
+            // Institution filter
+            if (institutionFilter !== '' && rowInstitution.indexOf(institutionFilter) === -1) {
+                return false;
+            }
+
+            // Category filter
+            if (categoryFilter !== '' && rowCategory !== '' && rowCategory.indexOf(categoryFilter) === -1) {
+                return false;
+            }
+
+            return true;
+        }
+    );
+
+    // Function to update filter summary
+    function updateFilterSummary() {
+        var filters = [];
+        var statusVal = $('#statusFilter').val();
+        var institutionVal = $('#institutionFilter').val();
+        var categoryVal = $('#categoryFilter').val();
+
+        if (statusVal) filters.push('Status: ' + statusVal);
+        if (institutionVal) filters.push('Institution: ' + institutionVal);
+        if (categoryVal) filters.push('Category: ' + categoryVal.replace('_', ' '));
+
+        if (filters.length > 0) {
+            $('#filterSummaryText').html(filters.join(' | '));
+            $('#filterSummary').removeClass('d-none');
+        } else {
+            $('#filterSummary').addClass('d-none');
+        }
+    }
+
+    // Apply filters on change
+    $('#statusFilter, #institutionFilter, #categoryFilter').on('change', function() {
+        table.draw();
+        updateFilterSummary();
+        
+        // Show notification
+        var visibleRows = table.rows({ search: 'applied' }).count();
+        var totalRows = table.rows().count();
+        
+        toastr.info(`Showing ${visibleRows} of ${totalRows} records`, 'Filter Applied', {
+            timeOut: 2000,
+            progressBar: true
+        });
+    });
+
+    // Clear all filters
+    $('#clearFilters').on('click', function() {
+        $('#statusFilter').val('');
+        $('#institutionFilter').val('');
+        $('#categoryFilter').val('');
+        table.draw();
+        updateFilterSummary();
+        
+        toastr.success('All filters cleared', 'Filters Reset', {
+            timeOut: 2000,
+            progressBar: true
+        });
+    });
+
+    // Initial filter summary
+    updateFilterSummary();
+});
+</script>
 </x-app-layout>

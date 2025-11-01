@@ -136,10 +136,70 @@
                         <i class="fas fa-file-alt"></i> Legal & Compliance
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="fleet-documents-tab" data-bs-toggle="tab" 
+                            data-bs-target="#fleet-documents" type="button" role="tab">
+                        <i class="fas fa-file-pdf"></i> Documents
+                    </button>
+                </li>
             </ul>
         </div>
         <div class="card-body">
             <div class="tab-content" id="fleetTabsContent">
+                <!-- Fleet Documents Tab -->
+<div class="tab-pane fade" id="fleet-documents" role="tabpanel" aria-labelledby="fleet-documents-tab">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Legal Documents & Agreements</h5>
+        <button class="btn btn-primary btn-sm" onclick="openUploadModal()">
+            <i class="fas fa-upload"></i> Upload Documents
+        </button>
+    </div>
+    
+    <div id="documentsContainer">
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Loading documents...</p>
+        </div>
+    </div>
+    <!-- Document Viewer Modal -->
+<div class="modal fade" id="docViewerModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="docTitle">Document</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" style="height: 80vh;">
+                <iframe id="docFrame" style="width:100%; height:100%; border:none;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadDocsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upload Documents</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="uploadDocsForm" enctype="multipart/form-data">
+                    @csrf
+                    <input type="file" class="form-control" name="documents[]" multiple 
+                           accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif" required>
+                    <small class="text-muted">Max 50MB per file. PDF, DOC, DOCX, JPG, PNG, GIF allowed.</small>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="uploadDocuments()">Upload</button>
+            </div>
+        </div>
+    </div>
+</div>
                 
                 <!-- Payment History Tab -->
                 <div class="tab-pane fade show active" id="payments" role="tabpanel" aria-labelledby="payments-tab">
@@ -1520,5 +1580,136 @@ $(window).on('load', function() {
         console.log('Fleet data available:', window.fleetData);
     }
 });
+</script>
+<script>
+// Auto-load documents on page ready
+$(document).ready(function() {
+    // Load documents if tab is already active on page load
+    if ($('#fleet-documents').hasClass('active show')) {
+        loadFleetDocuments();
+    }
+    
+    // Load documents when tab is shown
+    $('#fleet-documents-tab').on('shown.bs.tab', function() {
+        loadFleetDocuments();
+    });
+});
+
+function loadFleetDocuments() {
+    const fleetId = {{ $fleet->id }};
+    $('#documentsContainer').html('<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Loading documents...</p></div>');
+    
+    $.ajax({
+        url: `/fleetacquisition/${fleetId}/documents`,
+        method: 'GET',
+        success: function(response) {
+            if (response.success && response.documents && response.documents.length > 0) {
+                let html = '<div class="row g-3">';
+                response.documents.forEach(doc => {
+                    html += `
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-file-${doc.type.toLowerCase() === 'pdf' ? 'pdf' : 'alt'} fa-3x text-danger mb-3"></i>
+                                    <h6 class="text-truncate" title="${doc.name}">${doc.name}</h6>
+                                    <small class="badge bg-secondary">${doc.type}</small>
+                                    <div class="mt-3">
+                                        <a href="#" onclick="viewDocument('${doc.url}', '${doc.name}'); return false;" class="btn btn-sm btn-primary me-1">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        <button onclick="deleteFleetDoc(${doc.index})" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                });
+                html += '</div>';
+                $('#documentsContainer').html(html);
+            } else {
+                $('#documentsContainer').html('<div class="text-center py-5 text-muted"><i class="fas fa-folder-open fa-3x mb-3 opacity-50"></i><p>No documents uploaded yet</p><small>Click "Upload Documents" to add files</small></div>');
+            }
+        },
+        error: function(xhr) {
+            console.error('Error loading documents:', xhr);
+            $('#documentsContainer').html('<div class="text-center py-5 text-danger"><i class="fas fa-exclamation-triangle fa-3x mb-3"></i><p>Failed to load documents</p><button class="btn btn-sm btn-outline-primary" onclick="loadFleetDocuments()"><i class="fas fa-refresh"></i> Retry</button></div>');
+        }
+    });
+}
+function viewDocument(url, name) {
+    $('#docTitle').text(name);
+    $('#docFrame').attr('src', url);
+    $('#docViewerModal').modal('show');
+}
+function openUploadModal() {
+    $('#uploadDocsModal').modal('show');
+}
+
+function uploadDocuments() {
+    const fleetId = {{ $fleet->id }};
+    const formData = new FormData($('#uploadDocsForm')[0]);
+    const uploadBtn = $('#uploadDocsModal .modal-footer button.btn-primary');
+    const originalText = uploadBtn.html();
+    
+    $.ajax({
+        url: `/fleetacquisition/${fleetId}/documents/upload`,
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        xhr: function() {
+            const xhr = new window.XMLHttpRequest();
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    uploadBtn.html(`<i class="fas fa-spinner fa-spin"></i> ${percent}%`);
+                }
+            });
+            return xhr;
+        },
+        beforeSend: function() {
+            uploadBtn.html('<i class="fas fa-spinner fa-spin"></i> Uploading...').prop('disabled', true);
+        },
+        success: function(response) {
+            $('#uploadDocsModal').modal('hide');
+            Swal.fire('Success!', response.message, 'success');
+            loadFleetDocuments();
+            $('#uploadDocsForm')[0].reset();
+        },
+        error: function(xhr) {
+            Swal.fire('Error!', xhr.responseJSON?.message || 'Upload failed', 'error');
+        },
+        complete: function() {
+            uploadBtn.html(originalText).prop('disabled', false);
+        }
+    });
+}
+
+function deleteFleetDoc(index) {
+    Swal.fire({
+        title: 'Delete Document?',
+        text: 'This action cannot be undone',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Yes, delete!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: `/fleetacquisition/{{ $fleet->id }}/documents/${index}`,
+                method: 'DELETE',
+                headers: {'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')},
+                success: function(response) {
+                    Swal.fire('Deleted!', response.message, 'success');
+                    loadFleetDocuments();
+                },
+                error: function(xhr) {
+                    Swal.fire('Error!', xhr.responseJSON?.message || 'Delete failed', 'error');
+                }
+            });
+        }
+    });
+}
 </script>
 </x-app-layout>

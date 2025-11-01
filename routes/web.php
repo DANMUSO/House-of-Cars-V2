@@ -116,6 +116,10 @@ Route::post('/password/reset/sms', [App\Http\Controllers\Dashboard\UsersControll
     ->name('password.sms.send')
     ->middleware('guest');
 Route::middleware(['auth','role:Managing-Director,Showroom-Manager,Accountant,Salesperson,Support-Staff,HR,General-Manager,Yard-Supervisor,Sales-Supervisor'])->group(function () {
+
+Route::post('/fleetacquisition/{id}/documents/upload', [App\Http\Controllers\Dashboard\FleetAcquisitionController::class, 'uploadDocuments']);
+Route::get('/fleetacquisition/{id}/documents', [App\Http\Controllers\Dashboard\FleetAcquisitionController::class, 'getDocuments']);
+Route::delete('/fleetacquisition/{id}/documents/{index}', [App\Http\Controllers\Dashboard\FleetAcquisitionController::class, 'deleteDocument']);
     // SMS Communication Routes Hire Purchase
 Route::get('/hire-purchase/{id}/sms-history', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'getSmsHistory'])->name('hire-purchase.sms-history');
 Route::get('/hire-purchase/{id}/sms-statistics', [App\Http\Controllers\Dashboard\HirePurchasesController::class, 'getSmsStatistics'])->name('hire-purchase.sms-statistics');

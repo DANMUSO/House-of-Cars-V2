@@ -864,4 +864,145 @@ private function generateFleetPhotoTemporaryUrl($key, $minutes = 1440)
             ], 500);
         }
     }
+    /**
+ * Upload documents to S3
+ */
+private function uploadFleetDocumentToS3($document, $filename)
+{
+    try {
+        $s3Client = new \Aws\S3\S3Client([
+            'version' => 'latest',
+            'region'  => config('filesystems.disks.s3.region'),
+            'credentials' => [
+                'key'    => config('filesystems.disks.s3.key'),
+                'secret' => config('filesystems.disks.s3.secret'),
+            ],
+            'http' => ['verify' => false]
+        ]);
+
+        $key = "fleet_documents/" . $filename;
+        
+        $s3Client->putObject([
+            'Bucket' => config('filesystems.disks.s3.bucket'),
+            'Key'    => $key,
+            'Body'   => fopen($document->getPathname(), 'r'),
+            'ContentType' => $document->getMimeType(),
+            'CacheControl' => 'max-age=31536000',
+        ]);
+
+        return $key;
+    } catch (\Exception $e) {
+        throw new \Exception('S3 document upload failed: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Upload documents to fleet
+ */
+public function uploadDocuments(Request $request, $id)
+{
+    $request->validate([
+        'documents.*' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png,gif|max:51200'
+    ]);
+
+    try {
+        $fleet = FleetAcquisition::findOrFail($id);
+        $existingDocs = $fleet->legal_documents ?? [];
+        $uploadedDocs = [];
+        
+        if ($request->hasFile('documents')) {
+            foreach ($request->file('documents') as $document) {
+                $filename = pathinfo($document->getClientOriginalName(), PATHINFO_FILENAME) 
+                    . '_' . time() . '_' . uniqid() . '.' . $document->getClientOriginalExtension();
+                
+                $path = $this->uploadFleetDocumentToS3($document, $filename);
+                $existingDocs[] = $path;
+                
+                $uploadedDocs[] = [
+                    'url' => "https://" . config('filesystems.disks.s3.bucket') . ".s3." 
+                           . config('filesystems.disks.s3.region') . ".amazonaws.com/{$path}",
+                    'name' => $filename
+                ];
+            }
+
+            $fleet->update(['legal_documents' => $existingDocs]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'documents' => $uploadedDocs,
+            'message' => 'Documents uploaded successfully!'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Upload failed: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Delete fleet document
+ */
+public function deleteDocument($id, $documentIndex)
+{
+    try {
+        $fleet = FleetAcquisition::findOrFail($id);
+        $documents = $fleet->legal_documents ?? [];
+        
+        if (!isset($documents[$documentIndex])) {
+            return response()->json(['success' => false, 'message' => 'Document not found!'], 404);
+        }
+
+        // Delete from S3
+        $s3Client = new \Aws\S3\S3Client([
+            'version' => 'latest',
+            'region'  => config('filesystems.disks.s3.region'),
+            'credentials' => [
+                'key'    => config('filesystems.disks.s3.key'),
+                'secret' => config('filesystems.disks.s3.secret'),
+            ],
+            'http' => ['verify' => false]
+        ]);
+
+        $s3Client->deleteObject([
+            'Bucket' => config('filesystems.disks.s3.bucket'),
+            'Key' => $documents[$documentIndex]
+        ]);
+
+        unset($documents[$documentIndex]);
+        $documents = array_values($documents);
+
+        $fleet->update(['legal_documents' => $documents]);
+
+        return response()->json(['success' => true, 'message' => 'Document deleted successfully!']);
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'message' => 'Delete failed: ' . $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Get fleet documents
+ */
+public function getDocuments($id)
+{
+    try {
+        $fleet = FleetAcquisition::findOrFail($id);
+        $documents = [];
+        
+        foreach ($fleet->legal_documents ?? [] as $index => $docPath) {
+            $documents[] = [
+                'index' => $index,
+                'url' => "https://" . config('filesystems.disks.s3.bucket') . ".s3." 
+                       . config('filesystems.disks.s3.region') . ".amazonaws.com/{$docPath}",
+                'name' => basename($docPath),
+                'type' => strtoupper(pathinfo($docPath, PATHINFO_EXTENSION))
+            ];
+        }
+
+        return response()->json(['success' => true, 'documents' => $documents]);
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+    }
+}
 }

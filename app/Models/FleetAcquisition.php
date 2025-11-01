@@ -41,7 +41,7 @@ class FleetAcquisition extends Model
         'insurance_expiry_date',
         'company_kra_pin',
         'business_permit_number',
-        
+        'legal_documents',
         // Vendor/Financier Information
         'financing_institution',
         'financier_contact_person',
@@ -73,6 +73,7 @@ class FleetAcquisition extends Model
         'insurance_expiry_date' => 'date',
         'completion_date' => 'date',
         'vehicle_photos' => 'array',
+        'legal_documents' => 'array',
     ];
 
     // Accessors

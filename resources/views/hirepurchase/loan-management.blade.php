@@ -8480,6 +8480,39 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// ===== ADD SMS TEMPLATES HERE =====
+const smsTemplates = {
+    'payment_reminder': `Dear {client_name}, your installment of KSh {monthly_payment} is due on {next_due_date}. Kindly make payment to avoid penalties. Balance: KSh {outstanding}. Call us on 0715 400 709`,
+
+    'overdue_notice': `Dear {client_name}, your payment of KSh {monthly_payment} is overdue. Please clear immediately to avoid additional penalties. Balance: KSh {outstanding}. Call us on 0715 400 709`,
+
+    'payment_confirmation': `Dear {client_name}, we have received your payment of KSh [AMOUNT] on [DATE]. Your remaining balance is KSh {outstanding}. Thank you. Call us on 0715 400 709`,
+
+    'balance_update': `Dear {client_name}, Account Update for {vehicle}: Balance KSh {outstanding}, Monthly KSh {monthly_payment}, Next Due: {next_due_date}. Call us on 0715 400 709`,
+
+    'custom_greeting': `Dear {client_name}, we appreciate your business. Vehicle: {vehicle}, Balance: KSh {outstanding}. For assistance, call 0715 400 709. Thank you - Kelmer's House of Cars`
+};
+// ===== END SMS TEMPLATES =====
+
+// Load SMS History
+function loadSmsHistory() {
+    const agreementId = {{ $agreement->id }};
+    
+    fetch(`/hire-purchase/${agreementId}/sms-history`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displaySmsHistory(data.messages);
+            } else {
+                showSmsError('Failed to load SMS history');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading SMS history:', error);
+            showSmsError('Network error loading SMS history');
+        });
+}
+
 // Load SMS History
 function loadSmsHistory() {
     const agreementId = {{ $agreement->id }};
@@ -8605,7 +8638,7 @@ function updatePreview() {
     const message = document.getElementById('smsMessage').value;
     const preview = message
         .replace(/{client_name}/g, '{{ $agreement->client_name }}')
-        .replace(/{vehicle}/g, '{{ $agreement->vehicle_make }} {{ $agreement->vehicle_model }}')
+        .replace(/{vehicle}/g, '{{ $agreement->vehicle_make }} {{ $agreement->model }}')
         .replace(/{outstanding}/g, '{{ number_format($actualOutstanding, 2) }}')
         .replace(/{monthly_payment}/g, '{{ number_format($agreement->monthly_payment, 2) }}')
         .replace(/{next_due_date}/g, '{{ $nextDueInstallment ? \Carbon\Carbon::parse($nextDueInstallment->due_date)->format("M d, Y") : "N/A" }}');
