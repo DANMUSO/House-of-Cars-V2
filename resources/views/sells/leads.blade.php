@@ -788,28 +788,15 @@
     <script>
 $(document).ready(function() {
     // Initialize DataTable
-    var table = $('#responsive-datatable').DataTable({
-        responsive: {
-            details: {
-                type: 'column',
-                target: 'tr'
-            }
-        },
+   var table = $('#responsive-datatable').DataTable({
+        responsive: false, // Disable responsive to prevent column hiding
+        scrollX: true, // Enable horizontal scrolling instead
         pageLength: 25,
         order: [[9, 'desc']], // Sort by created date column
         columnDefs: [
             { 
                 orderable: false, 
-                targets: [10],
-                responsivePriority: 1 // Always show Actions column
-            },
-            {
-                responsivePriority: 2,
-                targets: [1] // Client Details
-            },
-            {
-                responsivePriority: 3,
-                targets: [7] // Status
+                targets: [10] // Actions column not sortable
             }
         ]
     });
