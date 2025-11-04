@@ -16,89 +16,79 @@ class LeadsController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
-    {
-        try {
-            $userRole = Auth::user()->role;
-            
-            // Initialize the query based on user role
-            if (in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
-                // Show all leads for Managing Director, Accountant, and Sales Manager
-                $query = Lead::with('users');
-            } else {
-                // Show only leads assigned to the current user (salesperson)
-                $query = Lead::with('users')->where('salesperson_id', Auth::id());
-            }
-            
-            // Apply filters
-            if ($request->filled('search')) {
-                $search = $request->input('search');
-                $query->where(function ($q) use ($search) {
-                    $q->where('client_name', 'LIKE', "%{$search}%")
-                      ->orWhere('car_model', 'LIKE', "%{$search}%")
-                      ->orWhere('client_phone', 'LIKE', "%{$search}%")
-                      ->orWhere('client_email', 'LIKE', "%{$search}%");
-                });
-            }
-
-            if ($request->filled('status')) {
-                $query->where('status', $request->input('status'));
-            }
-
-            if ($request->filled('purchase_type')) {
-                $query->where('purchase_type', $request->input('purchase_type'));
-            }
-
-            // Only allow filtering by salesperson for privileged roles
-            if ($request->filled('salesperson_id') && in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
-                $query->where('salesperson_id', $request->input('salesperson_id'));
-            }
-
-            if ($request->filled('follow_up')) {
-                $followUp = $request->input('follow_up') === 'yes';
-                $query->where('follow_up_required', $followUp);
-            }
-
-            $leads = $query->orderBy('created_at', 'desc')->paginate(1000);
-            
-            // Get salespeople list (only for privileged roles)
-            if (in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
-                $salespeople = User::select('id','last_name','first_name')->get();
-            } else {
-                $salespeople = collect(); // Empty collection for regular users
-            }
-            
-            // Use the model's static method for statistics
-            $statistics = $this->getStatisticsBasedOnRole();
-
-            if ($request->ajax()) {
-                return response()->json([
-                    'leads' => $leads,
-                    'statistics' => $statistics,
-                ]);
-            }
-            return view('sells.leads', compact('leads', 'salespeople', 'statistics'));
-            
-        } catch (\Exception $e) {
-            \Log::error('Error in LeadsController@index: ' . $e->getMessage());
-            
-            // Return default values in case of error based on role
-            $userRole = Auth::user()->role;
-            if (in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
-                $leads = Lead::paginate(1000);
-                $salespeople = User::select('id','last_name','first_name')->get();
-            } else {
-                $leads = Lead::where('salesperson_id', Auth::id())->paginate(1000);
-                $salespeople = collect();
-            }
-            
-            $statistics = $this->getStatisticsBasedOnRole();
-            
-            return view('sells.leads', compact('leads', 'salespeople', 'statistics'))
-                   ->with('error', 'Error loading leads data. Please try again.');
+  public function index(Request $request)
+{
+    try {
+        $userRole = Auth::user()->role;
+        
+        // Initialize the query based on user role
+        if (in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
+            // Show all leads for privileged roles
+            $query = Lead::with('users');
+        } else {
+            // Show only leads assigned to the current user (salesperson)
+            $query = Lead::with('users')->where('salesperson_id', Auth::id());
         }
-    }
+        
+        // Get ALL records without pagination (for client-side filtering)
+        $leads = $query->orderBy('created_at', 'desc')->get();
+        
+        // Wrap in a collection that mimics paginator for blade compatibility
+        $leadsCollection = new \Illuminate\Pagination\LengthAwarePaginator(
+            $leads,
+            $leads->count(),
+            $leads->count(),
+            1,
+            ['path' => $request->url()]
+        );
+        
+        // Get salespeople list (only for privileged roles)
+        if (in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
+            $salespeople = User::select('id','last_name','first_name')->get();
+        } else {
+            $salespeople = collect(); // Empty collection for regular users
+        }
+        
+        // Use the model's static method for statistics
+        $statistics = $this->getStatisticsBasedOnRole();
 
+        if ($request->ajax()) {
+            return response()->json([
+                'leads' => $leadsCollection,
+                'statistics' => $statistics,
+            ]);
+        }
+        
+        return view('sells.leads', compact('leads', 'salespeople', 'statistics'))
+               ->with('leads', $leadsCollection);
+        
+    } catch (\Exception $e) {
+        \Log::error('Error in LeadsController@index: ' . $e->getMessage());
+        
+        // Return default values in case of error based on role
+        $userRole = Auth::user()->role;
+        if (in_array($userRole, ['Managing-Director','Sales-Supervisor','General-Manager', 'Accountant', 'Sales-Manager'])) {
+            $leads = Lead::get();
+            $salespeople = User::select('id','last_name','first_name')->get();
+        } else {
+            $leads = Lead::where('salesperson_id', Auth::id())->get();
+            $salespeople = collect();
+        }
+        
+        $leadsCollection = new \Illuminate\Pagination\LengthAwarePaginator(
+            $leads,
+            $leads->count(),
+            $leads->count(),
+            1
+        );
+        
+        $statistics = $this->getStatisticsBasedOnRole();
+        
+        return view('sells.leads', compact('salespeople', 'statistics'))
+               ->with('leads', $leadsCollection)
+               ->with('error', 'Error loading leads data. Please try again.');
+    }
+}
     /**
      * Calculate and return statistics based on user role
      */

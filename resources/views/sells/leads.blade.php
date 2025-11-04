@@ -406,20 +406,20 @@
                         <div class="table-responsive" id="leadsTableContainer">
                             <table id="responsive-datatable" class="table table-bordered table-hover nowrap w-100">
                                 <thead class="table-dark">
-                                    <tr>
-                                        <th><i class="fas fa-hashtag me-1"></i>#</th>
-                                        <th><i class="fas fa-user me-1"></i>Client Details</th>
-                                        <th><i class="fas fa-car me-1"></i>Car Model</th>
-                                        <th><i class="fas fa-credit-card me-1"></i>Purchase Type</th>
-                                        <th><i class="fas fa-money-bill me-1"></i>Budget (KES)</th>
-                                        <th><i class="fas fa-money-bill me-1"></i>Commitment Amount (KES)</th>
-                                        <th><i class="fas fa-user-tie me-1"></i>Salesperson</th>
-                                        <th><i class="fas fa-flag me-1"></i>Status</th>
-                                        <th><i class="fas fa-clock me-1"></i>Follow Up</th>
-                                        <th><i class="fas fa-calendar me-1"></i>Created</th>
-                                        <th><i class="fas fa-cog me-1"></i>Actions</th>
-                                    </tr>
-                                </thead>
+    <tr>
+        <th data-priority="4"><i class="fas fa-hashtag me-1"></i>#</th>
+        <th data-priority="2"><i class="fas fa-user me-1"></i>Client Details</th>
+        <th data-priority="5"><i class="fas fa-car me-1"></i>Car Model</th>
+        <th data-priority="6"><i class="fas fa-credit-card me-1"></i>Purchase Type</th>
+        <th data-priority="7"><i class="fas fa-money-bill me-1"></i>Budget (KES)</th>
+        <th data-priority="8"><i class="fas fa-money-bill me-1"></i>Commitment Amount (KES)</th>
+        <th data-priority="9"><i class="fas fa-user-tie me-1"></i>Salesperson</th>
+        <th data-priority="3"><i class="fas fa-flag me-1"></i>Status</th>
+        <th data-priority="10"><i class="fas fa-clock me-1"></i>Follow Up</th>
+        <th data-priority="11"><i class="fas fa-calendar me-1"></i>Created</th>
+        <th data-priority="1"><i class="fas fa-cog me-1"></i>Actions</th>
+    </tr>
+</thead>
                                 <tbody>
                                     @forelse ($leads as $index => $lead)
                                         <tr>
@@ -786,620 +786,547 @@
     </style>
 
     <script>
-        $(document).ready(function() {
-        // ADD THIS CODE TO YOUR EXISTING $(document).ready() FUNCTION
+$(document).ready(function() {
+    // Initialize DataTable
+    var table = $('#responsive-datatable').DataTable({
+        responsive: {
+            details: {
+                type: 'column',
+                target: 'tr'
+            }
+        },
+        pageLength: 25,
+        order: [[9, 'desc']], // Sort by created date column
+        columnDefs: [
+            { 
+                orderable: false, 
+                targets: [10],
+                responsivePriority: 1 // Always show Actions column
+            },
+            {
+                responsivePriority: 2,
+                targets: [1] // Client Details
+            },
+            {
+                responsivePriority: 3,
+                targets: [7] // Status
+            }
+        ]
+    });
 
-// Store original table data for filtering
-let originalTableData = [];
-let filteredData = [];
-
-// Initialize on page load
-initializeFiltering();
-
-function initializeFiltering() {
-    // Store original table data
-    storeOriginalData();
+    // Store original data for reference
+    let originalTableData = [];
     
-    // Populate salesperson dropdown
+    // Custom filter function
+    $.fn.dataTable.ext.search.push(
+        function(settings, data, dataIndex) {
+            var searchFilter = $('#searchInput').val().toLowerCase();
+            var statusFilter = $('#statusFilter').val().toLowerCase();
+            var purchaseTypeFilter = $('#purchaseTypeFilter').val().toLowerCase();
+            var salespersonFilter = $('#salespersonFilter').val().toLowerCase();
+            var followUpFilter = $('#followUpFilter').val();
+            var dateFrom = $('#dateFromFilter').val();
+            var dateTo = $('#dateToFilter').val();
+
+            // Get row element
+            var $row = $(table.row(dataIndex).node());
+
+            // Search filter - check multiple columns
+            if (searchFilter !== '') {
+                var clientName = data[1].toLowerCase(); // Client Details column
+                var carModel = data[2].toLowerCase(); // Car Model column
+                
+                if (clientName.indexOf(searchFilter) === -1 && 
+                    carModel.indexOf(searchFilter) === -1) {
+                    return false;
+                }
+            }
+
+            // Status filter
+            if (statusFilter !== '') {
+                var rowStatus = $row.find('td:eq(7) .badge').text().toLowerCase().trim();
+                if (rowStatus.indexOf(statusFilter) === -1) {
+                    return false;
+                }
+            }
+
+            // Purchase Type filter
+            if (purchaseTypeFilter !== '') {
+                var rowPurchaseType = $row.find('td:eq(3) .badge').text().toLowerCase().trim();
+                if (rowPurchaseType.indexOf(purchaseTypeFilter) === -1) {
+                    return false;
+                }
+            }
+
+            // Salesperson filter
+            if (salespersonFilter !== '') {
+                var rowSalesperson = $row.find('td:eq(6) span').text().toLowerCase().trim();
+                if (rowSalesperson !== salespersonFilter) {
+                    return false;
+                }
+            }
+
+            // Follow Up filter
+            if (followUpFilter !== '') {
+                var hasFollowUp = $row.find('td:eq(8) .badge').text().includes('Required');
+                var wantsFollowUp = (followUpFilter === '1');
+                if (hasFollowUp !== wantsFollowUp) {
+                    return false;
+                }
+            }
+
+            // Date range filter
+            if (dateFrom || dateTo) {
+                var rowDateText = $row.find('td:eq(9) strong').text().trim();
+                var rowDate = new Date(rowDateText);
+                
+                if (dateFrom) {
+                    var fromDate = new Date(dateFrom);
+                    if (rowDate < fromDate) {
+                        return false;
+                    }
+                }
+                
+                if (dateTo) {
+                    var toDate = new Date(dateTo);
+                    toDate.setHours(23, 59, 59, 999);
+                    if (rowDate > toDate) {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+    );
+
+    // Populate salesperson dropdown from existing data
+    function populateSalespersonDropdown() {
+        var salespeople = new Set();
+        
+        table.rows().every(function() {
+            var $row = $(this.node());
+            var salesperson = $row.find('td:eq(6) span').text().trim();
+            if (salesperson && salesperson !== '') {
+                salespeople.add(salesperson.toLowerCase());
+            }
+        });
+        
+        var dropdown = $('#salespersonFilter');
+        dropdown.find('option:not(:first)').remove();
+        
+        Array.from(salespeople).sort().forEach(function(salesperson) {
+            var displayName = salesperson.charAt(0).toUpperCase() + salesperson.slice(1);
+            dropdown.append(`<option value="${salesperson}">${displayName}</option>`);
+        });
+    }
+
+    // Initialize salesperson dropdown
     populateSalespersonDropdown();
-    
-    // Set up filter event handlers
-    setupFilterHandlers();
-    
-    // Initial filter application
-    applyClientSideFilters();
-}
 
-function storeOriginalData() {
-    originalTableData = [];
-    $('#responsive-datatable tbody tr').each(function(index) {
-        if (!$(this).find('td').hasClass('text-center')) { // Skip "no data" row
-            const row = $(this);
-            const data = {
-                element: row.clone(true),
-                clientName: row.find('td:eq(1) strong').text().trim().toLowerCase(),
-                clientPhone: row.find('td:eq(1) small').first().text().trim(),
-                clientEmail: row.find('td:eq(1) small').last().text().trim().toLowerCase(),
-                carModel: row.find('td:eq(2) strong').text().trim().toLowerCase(),
-                purchaseType: row.find('td:eq(3) .badge').text().trim().toLowerCase(),
-                budget: parseFloat(row.find('td:eq(4)').text().replace(/[^\d.]/g, '')) || 0,
-                salesperson: row.find('td:eq(6) span').text().trim().toLowerCase(),
-                status: row.find('td:eq(7) .badge').text().trim().toLowerCase(),
-                followUp: row.find('td:eq(8) .badge').text().includes('Required'),
-                createdDate: new Date(row.find('td:eq(9) strong').text().trim()),
-                rawRow: row[0].outerHTML
-            };
-            originalTableData.push(data);
+    // Function to update filter summary
+    function updateFilterSummary() {
+        var filters = [];
+        
+        var searchVal = $('#searchInput').val();
+        var statusVal = $('#statusFilter').val();
+        var purchaseTypeVal = $('#purchaseTypeFilter').val();
+        var salespersonVal = $('#salespersonFilter').val();
+        var followUpVal = $('#followUpFilter').val();
+        var dateFromVal = $('#dateFromFilter').val();
+        var dateToVal = $('#dateToFilter').val();
+
+        if (searchVal) filters.push('Search: "' + searchVal + '"');
+        if (statusVal) filters.push('Status: ' + statusVal);
+        if (purchaseTypeVal) filters.push('Type: ' + purchaseTypeVal);
+        if (salespersonVal) filters.push('Salesperson: ' + salespersonVal);
+        if (followUpVal) filters.push('Follow-up: ' + (followUpVal === '1' ? 'Required' : 'Not Required'));
+        if (dateFromVal) filters.push('From: ' + new Date(dateFromVal).toLocaleDateString());
+        if (dateToVal) filters.push('To: ' + new Date(dateToVal).toLocaleDateString());
+
+        var resultText = 'Showing ';
+        if (filters.length > 0) {
+            resultText += 'filtered leads (' + filters.join(', ') + ')';
+        } else {
+            resultText += 'all leads';
         }
-    });
-    filteredData = [...originalTableData];
-}
+        
+        $('#filterResults').text(resultText);
+    }
 
-function populateSalespersonDropdown() {
-    const salespeople = new Set();
-    originalTableData.forEach(row => {
-        if (row.salesperson && row.salesperson.trim() !== '') {
-            salespeople.add(row.salesperson);
-        }
-    });
-    
-    const dropdown = $('#salespersonFilter');
-    dropdown.find('option:not(:first)').remove();
-    
-    Array.from(salespeople).sort().forEach(salesperson => {
-        dropdown.append(`<option value="${salesperson}">${salesperson.charAt(0).toUpperCase() + salesperson.slice(1)}</option>`);
-    });
-}
+    // Function to update statistics based on filtered data
+    function updateFilteredStatistics() {
+        var stats = {
+            active: 0,
+            closed: 0,
+            unsuccessful: 0,
+            followUp: 0,
+            finance: 0,
+            cash: 0,
+            totalBudget: 0,
+            count: 0
+        };
 
-function setupFilterHandlers() {
-    // Text search with debounce
-    let searchTimeout;
+        table.rows({ search: 'applied' }).every(function() {
+            var $row = $(this.node());
+            stats.count++;
+
+            // Count by status
+            var status = $row.find('td:eq(7) .badge').text().toLowerCase().trim();
+            if (status.includes('active')) stats.active++;
+            else if (status.includes('closed')) stats.closed++;
+            else if (status.includes('unsuccessful')) stats.unsuccessful++;
+
+            // Count by purchase type
+            var purchaseType = $row.find('td:eq(3) .badge').text().toLowerCase().trim();
+            if (purchaseType.includes('finance')) stats.finance++;
+            else if (purchaseType.includes('cash')) stats.cash++;
+
+            // Count follow-ups
+            if ($row.find('td:eq(8) .badge').text().includes('Required')) {
+                stats.followUp++;
+            }
+
+            // Sum budget
+            var budgetText = $row.find('td:eq(4)').text().replace(/[^\d.]/g, '');
+            stats.totalBudget += parseFloat(budgetText) || 0;
+        });
+
+        // Update statistics cards
+        $('.row.mb-4 .col-lg-2:eq(0) .card-body h5').text(stats.active);
+        $('.row.mb-4 .col-lg-2:eq(1) .card-body h5').text(stats.closed);
+        $('.row.mb-4 .col-lg-2:eq(2) .card-body h5').text(stats.unsuccessful);
+        $('.row.mb-4 .col-lg-2:eq(3) .card-body h5').text(stats.followUp);
+        $('.row.mb-4 .col-lg-2:eq(4) .card-body h5').text(stats.finance);
+        $('.row.mb-4 .col-lg-2:eq(5) .card-body h5').text(stats.cash);
+
+        // Update total count
+        $('#totalCount').text(stats.count);
+
+        // Update average budget and conversion rate
+        var avgBudget = stats.count > 0 ? stats.totalBudget / stats.count : 0;
+        var totalProcessed = stats.active + stats.closed + stats.unsuccessful;
+        var conversionRate = totalProcessed > 0 ? (stats.closed / totalProcessed * 100).toFixed(1) : 0;
+
+        $('.card.bg-light .text-success').text(stats.count);
+        $('.card.bg-light .text-primary').text('KES ' + avgBudget.toLocaleString('en-US', {minimumFractionDigits: 2}));
+        $('.card.bg-light .text-warning').text('KES ' + stats.totalBudget.toLocaleString('en-US', {minimumFractionDigits: 2}));
+        $('.card.bg-light .text-info').text(conversionRate + '%');
+    }
+
+    // Apply filters with debounce for search
+    var searchTimeout;
     $('#searchInput').on('input', function() {
         clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            applyClientSideFilters();
+        searchTimeout = setTimeout(function() {
+            table.draw();
+            updateFilterSummary();
+            updateFilteredStatistics();
         }, 300);
     });
-    
-    // Dropdown filters
+
+    // Apply filters on dropdown change
     $('#statusFilter, #purchaseTypeFilter, #salespersonFilter, #followUpFilter').on('change', function() {
-        applyClientSideFilters();
+        table.draw();
+        updateFilterSummary();
+        updateFilteredStatistics();
+        
+        // Show notification
+        var visibleRows = table.rows({ search: 'applied' }).count();
+        var totalRows = table.rows().count();
+        
+        toastr.info(`Showing ${visibleRows} of ${totalRows} leads`, 'Filter Applied', {
+            timeOut: 2000,
+            progressBar: true
+        });
     });
-    
-    // Date filters
+
+    // Apply filters on date change
     $('#dateFromFilter, #dateToFilter').on('change', function() {
         validateDateRange();
-        applyClientSideFilters();
+        table.draw();
+        updateFilterSummary();
+        updateFilteredStatistics();
     });
-    
+
+    // Date validation
+    function validateDateRange() {
+        var fromDate = $('#dateFromFilter').val();
+        var toDate = $('#dateToFilter').val();
+        
+        if (fromDate && toDate && fromDate > toDate) {
+            $('#dateToFilter').val(fromDate);
+        }
+        
+        if (fromDate) {
+            $('#dateToFilter').attr('min', fromDate);
+        }
+        if (toDate) {
+            $('#dateFromFilter').attr('max', toDate);
+        }
+    }
+
     // Quick date filters
     $('.quick-date-filter').on('click', function() {
-        const range = $(this).data('range');
-        setQuickDateRange(range);
-        applyClientSideFilters();
+        var range = $(this).data('range');
+        var today = new Date();
+        var fromDate, toDate;
+        
+        switch(range) {
+            case 'today':
+                fromDate = toDate = today.toISOString().split('T')[0];
+                break;
+            case 'week':
+                fromDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                toDate = today.toISOString().split('T')[0];
+                break;
+            case 'month':
+                fromDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+                toDate = today.toISOString().split('T')[0];
+                break;
+            case 'quarter':
+                var quarter = Math.floor(today.getMonth() / 3);
+                fromDate = new Date(today.getFullYear(), quarter * 3, 1).toISOString().split('T')[0];
+                toDate = today.toISOString().split('T')[0];
+                break;
+        }
+        
+        $('#dateFromFilter').val(fromDate);
+        $('#dateToFilter').val(toDate);
+        
+        table.draw();
+        updateFilterSummary();
+        updateFilteredStatistics();
     });
-    
-    // Clear filters
+
+    // Clear all filters
     $('#clearFilters').on('click', function() {
-        clearAllFilters();
+        $('#searchInput').val('');
+        $('#statusFilter').val('');
+        $('#purchaseTypeFilter').val('');
+        $('#salespersonFilter').val('');
+        $('#followUpFilter').val('');
+        $('#dateFromFilter').val('');
+        $('#dateToFilter').val('');
+        
+        // Remove date restrictions
+        $('#dateFromFilter').removeAttr('max');
+        $('#dateToFilter').removeAttr('min');
+        
+        table.draw();
+        updateFilterSummary();
+        updateFilteredStatistics();
+        
+        toastr.success('All filters cleared', 'Filters Reset', {
+            timeOut: 2000,
+            progressBar: true
+        });
     });
-}
 
-function validateDateRange() {
-    const fromDate = $('#dateFromFilter').val();
-    const toDate = $('#dateToFilter').val();
-    
-    if (fromDate && toDate && fromDate > toDate) {
-        $('#dateToFilter').val(fromDate);
-    }
-    
-    if (fromDate) {
-        $('#dateToFilter').attr('min', fromDate);
-    }
-    if (toDate) {
-        $('#dateFromFilter').attr('max', toDate);
-    }
-}
-
-function setQuickDateRange(range) {
-    const today = new Date();
-    let fromDate, toDate;
-    
-    switch(range) {
-        case 'today':
-            fromDate = toDate = today.toISOString().split('T')[0];
-            break;
-        case 'week':
-            fromDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-            toDate = today.toISOString().split('T')[0];
-            break;
-        case 'month':
-            fromDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-            toDate = today.toISOString().split('T')[0];
-            break;
-        case 'quarter':
-            const quarter = Math.floor(today.getMonth() / 3);
-            fromDate = new Date(today.getFullYear(), quarter * 3, 1).toISOString().split('T')[0];
-            toDate = today.toISOString().split('T')[0];
-            break;
-    }
-    
-    $('#dateFromFilter').val(fromDate);
-    $('#dateToFilter').val(toDate);
-}
-
-function applyClientSideFilters() {
-    const filters = {
-        search: $('#searchInput').val().toLowerCase().trim(),
-        status: $('#statusFilter').val().toLowerCase(),
-        purchaseType: $('#purchaseTypeFilter').val().toLowerCase(),
-        salesperson: $('#salespersonFilter').val().toLowerCase(),
-        followUp: $('#followUpFilter').val(),
-        dateFrom: $('#dateFromFilter').val() ? new Date($('#dateFromFilter').val()) : null,
-        dateTo: $('#dateToFilter').val() ? new Date($('#dateToFilter').val()) : null
-    };
-    
-    // Apply filters
-    filteredData = originalTableData.filter(row => {
-        // Search filter
-        if (filters.search && !matchesSearch(row, filters.search)) {
-            return false;
-        }
-        
-        // Status filter
-        if (filters.status && !row.status.includes(filters.status)) {
-            return false;
-        }
-        
-        // Purchase type filter
-        if (filters.purchaseType && !row.purchaseType.includes(filters.purchaseType)) {
-            return false;
-        }
-        
-        // Salesperson filter
-        if (filters.salesperson && row.salesperson !== filters.salesperson) {
-            return false;
-        }
-        
-        // Follow up filter
-        if (filters.followUp !== '' && ((filters.followUp === '1') !== row.followUp)) {
-            return false;
-        }
-        
-        // Date range filter
-        if (filters.dateFrom && row.createdDate < filters.dateFrom) {
-            return false;
-        }
-        if (filters.dateTo) {
-            const endOfDay = new Date(filters.dateTo);
-            endOfDay.setHours(23, 59, 59, 999);
-            if (row.createdDate > endOfDay) {
-                return false;
-            }
-        }
-        
-        return true;
-    });
-    
-    // Update table
-    updateTableDisplay();
-    
-    // Update statistics
+    // Initial filter summary and statistics
+    updateFilterSummary();
     updateFilteredStatistics();
-    
-    // Update filter results text
-    updateFilterResultsText(filters);
-}
 
-function matchesSearch(row, searchTerm) {
-    return row.clientName.includes(searchTerm) ||
-           row.clientPhone.includes(searchTerm) ||
-           row.clientEmail.includes(searchTerm) ||
-           row.carModel.includes(searchTerm);
-}
-
-function updateTableDisplay() {
-    const tbody = $('#responsive-datatable tbody');
-    tbody.empty();
+    // Rest of your existing code (edit, delete, notes, forms, etc.)
+    // ... (keep all your existing event handlers below)
     
-    if (filteredData.length === 0) {
-        tbody.append(`
-            <tr>
-                <td colspan="11" class="text-center py-4">
-                    <div class="text-muted">
-                        <i class="fas fa-search fa-3x mb-3"></i>
-                        <h5>No leads found</h5>
-                        <p>No leads match your current filter criteria.</p>
-                    </div>
-                </td>
-            </tr>
-        `);
-    } else {
-        filteredData.forEach((row, index) => {
-            // Update row number
-            const updatedRow = $(row.element);
-            updatedRow.find('td:first').text(index + 1);
-            tbody.append(updatedRow);
-        });
-    }
-    
-    // Reattach event handlers for the new elements
-    attachRowEventHandlers();
-}
-
-function attachRowEventHandlers() {
-    // Reattach edit, delete, and notes button handlers
-    $('.editBtn').off('click').on('click', function() {
-        // Your existing edit button code
-    });
-    
-    $('.deleteBtn').off('click').on('click', function() {
-        // Your existing delete button code
-    });
-    
-    $('.notesBtn').off('click').on('click', function() {
-        // Your existing notes button code
-    });
-}
-
-function updateFilteredStatistics() {
-    const stats = {
-        active: filteredData.filter(row => row.status.includes('active')).length,
-        closed: filteredData.filter(row => row.status.includes('closed')).length,
-        unsuccessful: filteredData.filter(row => row.status.includes('unsuccessful')).length,
-        followUp: filteredData.filter(row => row.followUp).length,
-        finance: filteredData.filter(row => row.purchaseType.includes('finance')).length,
-        cash: filteredData.filter(row => row.purchaseType.includes('cash')).length,
-        total: filteredData.length,
-        totalBudget: filteredData.reduce((sum, row) => sum + row.budget, 0),
-        avgBudget: filteredData.length > 0 ? filteredData.reduce((sum, row) => sum + row.budget, 0) / filteredData.length : 0
-    };
-    
-    // Update statistics cards
-    $('.statistics .card-body h5').eq(0).text(stats.active);
-    $('.statistics .card-body h5').eq(1).text(stats.closed);
-    $('.statistics .card-body h5').eq(2).text(stats.unsuccessful);
-    $('.statistics .card-body h5').eq(3).text(stats.followUp);
-    $('.statistics .card-body h5').eq(4).text(stats.finance);
-    $('.statistics .card-body h5').eq(5).text(stats.cash);
-    
-    // Update summary row
-    $('#totalCount').text(stats.total);
-    
-    // Calculate conversion rate
-    const totalProcessed = stats.active + stats.closed + stats.unsuccessful;
-    const conversionRate = totalProcessed > 0 ? ((stats.closed / totalProcessed) * 100).toFixed(1) : 0;
-    
-    // Update average budget and conversion rate if those elements exist
-    $('.card.bg-light .text-success').text(stats.total);
-    $('.card.bg-light .text-primary').text('KES ' + stats.avgBudget.toLocaleString('en-US', {minimumFractionDigits: 2}));
-    $('.card.bg-light .text-warning').text('KES ' + stats.totalBudget.toLocaleString('en-US', {minimumFractionDigits: 2}));
-    $('.card.bg-light .text-info').text(conversionRate + '%');
-}
-
-function updateFilterResultsText(filters) {
-    let resultText = 'Showing ';
-    const activeFilters = [];
-    
-    if (filters.search) activeFilters.push(`search: "${filters.search}"`);
-    if (filters.status) activeFilters.push(`status: ${filters.status}`);
-    if (filters.purchaseType) activeFilters.push(`type: ${filters.purchaseType}`);
-    if (filters.salesperson) activeFilters.push(`salesperson: ${filters.salesperson}`);
-    if (filters.followUp !== '') activeFilters.push(`follow-up: ${filters.followUp === '1' ? 'required' : 'not required'}`);
-    if (filters.dateFrom) activeFilters.push(`from: ${filters.dateFrom.toLocaleDateString()}`);
-    if (filters.dateTo) activeFilters.push(`to: ${filters.dateTo.toLocaleDateString()}`);
-    
-    if (activeFilters.length > 0) {
-        resultText += `filtered leads (${activeFilters.join(', ')})`;
-    } else {
-        resultText += 'all leads';
-    }
-    
-    $('#filterResults').text(resultText);
-}
-
-function clearAllFilters() {
-    $('#searchInput').val('');
-    $('#statusFilter').val('');
-    $('#purchaseTypeFilter').val('');
-    $('#salespersonFilter').val('');
-    $('#followUpFilter').val('');
-    $('#dateFromFilter').val('');
-    $('#dateToFilter').val('');
-    
-    // Remove date restrictions
-    $('#dateFromFilter').removeAttr('max');
-    $('#dateToFilter').removeAttr('min');
-    
-    applyClientSideFilters();
-}
-            document.getElementById('editModal').addEventListener('hidden.bs.modal', function () {
-    document.body.classList.remove('modal-open');
-    document.body.style.overflow = 'auto';
-});
-            // CSRF token setup for AJAX requests
-            $.ajaxSetup({
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                }
-            });
-
-            // Real-time search functionality
-            let searchTimeout;
-            $('#searchInput').on('input', function() {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(function() {
-                    applyFilters();
-                }, 300);
-            });
-
-            // Filter change handlers
-            $('#statusFilter, #purchaseTypeFilter, #salespersonFilter, #followUpFilter').on('change', function() {
-                applyFilters();
-            });
-
-            
-
-            // Clear filters
-            $('#clearFilters').on('click', function() {
-                $('#filterForm')[0].reset();
-                $('.status-filter').removeClass('active');
-                $('.status-filter[data-status=""]').addClass('active');
-                applyFilters();
-            });
-
-            // Apply filters function
-           
-
-            // Update statistics
-            function updateStatistics(stats) {
-                $('.statistics .card-body h5').eq(0).text(stats.active || 0);
-                $('.statistics .card-body h5').eq(1).text(stats.closed || 0);
-                $('.statistics .card-body h5').eq(2).text(stats.unsuccessful || 0);
-                $('.statistics .card-body h5').eq(3).text(stats.follow_up || 0);
-                $('.statistics .card-body h5').eq(4).text(stats.finance || 0);
-                $('.statistics .card-body h5').eq(5).text(stats.cash || 0);
-            }
-
-            // Update table (simplified - you may want to rebuild the entire table)
-            function updateTable(leads) {
-                // This is a simplified version - you might want to rebuild the entire tbody
-                location.reload(); // For now, reload to get updated pagination
-            }
-
-           // REPLACE YOUR EXISTING EDIT BUTTON CLICK HANDLER WITH THIS:
-
-$(document).on('click', '.editBtn', function() {
-    const data = $(this).data();
-    
-    $('#recordId').val(data.id);
-    $('#editClientName').val(data.clientName);
-    $('#editClientPhone').val(data.clientPhone);
-    $('#editClientEmail').val(data.clientEmail);
-    $('#editCarModel').val(data.carModel);
-    $('#editPurchaseType').val(data.purchaseType); 
-    $('#editCommitmentAmount').val(data.commitmentAmount);
-    $('#editClientBudget').val(data.clientBudget);
-    $('#editSalespersonId').val(data.salespersonId); // Set the hidden salesperson_id field
-    $('#editStatus').val(data.status);
-    $('#editFollowUpRequired').prop('checked', data.followUp == 1);
-    $('#editNotes').val(data.notes);
-    
-    // CRITICAL FIX: Set the correct form action URL with the lead ID
-    $('#updateLeadsForm').attr('action', `/leads/${data.id}`);
-    
-    // Show modal
-    new bootstrap.Modal(document.getElementById('editModal')).show();
-});
-
-// REPLACE YOUR EXISTING UPDATE FORM SUBMIT HANDLER WITH THIS:
-
-$('#updateLeadsForm').on('submit', function(e) {
-    e.preventDefault();
-    
-    const button = $(this).find('button[type="submit"]');
-    const originalText = button.html();
-    
-    button.html('<i class="fas fa-spinner fa-spin me-1"></i> Updating...');
-    button.prop('disabled', true);
-    
-    // Get the form action URL (which now includes the lead ID)
-    const actionUrl = $(this).attr('action');
-    
-    $.ajax({
-        url: actionUrl,
-        type: 'POST',
-        data: $(this).serialize(),
-        success: function(response) {
-            // Properly hide modal and cleanup
-            const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
-            if (modal) {
-                modal.hide();
-            }
-            
-            // Ensure cleanup
-            setTimeout(function() {
-                $('.modal-backdrop').remove();
-                $('body').removeClass('modal-open');
-                $('body').css('padding-right', '');
-            }, 300);
-            
-            Swal.fire(
-                'Success!',
-                'Lead updated successfully!',
-                'success'
-            ).then(() => {
-                location.reload();
-            });
-        },
-        error: function(xhr, status, error) {
-            button.html(originalText);
-            button.prop('disabled', false);
-            
-            if (xhr.responseJSON && xhr.responseJSON.errors) {
-                let errorMessages = [];
-                Object.values(xhr.responseJSON.errors).forEach(error => {
-                    errorMessages.push('• ' + error[0]);
-                });
-                
-                Swal.fire({
-                    title: 'Validation Errors',
-                    html: errorMessages.join('<br>'),
-                    icon: 'error',
-                    confirmButtonText: 'OK'
-                });
-            } else {
-                Swal.fire(
-                    'Error!',
-                    'Error updating lead. Please try again.',
-                    'error'
-                );
-            }
+    // CSRF token setup for AJAX requests
+    $.ajaxSetup({
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
         }
     });
-});
-            // Notes button functionality
-            $(document).on('click', '.notesBtn', function() {
-                const notes = $(this).data('notes');
-                $('#notesContent').html(notes.replace(/\n/g, '<br>'));
-                new bootstrap.Modal(document.getElementById('notesModal')).show();
-            });
 
-            // Delete button functionality
-            $(document).on('click', '.deleteBtn', function() {
-                const leadId = $(this).data('id');
-                const leadRow = $(this).closest('tr');
-                
-                Swal.fire({
-                    title: 'Are you sure?',
-                    text: "You won't be able to revert this!",
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#d33',
-                    cancelButtonColor: '#3085d6',
-                    confirmButtonText: 'Yes, delete it!'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        const button = $(this);
-                        const originalText = button.html();
-                        
-                        button.html('<i class="fas fa-spinner fa-spin me-1"></i> Deleting...');
-                        button.prop('disabled', true);
-                        
-                        $.ajax({
-                            url: `/leads/${leadId}`,
-                            type: 'DELETE',
-                            success: function(response) {
-                                leadRow.fadeOut(function() {
-                                    leadRow.remove();
-                                    Swal.fire(
-                                        'Deleted!',
-                                        'Lead has been deleted.',
-                                        'success'
-                                    );
-                                    // Reload to update statistics
-                                    
-                                });
-                            },
-                            error: function(xhr, status, error) {
-                                button.html(originalText);
-                                button.prop('disabled', false);
-                                Swal.fire(
-                                    'Error!',
-                                    'Error deleting lead. Please try again.',
-                                    'error'
-                                );
-                            }
-                        });
-                    }
-                });
-            });
+    // Edit modal handler
+    $(document).on('click', '.editBtn', function() {
+        const data = $(this).data();
+        
+        $('#recordId').val(data.id);
+        $('#editClientName').val(data.clientName);
+        $('#editClientPhone').val(data.clientPhone);
+        $('#editClientEmail').val(data.clientEmail);
+        $('#editCarModel').val(data.carModel);
+        $('#editPurchaseType').val(data.purchaseType); 
+        $('#editCommitmentAmount').val(data.commitmentAmount);
+        $('#editClientBudget').val(data.clientBudget);
+        $('#editSalespersonId').val(data.salespersonId);
+        $('#editStatus').val(data.status);
+        $('#editFollowUpRequired').prop('checked', data.followUp == 1);
+        $('#editNotes').val(data.notes);
+        
+        $('#updateLeadsForm').attr('action', `/leads/${data.id}`);
+        new bootstrap.Modal(document.getElementById('editModal')).show();
+    });
 
-            // Form submissions
-            $('#LeadForm').on('submit', function(e) {
-                e.preventDefault();
+    // Update form handler
+    $('#updateLeadsForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const button = $(this).find('button[type="submit"]');
+        const originalText = button.html();
+        
+        button.html('<i class="fas fa-spinner fa-spin me-1"></i> Updating...');
+        button.prop('disabled', true);
+        
+        const actionUrl = $(this).attr('action');
+        
+        $.ajax({
+            url: actionUrl,
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function(response) {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
+                if (modal) modal.hide();
                 
-                const button = $(this).find('button[type="submit"]');
-                const originalText = button.html();
+                setTimeout(function() {
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open');
+                    $('body').css('padding-right', '');
+                }, 300);
                 
-                button.html('<i class="fas fa-spinner fa-spin me-1"></i> Saving...');
-                button.prop('disabled', true);
+                Swal.fire('Success!', 'Lead updated successfully!', 'success')
+                    .then(() => location.reload());
+            },
+            error: function(xhr) {
+                button.html(originalText);
+                button.prop('disabled', false);
                 
-                $.ajax({
-                    url: $(this).attr('action'),
-                    type: 'POST',
-                    data: $(this).serialize(),
-                    success: function(response) {
-                        // Properly hide modal and cleanup
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('standard-modal'));
-                        if (modal) {
-                            modal.hide();
-                        }
-                        
-                        // Ensure cleanup
-                        setTimeout(function() {
-                            $('.modal-backdrop').remove();
-                            $('body').removeClass('modal-open');
-                            $('body').css('padding-right', '');
-                        }, 300);
-                        
-                        Swal.fire(
-                            'Success!',
-                            'Lead created successfully!',
-                            'success'
-                        );
-                        location.reload();
-                    },
-                    error: function(xhr, status, error) {
-                        button.html(originalText);
-                        button.prop('disabled', false);
-                        
-                        if (xhr.responseJSON && xhr.responseJSON.errors) {
-                            let errorMessages = [];
-                            Object.values(xhr.responseJSON.errors).forEach(error => {
-                                errorMessages.push('• ' + error[0]);
-                            });
-                            
-                            Swal.fire({
-                                title: 'Validation Errors',
-                                html: errorMessages.join('<br>'),
-                                icon: 'error',
-                                confirmButtonText: 'OK'
-                            });
-                        } else {
-                            Swal.fire(
-                                'Error!',
-                                'Error creating lead. Please try again.',
-                                'error'
-                            );
-                        }
-                    }
-                });
-            });
-
-           
-
-            // Budget formatting
-            $('#client_budget, #editClientBudget').on('input', function() {
-                let value = $(this).val().replace(/[^\d.]/g, '');
-                if (value && !isNaN(value)) {
-                    $(this).val(parseFloat(value).toFixed(2));
+                if (xhr.responseJSON && xhr.responseJSON.errors) {
+                    let errorMessages = [];
+                    Object.values(xhr.responseJSON.errors).forEach(error => {
+                        errorMessages.push('• ' + error[0]);
+                    });
+                    
+                    Swal.fire({
+                        title: 'Validation Errors',
+                        html: errorMessages.join('<br>'),
+                        icon: 'error'
+                    });
+                } else {
+                    Swal.fire('Error!', 'Error updating lead. Please try again.', 'error');
                 }
-            });
-
-            // Phone number formatting (basic)
-            $('#client_phone, #editClientPhone').on('input', function() {
-                let value = $(this).val().replace(/[^\d+\-\(\)\s]/g, '');
-                $(this).val(value);
-            });
-
-            // Auto-hide alerts
-            setTimeout(function() {
-                $('.alert').fadeOut();
-            }, 5000);
-
-            // Initialize tooltips if using Bootstrap tooltips
-            $('[data-bs-toggle="tooltip"]').tooltip();
+            }
         });
+    });
+
+    // Delete handler
+    $(document).on('click', '.deleteBtn', function() {
+        const leadId = $(this).data('id');
+        const leadRow = $(this).closest('tr');
+        
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You won't be able to revert this!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $.ajax({
+                    url: `/leads/${leadId}`,
+                    type: 'DELETE',
+                    success: function(response) {
+                        // Remove row from DataTable
+                        table.row(leadRow).remove().draw();
+                        
+                        // Update statistics
+                        updateFilteredStatistics();
+                        
+                        Swal.fire('Deleted!', 'Lead has been deleted.', 'success');
+                    },
+                    error: function() {
+                        Swal.fire('Error!', 'Error deleting lead. Please try again.', 'error');
+                    }
+                });
+            }
+        });
+    });
+
+    // Notes modal handler
+    $(document).on('click', '.notesBtn', function() {
+        const notes = $(this).data('notes');
+        $('#notesContent').html(notes.replace(/\n/g, '<br>'));
+        new bootstrap.Modal(document.getElementById('notesModal')).show();
+    });
+
+    // Add lead form handler
+    $('#LeadForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        const button = $(this).find('button[type="submit"]');
+        const originalText = button.html();
+        
+        button.html('<i class="fas fa-spinner fa-spin me-1"></i> Saving...');
+        button.prop('disabled', true);
+        
+        $.ajax({
+            url: $(this).attr('action'),
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function(response) {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('standard-modal'));
+                if (modal) modal.hide();
+                
+                setTimeout(function() {
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open');
+                    $('body').css('padding-right', '');
+                }, 300);
+                
+                Swal.fire('Success!', 'Lead created successfully!', 'success');
+                location.reload();
+            },
+            error: function(xhr) {
+                button.html(originalText);
+                button.prop('disabled', false);
+                
+                if (xhr.responseJSON && xhr.responseJSON.errors) {
+                    let errorMessages = [];
+                    Object.values(xhr.responseJSON.errors).forEach(error => {
+                        errorMessages.push('• ' + error[0]);
+                    });
+                    
+                    Swal.fire({
+                        title: 'Validation Errors',
+                        html: errorMessages.join('<br>'),
+                        icon: 'error'
+                    });
+                } else {
+                    Swal.fire('Error!', 'Error creating lead. Please try again.', 'error');
+                }
+            }
+        });
+    });
+
+    // Modal cleanup
+    document.getElementById('editModal').addEventListener('hidden.bs.modal', function () {
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = 'auto';
+    });
+
+    // Budget formatting
+    $('#client_budget, #editClientBudget').on('input', function() {
+        let value = $(this).val().replace(/[^\d.]/g, '');
+        if (value && !isNaN(value)) {
+            $(this).val(parseFloat(value).toFixed(2));
+        }
+    });
+
+    // Phone number formatting
+    $('#client_phone, #editClientPhone').on('input', function() {
+        let value = $(this).val().replace(/[^\d+\-\(\)\s]/g, '');
+        $(this).val(value);
+    });
+
+    // Auto-hide alerts
+    setTimeout(function() {
+        $('.alert').fadeOut();
+    }, 5000);
+
+    // Initialize tooltips
+    $('[data-bs-toggle="tooltip"]').tooltip();
+});
     </script>
 </x-app-layout>

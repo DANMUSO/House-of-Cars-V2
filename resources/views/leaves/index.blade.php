@@ -67,7 +67,58 @@
             </div>
         </div>
         @endif
-
+<!-- Add this right before <div class="row"> containing the table -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Filter Applications</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" id="searchFilter" placeholder="Search employee, email...">
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" id="statusFilterSelect">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" id="leaveTypeFilterSelect">
+                            <option value="">All Types</option>
+                            <option value="Annual">Annual</option>
+                            <option value="Sick">Sick</option>
+                            <option value="Maternity">Maternity/Paternity</option>
+                            <option value="Emergency">Emergency</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" class="form-control" id="dateFromFilter" placeholder="From">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" class="form-control" id="dateToFilter" placeholder="To">
+                    </div>
+                    <div class="col-md-1">
+                        <button class="btn btn-outline-secondary w-100" id="clearFiltersBtn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-2 d-flex justify-content-between">
+                    <small class="text-muted" id="filterInfo">Showing all applications</small>
+                    <button class="btn btn-success btn-sm" id="exportBtn">
+                        <i class="fas fa-file-excel me-1"></i>Export
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
         <!-- Leave Applications Table -->
         <div class="row">
             <div class="col-12">
@@ -1208,5 +1259,193 @@
                 title: message
             });
         }
+        // Add this after the table in your blade file (before existing scripts)
+
+// HTML Filters Section - Add before the table
+const filtersHTML = `
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Filter Applications</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" id="searchFilter" placeholder="Search employee, email...">
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" id="statusFilterSelect">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" id="leaveTypeFilterSelect">
+                            <option value="">All Types</option>
+                            <option value="Annual Leave">Annual</option>
+                            <option value="Sick Leave">Sick</option>
+                            <option value="Maternity/Paternity Leave">Maternity/Paternity</option>
+                            <option value="Emergency Leave">Emergency</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" class="form-control" id="dateFromFilter">
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" class="form-control" id="dateToFilter">
+                    </div>
+                    <div class="col-md-1">
+                        <button class="btn btn-outline-secondary w-100" id="clearFiltersBtn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-12">
+                        <small class="text-muted" id="filterInfo">Showing all applications</small>
+                        <button class="btn btn-success btn-sm float-end" id="exportBtn">
+                            <i class="fas fa-file-excel me-1"></i>Export to Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>`;
+
+// Initialize DataTable with filters
+$(document).ready(function() {
+    var table = $('#responsive-datatable').DataTable({
+        responsive: false,
+        scrollX: true,
+        pageLength: 25,
+        order: [[8, 'desc']],
+        columnDefs: [
+            { orderable: false, targets: [9] },
+            { responsivePriority: 1, targets: [1, 7, 9] }
+        ]
+    });
+
+    // Custom filter function
+    $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+        var searchVal = $('#searchFilter').val().toLowerCase();
+        var statusVal = $('#statusFilterSelect').val().toLowerCase();
+        var typeVal = $('#leaveTypeFilterSelect').val();
+        var dateFrom = $('#dateFromFilter').val();
+        var dateTo = $('#dateToFilter').val();
+
+        var $row = $(table.row(dataIndex).node());
+        
+        // Search filter
+        if (searchVal && !data[1].toLowerCase().includes(searchVal)) {
+            return false;
+        }
+
+        // Status filter
+        if (statusVal) {
+            var rowStatus = $row.find('td:eq(7) .badge').text().toLowerCase().trim();
+            if (!rowStatus.includes(statusVal)) return false;
+        }
+
+        // Leave type filter
+        if (typeVal) {
+            var rowType = $row.find('td:eq(2) .badge').text().trim();
+            if (!rowType.includes(typeVal)) return false;
+        }
+
+        // Date range filter
+        if (dateFrom || dateTo) {
+            var startDate = new Date(data[3]);
+            if (dateFrom && startDate < new Date(dateFrom)) return false;
+            if (dateTo && startDate > new Date(dateTo)) return false;
+        }
+
+        return true;
+    });
+
+    // Apply filters
+    function applyFilters() {
+        table.draw();
+        updateFilterInfo();
+    }
+
+    function updateFilterInfo() {
+        var visible = table.rows({ search: 'applied' }).count();
+        var total = table.rows().count();
+        $('#filterInfo').text(`Showing ${visible} of ${total} applications`);
+    }
+
+    // Event handlers
+    $('#searchFilter').on('input', debounce(applyFilters, 300));
+    $('#statusFilterSelect, #leaveTypeFilterSelect, #dateFromFilter, #dateToFilter').on('change', applyFilters);
+    
+    $('#clearFiltersBtn').on('click', function() {
+        $('#searchFilter, #dateFromFilter, #dateToFilter').val('');
+        $('#statusFilterSelect, #leaveTypeFilterSelect').val('');
+        applyFilters();
+    });
+
+    // Export function
+    $('#exportBtn').on('click', function() {
+        var data = [];
+        var headers = ['ID', 'Employee', 'Email', 'Leave Type', 'Start Date', 'End Date', 
+                      'Days', 'Handover Person', 'Status', 'Applied Date'];
+        
+        data.push(headers);
+        
+        table.rows({ search: 'applied' }).every(function() {
+            var $row = $(this.node());
+            var rowData = [
+                $row.find('td:eq(0)').text(),
+                $row.find('td:eq(1) .fw-semibold').text(),
+                $row.find('td:eq(1) small').text(),
+                $row.find('td:eq(2) .badge').text().trim(),
+                $row.find('td:eq(3)').text(),
+                $row.find('td:eq(4)').text(),
+                $row.find('td:eq(5) .fw-semibold').text(),
+                $row.find('td:eq(6)').text(),
+                $row.find('td:eq(7) .badge').text().trim(),
+                $row.find('td:eq(8)').text()
+            ];
+            data.push(rowData);
+        });
+
+        // Create CSV
+        var csv = data.map(row => row.join(',')).join('\n');
+        var blob = new Blob([csv], { type: 'text/csv' });
+        var url = window.URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = `leave_applications_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        
+        toastr.success('Export completed successfully!');
+    });
+
+    function debounce(func, wait) {
+        var timeout;
+        return function() {
+            clearTimeout(timeout);
+            timeout = setTimeout(func, wait);
+        };
+    }
+
+    updateFilterInfo();
+});
+
+// Add this CSS
+const styles = `
+<style>
+    #responsive-datatable_wrapper .row:first-child {
+        margin-bottom: 1rem;
+    }
+    .dataTables_filter {
+        display: none;
+    }
+</style>`;
     </script>
 </x-app-layout>
