@@ -77,37 +77,29 @@ class LeavesController extends Controller
      * Create default leave balances for a user
      */
     private function createDefaultLeaveBalances($userId)
-    {
-        $user = User::find($userId);
-        
-        // Base leave types that apply to everyone
-        $defaultLeaveTypes = [
-            'Annual Leave' => 25,
-            'Sick Leave' => 12,
-            'Emergency Leave' => 3,
-        ];
+{
+    $defaultLeaveTypes = [
+        'Annual Leave' => ['days' => 25, 'hours' => 200],
+        'Sick Leave' => ['days' => 12, 'hours' => 96],
+        'Emergency Leave' => ['days' => 3, 'hours' => 24],
+        'Maternity/Paternity Leave' => ['days' => 90, 'hours' => 0],
+    ];
 
-        // Add Maternity/Paternity Leave with dynamic days
-        $maternityPaternityDays = 90; // Default
-        $defaultLeaveTypes['Maternity/Paternity Leave'] = $maternityPaternityDays;
-
-        foreach ($defaultLeaveTypes as $leaveType => $totalDays) {
-            LeaveDay::updateOrCreate(
-                [
-                    'user_id' => $userId,
-                    'leave_type' => $leaveType,
-                    'year' => date('Y'),
-                ],
-                [
-                    'total_days' => $totalDays,
-                    'used_days' => 0,
-                    'remaining_days' => $totalDays,
-                    'status' => 'active',
-                ]
-            );
-        }
+    foreach ($defaultLeaveTypes as $leaveType => $allocation) {
+        LeaveDay::updateOrCreate(
+            ['user_id' => $userId, 'leave_type' => $leaveType, 'year' => date('Y')],
+            [
+                'total_days' => $allocation['days'],
+                'used_days' => 0,
+                'remaining_days' => $allocation['days'],
+                'total_hours' => $allocation['hours'],
+                'used_hours' => 0,
+                'remaining_hours' => $allocation['hours'],
+                'status' => 'active',
+            ]
+        );
     }
-
+}
     /**
      * Send SMS notification to handover person when they are assigned
      */
@@ -336,127 +328,156 @@ private function getHandoverSuggestions()
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'leave_type' => 'required|string',
-            'start_date' => 'required|date|after_or_equal:today',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'handover_person' => 'required|string|max:255',
-            'reason' => 'required|string|max:1000',
-        ]);
+{
+    $validated = $request->validate([
+        'leave_type' => 'required|string',
+        'leave_duration_type' => 'required|in:days,hours',
+        'start_date' => 'required|date|after_or_equal:today',
+        'end_date' => 'nullable|date|after_or_equal:start_date',
+        'start_time' => 'required_if:leave_duration_type,hours|nullable|date_format:H:i',
+        'end_time' => 'required_if:leave_duration_type,hours|nullable|date_format:H:i|after:start_time',
+        'total_days' => 'nullable|integer|min:1',
+        'total_hours' => 'nullable|numeric|min:0.5|max:8',
+        'handover_person' => 'required|string|max:255',
+        'reason' => 'required|string|max:1000',
+    ]);
 
-        try {
-            DB::beginTransaction();
+    try {
+        DB::beginTransaction();
 
-            $userId = Auth::id();
-            $user = Auth::user();
+        $userId = Auth::id();
+        $user = Auth::user();
+        $isDaysType = $validated['leave_duration_type'] === 'days';
+        
+        // Calculate total days or hours based on duration type
+        if ($isDaysType) {
             $startDate = Carbon::parse($validated['start_date']);
             $endDate = Carbon::parse($validated['end_date']);
-            
-            // Calculate total days (excluding weekends)
             $totalDays = $this->calculateWorkingDays($startDate, $endDate);
+            $totalHours = 0;
+        } else {
+            // For hours
+            $totalDays = 0;
+            $totalHours = floatval($validated['total_hours']);
+        }
 
-            // Find the user's leave balance for the selected leave type
+        // Find the user's leave balance for the selected leave type
+        $leaveDay = LeaveDay::where('user_id', $userId)
+            ->where('leave_type', $validated['leave_type'])
+            ->where('year', date('Y'))
+            ->where('status', 'active')
+            ->first();
+
+        if (!$leaveDay) {
+            // Try to create default leave balances if they don't exist
+            $this->createDefaultLeaveBalances($userId);
+            
             $leaveDay = LeaveDay::where('user_id', $userId)
                 ->where('leave_type', $validated['leave_type'])
                 ->where('year', date('Y'))
                 ->where('status', 'active')
                 ->first();
-
-            if (!$leaveDay) {
-                // Try to create default leave balances if they don't exist
-                $this->createDefaultLeaveBalances($userId);
                 
-                $leaveDay = LeaveDay::where('user_id', $userId)
-                    ->where('leave_type', $validated['leave_type'])
-                    ->where('year', date('Y'))
-                    ->where('status', 'active')
-                    ->first();
-                    
-                if (!$leaveDay) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Selected leave type is not available for your account. Please contact HR.'
-                    ], 400);
-                }
+            if (!$leaveDay) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Selected leave type is not available for your account. Please contact HR.'
+                ], 400);
             }
+        }
 
-            // Check if user has enough leave days
+        // Check balance based on duration type
+        if ($isDaysType) {
             if ($leaveDay->remaining_days < $totalDays) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Insufficient leave balance. You have {$leaveDay->remaining_days} days remaining for {$validated['leave_type']}."
+                    'message' => "Insufficient leave balance. You have {$leaveDay->remaining_days} days remaining."
                 ], 400);
             }
-
-            // Check for overlapping leave applications
-            $overlapping = LeaveApplication::where('user_id', $userId)
-                ->whereIn('status', ['Pending', 'Approved'])
-                ->where(function ($query) use ($startDate, $endDate) {
-                    $query->whereBetween('start_date', [$startDate, $endDate])
-                        ->orWhereBetween('end_date', [$startDate, $endDate])
-                        ->orWhere(function ($q) use ($startDate, $endDate) {
-                            $q->where('start_date', '<=', $startDate)
-                              ->where('end_date', '>=', $endDate);
-                        });
-                })
-                ->exists();
-
-            if ($overlapping) {
+        } else {
+            if ($leaveDay->remaining_hours < $totalHours) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'You have overlapping leave applications for the selected dates.'
+                    'message' => "Insufficient leave balance. You have {$leaveDay->remaining_hours} hours remaining."
                 ], 400);
             }
+        }
 
-            // Create leave application
-            $leaveApplication = LeaveApplication::create([
-                'user_id' => $userId,
-                'leave_day_id' => $leaveDay->id,
-                'leave_type' => $validated['leave_type'],
-                'start_date' => $validated['start_date'],
-                'end_date' => $validated['end_date'],
-                'total_days' => $totalDays,
-                'handover_person' => $validated['handover_person'],
-                'reason' => $validated['reason'],
-                'status' => 'Pending',
-                'applied_date' => now(),
-            ]);
+        // Set dates for overlap check
+        $startDate = Carbon::parse($validated['start_date']);
+        $endDate = $isDaysType ? Carbon::parse($validated['end_date']) : $startDate->copy();
 
-            DB::commit();
+        // Check for overlapping leave applications
+        $overlapping = LeaveApplication::where('user_id', $userId)
+            ->whereIn('status', ['Pending', 'Approved'])
+            ->where(function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('start_date', [$startDate, $endDate])
+                    ->orWhereBetween('end_date', [$startDate, $endDate])
+                    ->orWhere(function ($q) use ($startDate, $endDate) {
+                        $q->where('start_date', '<=', $startDate)
+                          ->where('end_date', '>=', $endDate);
+                    });
+            })
+            ->exists();
 
-             // Send SMS notification to General Managers
-            try {
-                $this->sendLeaveApplicationNotificationToManagers($leaveApplication, $user);
-            } catch (\Exception $smsException) {
-                Log::error('SMS error during leave application: ' . $smsException->getMessage());
-                // Don't fail the leave application if SMS fails
-            }
-
-            // Send SMS notification to handover person
-            try {
-                $this->sendHandoverNotificationToAssignee($leaveApplication, $user);
-            } catch (\Exception $smsException) {
-                Log::error('SMS error during handover notification: ' . $smsException->getMessage());
-                // Don't fail the leave application if SMS fails
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Leave application submitted successfully!',
-                'data' => $leaveApplication->load(['user', 'leaveDay'])
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollback();
-            Log::error('Leave application failed: ' . $e->getMessage());
-            
+        if ($overlapping) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to submit leave application. Please try again.'
-            ], 500);
+                'message' => 'You have overlapping leave applications for the selected dates.'
+            ], 400);
         }
+
+        // Create leave application
+        $leaveApplication = LeaveApplication::create([
+            'user_id' => $userId,
+            'leave_day_id' => $leaveDay->id,
+            'leave_type' => $validated['leave_type'],
+            'leave_duration_type' => $validated['leave_duration_type'],
+            'start_date' => $validated['start_date'],
+            'end_date' => $isDaysType ? $validated['end_date'] : $validated['start_date'],
+            'start_time' => $isDaysType ? null : $validated['start_time'],
+            'end_time' => $isDaysType ? null : $validated['end_time'],
+            'total_days' => $totalDays,
+            'total_hours' => $totalHours,
+            'handover_person' => $validated['handover_person'],
+            'reason' => $validated['reason'],
+            'status' => 'Pending',
+            'applied_date' => now(),
+        ]);
+
+        DB::commit();
+
+        // Send SMS notification to General Managers
+        try {
+            $this->sendLeaveApplicationNotificationToManagers($leaveApplication, $user);
+        } catch (\Exception $smsException) {
+            Log::error('SMS error during leave application: ' . $smsException->getMessage());
+        }
+
+        // Send SMS notification to handover person
+        try {
+            $this->sendHandoverNotificationToAssignee($leaveApplication, $user);
+        } catch (\Exception $smsException) {
+            Log::error('SMS error during handover notification: ' . $smsException->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Leave application submitted successfully!',
+            'data' => $leaveApplication->load(['user', 'leaveDay'])
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollback();
+        Log::error('Leave application failed: ' . $e->getMessage());
+        Log::error('Stack trace: ' . $e->getTraceAsString());
+        
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to submit leave application. Please try again.'
+        ], 500);
     }
+}
 
     /**
      * Send SMS notification to General Managers when leave is applied
@@ -571,10 +592,17 @@ private function getHandoverSuggestions()
 
             // Deduct leave days from the user's balance (if leaveDay exists)
             if ($leaveDay) {
-                $leaveDay->update([
-                    'used_days' => $leaveDay->used_days + $leave->total_days,
-                    'remaining_days' => $leaveDay->remaining_days - $leave->total_days,
-                ]);
+                if ($leave->leave_duration_type === 'days') {
+                    $leaveDay->update([
+                        'used_days' => $leaveDay->used_days + $leave->total_days,
+                        'remaining_days' => $leaveDay->remaining_days - $leave->total_days,
+                    ]);
+                } else {
+                    $leaveDay->update([
+                        'used_hours' => $leaveDay->used_hours + $leave->total_hours,
+                        'remaining_hours' => $leaveDay->remaining_hours - $leave->total_hours,
+                    ]);
+                }
             }
 
             DB::commit();
@@ -807,15 +835,20 @@ private function getHandoverSuggestions()
             }
 
             // If application was approved, restore the leave days
-            if ($leave->status === 'Approved' && $leave->leaveDay) {
-                $leaveDay = $leave->leaveDay;
+             if ($leave->status === 'Approved' && $leave->leaveDay) {
+            $leaveDay = $leave->leaveDay;
+            if ($leave->leave_duration_type === 'days') {
                 $leaveDay->update([
                     'used_days' => $leaveDay->used_days - $leave->total_days,
                     'remaining_days' => $leaveDay->remaining_days + $leave->total_days,
                 ]);
-
-                Log::info("Leave cancelled for user {$leave->user->first_name} {$leave->user->last_name}. Restored {$leave->total_days} days to {$leave->leave_type}.");
+            } else {
+                $leaveDay->update([
+                    'used_hours' => $leaveDay->used_hours - $leave->total_hours,
+                    'remaining_hours' => $leaveDay->remaining_hours + $leave->total_hours,
+                ]);
             }
+        }
 
             $leave->update([
                 'status' => 'Cancelled',

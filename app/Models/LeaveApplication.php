@@ -25,6 +25,10 @@ class LeaveApplication extends Model
         'approved_date',
         'cancelled_date',
         'comments',
+            'leave_duration_type',
+    'total_hours',
+    'start_time',
+    'end_time',
     ];
 
     protected $casts = [

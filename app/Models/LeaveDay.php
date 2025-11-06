@@ -17,6 +17,9 @@ class LeaveDay extends Model
         'remaining_days',
         'year',
         'status',
+        'total_hours',
+    'used_hours',
+    'remaining_hours',
     ];
 
     protected $casts = [

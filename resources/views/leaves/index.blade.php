@@ -32,24 +32,23 @@
             @endphp
             <div class="col-md-3 col-sm-6 mb-3">
                 <div class="card bg-light">
-                    <div class="card-body text-center">
-                        <h6 class="card-title text-capitalize mb-2">{{ $cardDisplayName }}</h6>
-                        <h3 class="text-primary mb-1">{{ $balance->remaining_days }}<small class="text-muted">/{{ $balance->total_days }}</small></h3>
-                        <small class="text-muted">Days Remaining/Total</small>
-                        <div class="progress mt-2" style="height: 6px;">
-                            @php
-                                $percentage = $balance->total_days > 0 ? ($balance->remaining_days / $balance->total_days) * 100 : 0;
-                                $progressClass = $percentage > 50 ? 'bg-success' : ($percentage > 25 ? 'bg-warning' : 'bg-danger');
-                            @endphp
-                            <div class="progress-bar {{ $progressClass }}" role="progressbar" 
-                                 style="width: {{ $percentage }}%"
-                                 aria-valuenow="{{ $balance->remaining_days }}" 
-                                 aria-valuemin="0" 
-                                 aria-valuemax="{{ $balance->total_days }}">
-                            </div>
-                        </div>
+                <div class="card-body text-center">
+                    <h6 class="card-title text-capitalize mb-2">{{ $cardDisplayName }}</h6>
+                    <h3 class="text-primary mb-1">
+                        {{ $balance->remaining_days }}<small class="text-muted">/{{ $balance->total_days }}</small>
+                        <span class="text-muted">days</span>
+                    </h3>
+                    @if($balance->total_hours > 0)
+                    <div class="mt-2">
+                        <h5 class="text-info mb-0">
+                            {{ $balance->remaining_hours }}<small class="text-muted">/{{ $balance->total_hours }}</small>
+                            <span class="text-muted">hrs</span>
+                        </h5>
                     </div>
+                    @endif
+                    <!-- existing progress bar code -->
                 </div>
+            </div>
             </div>
             @endforeach
         </div>
@@ -168,8 +167,14 @@
             <td>{{ \Carbon\Carbon::parse($application->start_date)->format('M d, Y') }}</td>
             <td>{{ \Carbon\Carbon::parse($application->end_date)->format('M d, Y') }}</td>
             <td>
-                <span class="fw-semibold">{{ $application->total_days }}</span> 
-                <small class="text-muted">working days</small>
+                  @if($application->leave_duration_type === 'hours')
+                    <span class="fw-semibold">{{ $application->total_hours }}</span> 
+                    <small class="text-muted">hours</small>
+                    <br><small class="text-muted">({{ \Carbon\Carbon::parse($application->start_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($application->end_time)->format('H:i') }})</small>
+                @else
+                    <span class="fw-semibold">{{ $application->total_days }}</span> 
+                    <small class="text-muted">working days</small>
+                @endif
             </td>
             <td>{{ $application->handover_person ?? 'N/A' }}</td>
             <td>
@@ -281,8 +286,13 @@
                                                         }
                                                     }
                                                 @endphp
-                                                <option value="{{ $leaveType }}" data-remaining="{{ $balance->remaining_days }}" data-total="{{ $balance->total_days }}">
-                                                    {{ $displayName }} ({{ $balance->remaining_days }}/{{ $balance->total_days }} days)
+                                                 <option value="{{ $leaveType }}" 
+                                                    data-remaining="{{ $balance->remaining_days }}" 
+                                                    data-total="{{ $balance->total_days }}"
+                                                    data-remaining-hours="{{ $balance->remaining_hours }}"
+                                                    data-total-hours="{{ $balance->total_hours }}">
+                                                    {{ $displayName }} ({{ $balance->remaining_days }}/{{ $balance->total_days }} days
+                                                    @if($balance->total_hours > 0), {{ $balance->remaining_hours }}/{{ $balance->total_hours }} hrs @endif)
                                                 </option>
                                             @endforeach
                                         @else
@@ -367,27 +377,63 @@
                         
                         <!-- Leave Balance Display (will be populated by JavaScript) -->
                         <div id="balance_display_container"></div>
-                        
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="start_date" class="form-label">Start Date <span class="text-danger">*</span></label>
-                                    <input type="date" class="form-control" id="start_date" name="start_date" required min="{{ date('Y-m-d') }}">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="end_date" class="form-label">End Date <span class="text-danger">*</span></label>
-                                    <input type="date" class="form-control" id="end_date" name="end_date" required>
-                                </div>
+                        <!-- Days Input (default visible) -->
+                         <div class="mb-3">
+                            <label class="form-label">Duration Type <span class="text-danger">*</span></label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="leave_duration_type" id="duration_days" value="days" checked>
+                                <label class="btn btn-outline-primary" for="duration_days">Full/Multiple Days</label>
+                                
+                                <input type="radio" class="btn-check" name="leave_duration_type" id="duration_hours" value="hours">
+                                <label class="btn btn-outline-primary" for="duration_hours">Hours (Same Day)</label>
                             </div>
                         </div>
-                        
+                       <div id="days_input_section">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="start_date" class="form-label">Start Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" min="{{ date('Y-m-d') }}">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="end_date" class="form-label">End Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="end_date" name="end_date">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Hours Input (hidden by default) -->
+        <div id="hours_input_section" style="display: none;">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="hours_date" class="form-label">Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="hours_date" name="hours_date" min="{{ date('Y-m-d') }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="start_time" class="form-label">Start Time <span class="text-danger">*</span></label>
+                        <input type="time" class="form-control" id="start_time" name="start_time">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="end_time" class="form-label">End Time <span class="text-danger">*</span></label>
+                        <input type="time" class="form-control" id="end_time" name="end_time">
+                    </div>
+                </div>
+            </div>
+        </div>
                         <div class="mb-3">
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle me-1"></i>
-                                <strong>Calculated Working Days:</strong> <span id="calculated_days" class="fw-bold text-primary">0</span>
-                                <small class="d-block mt-1 text-muted">Sundays are automatically excluded from the calculation</small>
+                                <strong id="duration_label">Calculated Working Days:</strong> 
+                                <span id="calculated_duration" class="fw-bold text-primary">0</span>
+                                <span id="duration_unit">days</span>
+                                <small class="d-block mt-1 text-muted" id="duration_note">Sundays are automatically excluded</small>
                             </div>
                         </div>
                         
@@ -614,112 +660,160 @@
     <script>
         // Global functions - declared in global scope
         window.submitLeaveApplication = function() {
-            const form = document.getElementById('createLeaveForm');
-            const submitBtn = document.getElementById('submitLeaveBtn');
-            
-            // Validate form
-            if (!form.checkValidity()) {
-                form.reportValidity();
-                return;
-            }
-            
-            // Check if requesting more days than available
-            const leaveTypeSelect = document.getElementById('leave_type');
-            const selectedOption = leaveTypeSelect.options[leaveTypeSelect.selectedIndex];
-            const requestedDays = parseInt(document.getElementById('calculated_days').textContent);
-            
-            if (selectedOption.dataset.remaining !== undefined) {
-                const remaining = parseInt(selectedOption.dataset.remaining);
-                if (requestedDays > remaining) {
-                    Swal.fire({
-                        title: 'Insufficient Leave Balance',
-                        text: `You are requesting ${requestedDays} days but only have ${remaining} days remaining.`,
-                        icon: 'error',
-                        confirmButtonText: 'OK',
-                        confirmButtonColor: '#dc3545'
-                    });
-                    return;
-                }
-            }
-            
-            // Show confirmation dialog
+    const form = document.getElementById('createLeaveForm');
+    const submitBtn = document.getElementById('submitLeaveBtn');
+    
+    // Validate form
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    // Get duration type and calculated value
+    const durationType = document.querySelector('input[name="leave_duration_type"]:checked').value;
+    const calculatedValue = document.getElementById('calculated_duration').textContent;
+    const requestedAmount = durationType === 'days' ? parseInt(calculatedValue) : parseFloat(calculatedValue);
+    
+    // Check if requesting more than available
+    const leaveTypeSelect = document.getElementById('leave_type');
+    const selectedOption = leaveTypeSelect.options[leaveTypeSelect.selectedIndex];
+    
+    if (selectedOption.dataset.remaining !== undefined) {
+        const remaining = durationType === 'days' 
+            ? parseInt(selectedOption.dataset.remaining)
+            : parseFloat(selectedOption.dataset.remainingHours || 0);
+        
+        const unit = durationType === 'days' ? 'days' : 'hours';
+        
+        if (requestedAmount > remaining) {
             Swal.fire({
-                title: 'Submit Leave Application?',
-                html: `
-                    <div class="text-start">
-                        <p><strong>Leave Type:</strong> ${document.getElementById('leave_type').options[document.getElementById('leave_type').selectedIndex].text.split('(')[0].trim()}</p>
-                        <p><strong>Duration:</strong> ${document.getElementById('start_date').value} to ${document.getElementById('end_date').value}</p>
-                        <p><strong>Working Days:</strong> ${requestedDays} days</p>
-                        <p><strong>Handover Person:</strong> ${document.getElementById('handover_person').options[document.getElementById('handover_person').selectedIndex].text}</p>
-                    </div>
-                `,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, Submit',
-                cancelButtonText: 'Cancel',
-                confirmButtonColor: '#0d6efd',
-                cancelButtonColor: '#6c757d'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    performSubmission();
-                }
+                title: 'Insufficient Leave Balance',
+                text: `You are requesting ${requestedAmount} ${unit} but only have ${remaining} ${unit} remaining.`,
+                icon: 'error',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#dc3545'
             });
-        };
-
-        function performSubmission() {
-            const form = document.getElementById('createLeaveForm');
-            const submitBtn = document.getElementById('submitLeaveBtn');
-            const formData = new FormData(form);
-            
-            // Disable submit button and show loading
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
-            
-            // Add calculated days to form data
-            formData.append('total_days', document.getElementById('calculated_days').textContent);
-            
-            fetch('/leave-applications', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
-                    'Accept': 'application/json'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    Swal.fire({
-                        title: 'Success!',
-                        text: 'Your leave application has been submitted successfully.',
-                        icon: 'success',
-                        confirmButtonText: 'OK',
-                        confirmButtonColor: '#198754'
-                    }).then(() => {
-                        // Close modal and refresh page
-                        bootstrap.Modal.getInstance(document.getElementById('createLeaveModal')).hide();
-                        location.reload();
-                    });
-                } else {
-                    throw new Error(data.message || 'Something went wrong');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                Swal.fire({
-                    title: 'Error!',
-                    text: error.message || 'Failed to submit leave application. Please try again.',
-                    icon: 'error',
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#dc3545'
-                });
-            })
-            .finally(() => {
-                // Re-enable submit button
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Submit Request';
-            });
+            return;
         }
+    }
+    
+    // Build confirmation dialog based on duration type
+    let confirmationHtml = `
+        <div class="text-start">
+            <p><strong>Leave Type:</strong> ${leaveTypeSelect.options[leaveTypeSelect.selectedIndex].text.split('(')[0].trim()}</p>`;
+    
+    if (durationType === 'days') {
+        confirmationHtml += `
+            <p><strong>Duration:</strong> ${document.getElementById('start_date').value} to ${document.getElementById('end_date').value}</p>
+            <p><strong>Working Days:</strong> ${requestedAmount} days</p>`;
+    } else {
+        confirmationHtml += `
+            <p><strong>Date:</strong> ${document.getElementById('hours_date').value}</p>
+            <p><strong>Time:</strong> ${document.getElementById('start_time').value} - ${document.getElementById('end_time').value}</p>
+            <p><strong>Hours:</strong> ${requestedAmount} hours</p>`;
+    }
+    
+    confirmationHtml += `
+            <p><strong>Handover Person:</strong> ${document.getElementById('handover_person').options[document.getElementById('handover_person').selectedIndex].text}</p>
+        </div>`;
+    
+    // Show confirmation dialog
+    Swal.fire({
+        title: 'Submit Leave Application?',
+        html: confirmationHtml,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Submit',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#0d6efd',
+        cancelButtonColor: '#6c757d'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            performSubmission();
+        }
+    });
+};
+function performSubmission() {
+    const form = document.getElementById('createLeaveForm');
+    const submitBtn = document.getElementById('submitLeaveBtn');
+    const formData = new FormData(form);
+    
+    const durationType = document.querySelector('input[name="leave_duration_type"]:checked').value;
+    
+    // Get the calculated value properly
+    const calculatedValue = document.getElementById('calculated_duration').textContent;
+    
+    if (durationType === 'days') {
+        formData.append('total_days', calculatedValue);
+        formData.append('leave_duration_type', 'days');
+        // Ensure start_date and end_date are set from the days section
+        formData.set('start_date', document.getElementById('start_date').value);
+        formData.set('end_date', document.getElementById('end_date').value);
+    } else {
+        // For hours, set start_date and end_date to the hours_date
+        const hoursDate = document.getElementById('hours_date').value;
+        
+        // CRITICAL FIX: Set the date fields for hours-based leave
+        formData.set('start_date', hoursDate);
+        formData.set('end_date', hoursDate); // Same day
+        
+        // Remove the days section values if they exist
+        formData.delete('total_days');
+        
+        // Add hours-specific data
+        formData.append('total_hours', calculatedValue);
+        formData.append('leave_duration_type', 'hours');
+        formData.set('start_time', document.getElementById('start_time').value);
+        formData.set('end_time', document.getElementById('end_time').value);
+    }
+    
+    // Disable submit button and show loading
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+    
+    fetch('/leave-applications', {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
+            'Accept': 'application/json'
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('createLeaveModal')).hide();
+            
+            // Show success message
+            Swal.fire({
+                title: 'Success!',
+                text: 'Your leave application has been submitted successfully!',
+                icon: 'success',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#198754'
+            }).then(() => {
+                // Reload page to show new application
+                location.reload();
+            });
+        } else {
+            throw new Error(data.message || 'Failed to submit application');
+        }
+    })
+    .catch(error => {
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Submit Request';
+        
+        Swal.fire({
+            title: 'Error!',
+            text: error.message || 'Failed to submit leave application. Please try again.',
+            icon: 'error',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#dc3545'
+        });
+    });
+}
 
         // Other global functions
         window.filterTable = function(status) {
@@ -1083,16 +1177,39 @@
 
         // DOM ready functions
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize form event listeners
-            initializeFormHandlers();
-            initializeDateCalculation();
+    // Duration type toggle
+    document.querySelectorAll('input[name="leave_duration_type"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const isDays = this.value === 'days';
+            document.getElementById('days_input_section').style.display = isDays ? 'block' : 'none';
+            document.getElementById('hours_input_section').style.display = isDays ? 'none' : 'block';
             
-            // Add event listener to submit button
-            document.getElementById('submitLeaveBtn').addEventListener('click', function(e) {
-                e.preventDefault();
-                submitLeaveApplication();
-            });
+            // Reset fields
+            if (isDays) {
+                document.getElementById('start_time').value = '';
+                document.getElementById('end_time').value = '';
+                document.getElementById('hours_date').value = '';
+            } else {
+                document.getElementById('end_date').value = '';
+            }
+            
+            calculateLeaveDuration();
         });
+    });
+    
+    // Time change handlers
+    document.getElementById('start_time').addEventListener('change', calculateLeaveDuration);
+    document.getElementById('end_time').addEventListener('change', calculateLeaveDuration);
+    
+    // Existing handlers
+    initializeFormHandlers();
+    initializeDateCalculation();
+    
+    document.getElementById('submitLeaveBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        submitLeaveApplication();
+    });
+});
 
         function initializeFormHandlers() {
             // Handle leave type change to show balance
@@ -1101,8 +1218,8 @@
             });
             
             // Handle date changes for calculation
-            document.getElementById('start_date').addEventListener('change', calculateWorkingDays);
-            document.getElementById('end_date').addEventListener('change', calculateWorkingDays);
+            document.getElementById('start_date').addEventListener('change', calculateLeaveDuration);
+            document.getElementById('end_date').addEventListener('change', calculateLeaveDuration);
         }
 
         function initializeDateCalculation() {
@@ -1114,7 +1231,7 @@
             document.getElementById('start_date').addEventListener('change', function() {
                 const startDate = this.value;
                 document.getElementById('end_date').setAttribute('min', startDate);
-                calculateWorkingDays();
+                calculateLeaveDuration();
             });
         }
 
@@ -1126,50 +1243,99 @@
             if (selectedOption.value && selectedOption.dataset.remaining !== undefined) {
                 const remaining = selectedOption.dataset.remaining;
                 const total = selectedOption.dataset.total;
+                const remainingHours = selectedOption.dataset.remainingHours || 0;
+                const totalHours = selectedOption.dataset.totalHours || 0;
                 const leaveTypeName = selectedOption.text.split('(')[0].trim();
                 
-                balanceContainer.innerHTML = `
+                let balanceHtml = `
                     <div class="alert alert-info mb-3">
                         <div class="d-flex align-items-center">
                             <i class="fas fa-calendar-alt me-2"></i>
                             <div>
                                 <strong>${leaveTypeName} Balance:</strong> 
-                                <span class="text-primary fw-bold">${remaining}/${total} days remaining</span>
+                                <span class="text-primary fw-bold">${remaining}/${total} days</span>`;
+                
+                if (totalHours > 0) {
+                    balanceHtml += ` | <span class="text-info fw-bold">${remainingHours}/${totalHours} hours</span>`;
+                }
+                
+                balanceHtml += `
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
+                
+                balanceContainer.innerHTML = balanceHtml;
             } else {
                 balanceContainer.innerHTML = '';
             }
             
-            // Recalculate if dates are selected
-            calculateWorkingDays();
+            calculateLeaveDuration();
         }
 
-        function calculateWorkingDays() {
-            const startDate = document.getElementById('start_date').value;
-            const endDate = document.getElementById('end_date').value;
-            const calculatedDaysSpan = document.getElementById('calculated_days');
-            const warningContainer = document.getElementById('balance_warning_container');
-            
-            if (startDate && endDate) {
-                if (new Date(endDate) < new Date(startDate)) {
-                    calculatedDaysSpan.textContent = '0';
-                    showBalanceWarning('End date cannot be earlier than start date', 'danger');
-                    return;
-                }
-                
-                const workingDays = getWorkingDaysBetween(new Date(startDate), new Date(endDate));
-                calculatedDaysSpan.textContent = workingDays;
-                
-                // Check balance
-                checkLeaveBalance(workingDays);
-            } else {
-                calculatedDaysSpan.textContent = '0';
-                warningContainer.innerHTML = '';
+         function calculateLeaveDuration() {
+    const durationType = document.querySelector('input[name="leave_duration_type"]:checked').value;
+    const calculatedSpan = document.getElementById('calculated_duration');
+    const unitSpan = document.getElementById('duration_unit');
+    const labelSpan = document.getElementById('duration_label');
+    const noteSpan = document.getElementById('duration_note');
+    const warningContainer = document.getElementById('balance_warning_container');
+    
+    if (durationType === 'days') {
+        const startDate = document.getElementById('start_date').value;
+        const endDate = document.getElementById('end_date').value;
+        
+        labelSpan.textContent = 'Calculated Working Days:';
+        unitSpan.textContent = 'days';
+        noteSpan.textContent = 'Sundays are automatically excluded';
+        
+        if (startDate && endDate) {
+            if (new Date(endDate) < new Date(startDate)) {
+                calculatedSpan.textContent = '0';
+                showBalanceWarning('End date cannot be earlier than start date', 'danger');
+                return;
             }
+            
+            const workingDays = getWorkingDaysBetween(new Date(startDate), new Date(endDate));
+            calculatedSpan.textContent = workingDays;
+            checkLeaveBalance(workingDays, 'days');
+        } else {
+            calculatedSpan.textContent = '0';
+            warningContainer.innerHTML = '';
         }
+    } else {
+        const startTime = document.getElementById('start_time').value;
+        const endTime = document.getElementById('end_time').value;
+        
+        labelSpan.textContent = 'Calculated Hours:';
+        unitSpan.textContent = 'hours';
+        noteSpan.textContent = 'Maximum 8 hours per day';
+        
+        if (startTime && endTime) {
+            const start = new Date(`2000-01-01T${startTime}`);
+            const end = new Date(`2000-01-01T${endTime}`);
+            
+            if (end <= start) {
+                calculatedSpan.textContent = '0';
+                showBalanceWarning('End time must be after start time', 'danger');
+                return;
+            }
+            
+            const hours = (end - start) / (1000 * 60 * 60);
+            
+            if (hours > 8) {
+                calculatedSpan.textContent = hours.toFixed(1);
+                showBalanceWarning('Hours cannot exceed 8 per day', 'danger');
+                return;
+            }
+            
+            calculatedSpan.textContent = hours.toFixed(1);
+            checkLeaveBalance(hours, 'hours');
+        } else {
+            calculatedSpan.textContent = '0';
+            warningContainer.innerHTML = '';
+        }
+    }
+}
 
         function getWorkingDaysBetween(startDate, endDate) {
     let count = 0;
@@ -1186,32 +1352,35 @@
     
     return count;
 }
-
-        function checkLeaveBalance(requestedDays) {
-            const leaveTypeSelect = document.getElementById('leave_type');
-            const selectedOption = leaveTypeSelect.options[leaveTypeSelect.selectedIndex];
-            
-            if (selectedOption.value && selectedOption.dataset.remaining !== undefined) {
-                const remaining = parseInt(selectedOption.dataset.remaining);
-                
-                if (requestedDays > remaining) {
-                    showBalanceWarning(
-                        `Insufficient balance! You are requesting ${requestedDays} days but only have ${remaining} days remaining.`,
-                        'danger'
-                    );
-                } else if (requestedDays === remaining) {
-                    showBalanceWarning(
-                        `You are using all your remaining ${remaining} days for this leave type.`,
-                        'warning'
-                    );
-                } else {
-                    showBalanceWarning(
-                        `After this leave, you will have ${remaining - requestedDays} days remaining.`,
-                        'success'
-                    );
-                }
-            }
+function checkLeaveBalance(requestedAmount, type) {
+    const leaveTypeSelect = document.getElementById('leave_type');
+    const selectedOption = leaveTypeSelect.options[leaveTypeSelect.selectedIndex];
+    
+    if (selectedOption.value && selectedOption.dataset.remaining !== undefined) {
+        const remaining = type === 'days' 
+            ? parseInt(selectedOption.dataset.remaining)
+            : parseFloat(selectedOption.dataset.remainingHours || 0);
+        
+        const unit = type === 'days' ? 'days' : 'hours';
+        
+        if (requestedAmount > remaining) {
+            showBalanceWarning(
+                `Insufficient balance! You are requesting ${requestedAmount} ${unit} but only have ${remaining} ${unit} remaining.`,
+                'danger'
+            );
+        } else if (requestedAmount === remaining) {
+            showBalanceWarning(
+                `You are using all your remaining ${remaining} ${unit} for this leave type.`,
+                'warning'
+            );
+        } else {
+            showBalanceWarning(
+                `After this leave, you will have ${(remaining - requestedAmount).toFixed(1)} ${unit} remaining.`,
+                'success'
+            );
         }
+    }
+}
 
         function showBalanceWarning(message, type) {
             const warningContainer = document.getElementById('balance_warning_container');
@@ -1227,12 +1396,12 @@
         }
 
         // Reset form when modal is hidden
-        document.getElementById('createLeaveModal').addEventListener('hidden.bs.modal', function () {
-            document.getElementById('createLeaveForm').reset();
-            document.getElementById('balance_display_container').innerHTML = '';
-            document.getElementById('balance_warning_container').innerHTML = '';
-            document.getElementById('calculated_days').textContent = '0';
-        });
+document.getElementById('createLeaveModal').addEventListener('hidden.bs.modal', function () {
+    document.getElementById('createLeaveForm').reset();
+    document.getElementById('balance_display_container').innerHTML = '';
+    document.getElementById('balance_warning_container').innerHTML = '';
+    document.getElementById('calculated_duration').textContent = '0'; // Fixed from calculated_days
+});
 
         // Handle form validation feedback
         document.getElementById('createLeaveForm').addEventListener('submit', function(e) {
