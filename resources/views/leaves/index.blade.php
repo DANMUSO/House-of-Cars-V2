@@ -156,8 +156,12 @@
         <tr data-status="{{ $application->status }}" id="application-row-{{ $application->id }}">
             <td>{{ $application->id }}</td>
             <td>
-                <div class="fw-semibold">{{ $application->user->first_name }} {{ $application->user->last_name }}</div>
-                <small class="text-muted">{{ $application->user->email }}</small>
+               <div class="fw-semibold">
+    {{ optional($application->user)->first_name ?? 'Unknown' }}
+    {{ optional($application->user)->last_name ?? '' }}
+</div>
+<small class="text-muted">{{ optional($application->user)->email ?? 'No email' }}</small>
+
             </td>
             <td>
                 <span class="badge bg-info text-capitalize">
