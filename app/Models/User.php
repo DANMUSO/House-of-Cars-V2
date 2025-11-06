@@ -30,7 +30,13 @@ class User extends Authenticatable
         'profile_picture',
         'role',
         'email_verified_at',
+        'mfa_code', 
+        'mfa_code_expires_at', 
+        'phone'
+
+
     ];
+
 
     /**
      * The attributes that should be hidden for serialization.
@@ -62,6 +68,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'mfa_code_expires_at' => 'datetime',
     ];
     /**
      * Get the leave days for the user

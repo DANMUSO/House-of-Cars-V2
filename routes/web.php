@@ -3,6 +3,8 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Auth\MfaController;
+
 
 
 /*
@@ -15,6 +17,12 @@ use Illuminate\Http\Request;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+
+Route::middleware('guest')->group(function () {
+    Route::get('mfa/verify', [MfaController::class, 'show'])->name('mfa.verify');
+    Route::post('mfa/verify', [MfaController::class, 'verify']);
+    Route::post('mfa/resend', [MfaController::class, 'resend'])->name('mfa.resend');
+});
 Route::get('/check-upload-limits', function() {
        
 });
