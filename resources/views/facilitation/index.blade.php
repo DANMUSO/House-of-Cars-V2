@@ -656,11 +656,11 @@
                     <div class="d-flex align-items-center">
                         <div class="avatar-sm me-2">
                             <span class="avatar-title rounded-circle bg-primary text-white">
-                                {{ substr($facilitation->requester->first_name ?? 'Unknown', 0, 1) }}{{ substr($facilitation->requester->last_name, 0, 1) }}
+                                {{ substr($facilitation->requester->first_name ?? 'Unknown', 0, 1) }}{{ substr($facilitation->requester->last_name ?? 'Unknown', 0, 1) }}
                             </span>
                         </div>
                         <div>
-                            <h6 class="mb-0">{{ $facilitation->requester->first_name ?? 'Unknown' }} {{ $facilitation->requester->last_name }}</h6>
+                            <h6 class="mb-0">{{ $facilitation->requester->first_name ?? 'Unknown' }} {{ $facilitation->requester->last_name ?? 'Unknown' }}</h6>
                             <small class="text-muted">{{ $facilitation->requester->email ?? '' }}</small>
                         </div>
                     </div>
