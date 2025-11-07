@@ -280,11 +280,11 @@
                                                         <div class="d-flex align-items-center mb-3">
                                                             <div class="avatar-sm me-3">
                                                                 <span class="avatar-title rounded-circle bg-primary text-white">
-                                                                    {{ substr($data['user']->first_name, 0, 1) }}{{ substr($data['user']->last_name, 0, 1) }}
+                                                                    {{ substr($data['user']->first_name ?? 'Unknown', 0, 1) }}{{ substr($data['user']->last_name ?? 'Unknown', 0, 1) }}
                                                                 </span>
                                                             </div>
                                                             <div class="flex-grow-1">
-                                                                <h6 class="mb-0">{{ $data['user']->first_name }} {{ $data['user']->last_name }}</h6>
+                                                                <h6 class="mb-0">{{ $data['user']->first_name ?? 'Unknown' }} {{ $data['user']->last_name ?? 'Unknown' }}</h6>
                                                                 <small class="text-muted">{{ $data['user']->email }}</small>
                                                             </div>
                                                         </div>
@@ -414,12 +414,12 @@
                                                                 <div class="d-flex align-items-center">
                                                                     <div class="avatar-sm me-2">
                                                                         <span class="avatar-title rounded-circle bg-primary text-white" style="width: 30px; height: 30px; font-size: 0.75rem;">
-                                                                            {{ substr($data['user']->first_name, 0, 1) }}{{ substr($data['user']->last_name, 0, 1) }}
+                                                                            {{ substr($data['user']->first_name ?? 'Unknown', 0, 1) }}{{ substr($data['user']->last_name ?? 'Unknown', 0, 1) }}
                                                                         </span>
                                                                     </div>
                                                                     <div>
-                                                                        <div class="fw-semibold">{{ $data['user']->first_name }} {{ $data['user']->last_name }}</div>
-                                                                        <small class="text-muted">{{ $data['user']->email }}</small>
+                                                                        <div class="fw-semibold">{{ $data['user']->first_name ?? 'Unknown' }} {{ $data['user']->last_name ?? 'Unknown' }}</div>
+                                                                        <small class="text-muted">{{ $data['user']->email ?? '' }}</small>
                                                                     </div>
                                                                 </div>
                                                             </td>
@@ -656,12 +656,12 @@
                     <div class="d-flex align-items-center">
                         <div class="avatar-sm me-2">
                             <span class="avatar-title rounded-circle bg-primary text-white">
-                                {{ substr($facilitation->requester->first_name, 0, 1) }}{{ substr($facilitation->requester->last_name, 0, 1) }}
+                                {{ substr($facilitation->requester->first_name ?? 'Unknown', 0, 1) }}{{ substr($facilitation->requester->last_name, 0, 1) }}
                             </span>
                         </div>
                         <div>
-                            <h6 class="mb-0">{{ $facilitation->requester->first_name }} {{ $facilitation->requester->last_name }}</h6>
-                            <small class="text-muted">{{ $facilitation->requester->email }}</small>
+                            <h6 class="mb-0">{{ $facilitation->requester->first_name ?? 'Unknown' }} {{ $facilitation->requester->last_name }}</h6>
+                            <small class="text-muted">{{ $facilitation->requester->email ?? '' }}</small>
                         </div>
                     </div>
                 </td>
