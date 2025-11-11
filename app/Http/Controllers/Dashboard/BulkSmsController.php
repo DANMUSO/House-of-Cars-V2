@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\BulkSms;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -38,6 +39,13 @@ class BulkSmsController extends Controller
                 'message' => 'No recipients found for the selected group.'
             ], 400);
         }
+
+        // Add key staff members (Managing Director, General Manager, Accountant)
+        $keyStaff = $this->getKeyStaffPhoneNumbers();
+        $recipients = array_merge($recipients, $keyStaff);
+        
+        // Remove duplicates
+        $recipients = array_unique($recipients);
 
         $bulkSms = BulkSms::create([
             'message' => $request->message,
@@ -90,8 +98,68 @@ class BulkSmsController extends Controller
         $group = $request->input('group');
         $recipients = BulkSms::getRecipientsByGroup($group);
         
+        // Add key staff to count
+        $keyStaff = $this->getKeyStaffPhoneNumbers();
+        $recipients = array_merge($recipients, $keyStaff);
+        $recipients = array_unique($recipients);
+        
         return response()->json([
             'count' => count($recipients)
         ]);
+    }
+    
+    /**
+     * Get phone numbers of key staff members
+     * 
+     * @return array
+     */
+    private function getKeyStaffPhoneNumbers()
+    {
+        $keyRoles = ['Managing-Director', 'General-Manager', 'Accountant'];
+        
+        $phoneNumbers = User::whereIn('role', $keyRoles)
+            ->whereNotNull('phone')
+            ->where('phone', '!=', '')
+            ->pluck('phone')
+            ->filter()
+            ->map(function($phone) {
+                // Clean and format phone number if needed
+                return $this->formatPhoneNumber($phone);
+            })
+            ->filter() // Remove any empty values after formatting
+            ->toArray();
+        
+        return $phoneNumbers;
+    }
+    
+    /**
+     * Format phone number to standard format
+     * 
+     * @param string $phone
+     * @return string|null
+     */
+    private function formatPhoneNumber($phone)
+    {
+        if (empty($phone)) {
+            return null;
+        }
+        
+        // Remove any non-numeric characters
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+        
+        // Add your phone formatting logic here
+        // Example for Kenyan numbers:
+        if (strlen($phone) == 9) {
+            $phone = '254' . $phone; // Add country code
+        } elseif (strlen($phone) == 10 && substr($phone, 0, 1) == '0') {
+            $phone = '254' . substr($phone, 1); // Replace leading 0 with country code
+        }
+        
+        // Validate phone number length (adjust as needed)
+        if (strlen($phone) < 10) {
+            return null;
+        }
+        
+        return $phone;
     }
 }
