@@ -2971,12 +2971,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
 
                 <!-- Company Stamp Area -->
-                <div class="">
-                    <div style="color:#000; width: 200px; height: 100px; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                <div class="mt-5">
+                    <div style="width: 200px; height: 100px; border: 3px dashed #dc3545; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
                         <div class="text-center">
-                            <small class="text-muted d-block">KELMER'S HOUSE OF CARS LTD.</small>
-                            <strong class="text-danger" id="demand_stamp_date"></strong>
-                            <small class="text-muted d-block">TEL: 0715 400 709</small>
+                            <small class="d-block" style="color: #495057; font-weight: 600;">KELMER'S HOUSE OF CARS LTD.</small>
+                            <strong class="text-danger" id="demand_stamp_date" style="font-size: 0.95rem;"></strong>
+                            <small class="d-block" style="color: #495057; font-weight: 600;">TEL: 0715 400 709</small>
                         </div>
                     </div>
                 </div>

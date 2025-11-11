@@ -157,6 +157,14 @@ Route::post('/gentleman/send-sms', [App\Http\Controllers\Dashboard\GentlemanAgre
     //Receipt Routes
 Route::post('/facilitation/{id}/receipt', [App\Http\Controllers\Dashboard\FacilitationController::class, 'uploadReceipt'])->name('facilitation.receipt.upload');
 Route::delete('/facilitation/{id}/receipt', [App\Http\Controllers\Dashboard\FacilitationController::class, 'deleteReceipt'])->name('facilitation.receipt.delete');
+//Bulk SMS bulksms
+Route::prefix('bulksms')->name('bulksms.')->group(function () {
+    Route::get('/', [App\Http\Controllers\Dashboard\BulkSmsController::class, 'index'])->name('index');
+    Route::get('/create', [App\Http\Controllers\Dashboard\BulkSmsController::class, 'create'])->name('create');
+    Route::post('/', [App\Http\Controllers\Dashboard\BulkSmsController::class, 'store'])->name('store');
+    Route::get('/recipient-count', [App\Http\Controllers\Dashboard\BulkSmsController::class, 'getRecipientCount'])->name('recipient-count');
+    Route::get('/{bulkSms}', [App\Http\Controllers\Dashboard\BulkSmsController::class, 'show'])->name('show');
+});
     // Logbook Management Routes
 Route::prefix('logbooks')->name('logbooks.')->group(function () {
     // Main logbook routes

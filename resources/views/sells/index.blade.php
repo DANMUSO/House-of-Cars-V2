@@ -437,6 +437,16 @@
                                     <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Name:</div>
                                     <div  style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px;"></div>
                                 </div>
+                                <!-- Company Stamp Area -->
+                                <div class="mt-5">
+                                    <div style="width: 200px; height: 100px; border: 3px dashed #dc3545; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                                        <div class="text-center">
+                                            <small class="d-block" style="color: #495057; font-weight: 600;">KELMER'S HOUSE OF CARS LTD.</small>
+                                            <strong class="delivered-by-date" style="font-size: 0.95rem;"> 10/6/2025</strong>
+                                            <small class="d-block" style="color: #495057; font-weight: 600;">TEL: 0715 400 709</small>
+                                        </div>
+                                    </div>
+                                </div>
                                 
                             </div>
 </div>
@@ -809,6 +819,16 @@
                                 <div class="form-group mb-3">
                                     <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Name:</div>
                                     <div  style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px;"></div>
+                                    <!-- Company Stamp Area -->
+                                <div class="mt-5">
+                                    <div style="width: 200px; height: 100px; border: 3px dashed #dc3545; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                                        <div class="text-center">
+                                            <small class="d-block" style="color: #495057; font-weight: 600;">KELMER'S HOUSE OF CARS LTD.</small>
+                                            <strong class="delivered-by-date" style="font-size: 0.95rem;"> 10/6/2025</strong>
+                                            <small class="d-block" style="color: #495057; font-weight: 600;">TEL: 0715 400 709</small>
+                                        </div>
+                                    </div>
+                                </div>
                                 </div>
                                 
                             </div>

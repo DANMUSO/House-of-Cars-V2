@@ -1335,6 +1335,21 @@
                                     </ul>
                                 </div>
                             </li>
+                               <li>
+                                <a href="#sidebarForm1" data-bs-toggle="collapse">
+                                <i class="fa-solid fa-comment-sms"></i>
+
+                                    <span> Bulk SMS </span>
+                                    <span class="menu-arrow"></span>
+                                </a>
+                                <div class="collapse" id="sidebarForm1">
+                                    <ul class="nav-second-level">
+                                        <li>
+                                            <a class='tp-link' href="{{url('/bulksms')}}">Bulk SMS</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </li>
                             @endif
                             @if(in_array(Auth::user()->role, ['Showroom-Manager','Managing-Director','General-Manager']))
                             <!--<li>

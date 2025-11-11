@@ -1522,7 +1522,19 @@
                                                                 <div class="signature-line"></div>
                                                                 <div class="label">Sign:</div>
                                                                 <div class="signature-line"></div>
-                                                                <div class="dealer-info">Precision Auto Group</div>
+                                                                <div class="dealer-info">Kelmer's House of Cars
+                                                                                                  <!-- Company Stamp Area -->
+                                                                    <div class="mt-5">
+                                                                        <div style="width: 200px; height: 100px; border: 3px dashed #dc3545; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                                                                            <div class="text-center">
+                                                                                <small class="d-block" style="color: #495057; font-weight: 600;">KELMER'S HOUSE OF CARS LTD.</small>
+                                                                                <strong class="text-danger" id="demand_stamp_date" style="font-size: 0.95rem;"></strong>
+                                                                                <small class="d-block" style="color: #495057; font-weight: 600;">TEL: 0715 400 709</small>
+                                                                            </div>
+                                                                        </div>
+</div>
+                                                                </div>
+                                                                </div>
                                                             </div>
 
                                                             <div class="signature-box">

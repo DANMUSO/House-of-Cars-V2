@@ -255,7 +255,7 @@
                                                                 const interiorFunctional = ['radio_speakers','seat_belt','door_handles'];
                                                                 const interiorAccessories = ['head_rest','floor_carpets','rubber_mats','cigar_lighter','boot_mats'];
                                                                 const toolsAccessories = ['jack','handle','spare_wheel','compressor','wheel_spanner']; // Updated to include 'handle'
-
+                                                                const stampDateElement = document.getElementById('demand_stamp_date');
                                                                 let extOk = exteriorItems.filter(name => document.querySelector(`input[name="${name}"][value="ok"]`)?.checked).length;
                                                                 let intFuncOk = interiorFunctional.filter(name => document.querySelector(`input[name="${name}"][value="ok"]`)?.checked).length;
                                                                 let intAccOk = interiorAccessories.filter(name => document.querySelector(`input[name="${name}"][value="present"]`)?.checked).length;
@@ -1523,7 +1523,18 @@
                                                                 <div class="signature-line"></div>
                                                                 <div class="label">Sign:</div>
                                                                 <div class="signature-line"></div>
-                                                                <div class="dealer-info">Kelmer's House of Cars</div>
+                                                                <div class="dealer-info">Kelmer's House of Cars
+                                                                    <!-- Company Stamp Area -->
+                                                                    <div class="mt-5">
+                                                                        <div style="width: 200px; height: 100px; border: 3px dashed #dc3545; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                                                                            <div class="text-center">
+                                                                                <small class="d-block" style="color: #495057; font-weight: 600;">KELMER'S HOUSE OF CARS LTD.</small>
+                                                                                <strong class="text-danger" style="font-size: 0.95rem;">{{ $inspection->created_at->format('Y-m-d') }}</strong>
+                                                                                <small class="d-block" style="color: #495057; font-weight: 600;">TEL: 0715 400 709</small>
+                                                                            </div>
+                                                                        </div>
+</div>
+                                                                </div>
                                                             </div>
 
                                                             <div class="signature-box">

@@ -1885,10 +1885,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body text-dark" id="demandLetterContent" style="padding: 30px;">
+            <div class="modal-body text-dark" id="demandLetterContent">
                 <!-- Company Logo -->
                 <div class="text-center mb-4">
-                    <img src="{{asset('dashboardv1/assets/images/houseofcars.png')}}" alt="House of Cars" style="height: 100px; width: auto;">
+                    <img src="{{asset('dashboardv1/assets/images/houseofcars.png')}}" alt="House of Cars" style="height: 300px; width: auto;">
                 </div>
 
                 <!-- Date -->
@@ -2050,13 +2050,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p class="mb-2">Accounts Department</p>
                 </div>
 
-                <!-- Company Stamp Area -->
+               <!-- Company Stamp Area -->
                 <div class="mt-5">
-                    <div style="width: 200px; height: 100px; border: 2px dashed #dee2e6; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                    <div style="width: 200px; height: 100px; border: 3px dashed #dc3545; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
                         <div class="text-center">
-                            <small class="text-muted d-block">KELMER'S HOUSE OF CARS LTD.</small>
-                            <strong class="text-danger" id="demand_stamp_date"></strong>
-                            <small class="text-muted d-block">TEL: 0715 400 709</small>
+                            <small class="d-block" style="color: #495057; font-weight: 600;">KELMER'S HOUSE OF CARS LTD.</small>
+                            <strong class="text-danger" id="demand_stamp_date" style="font-size: 0.95rem;"></strong>
+                            <small class="d-block" style="color: #495057; font-weight: 600;">TEL: 0715 400 709</small>
                         </div>
                     </div>
                 </div>
