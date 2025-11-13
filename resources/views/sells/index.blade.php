@@ -824,7 +824,7 @@
                                     <div style="width: 200px; height: 100px; border: 3px dashed #dc3545; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
                                         <div class="text-center">
                                             <small class="d-block" style="color: #495057; font-weight: 600;">KELMER'S HOUSE OF CARS LTD.</small>
-                                            <strong class="delivered-by-date" style="font-size: 0.95rem;"> 10/6/2025</strong>
+                                            <strong class="delivered-by-date" style="font-size: 0.95rem;"> <?php echo date('Y-m-d');?></strong>
                                             <small class="d-block" style="color: #495057; font-weight: 600;">TEL: 0715 400 709</small>
                                         </div>
                                     </div>
