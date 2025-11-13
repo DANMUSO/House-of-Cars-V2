@@ -290,7 +290,9 @@
                                                         });
                                                         </script>
 
-                                                        <button type="button" class="submit-btn" onclick="submitInspection()">Submit Inspection</button>
+                                                         <button type="button" class="btn btn-primary submit-btn" onclick="submitInspection()">
+                                                                <i class="fas fa-save me-1"></i> Submit Inspection
+                                                            </button>
                                                     </form>
 
                                                                                 

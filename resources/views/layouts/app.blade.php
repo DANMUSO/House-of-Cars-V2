@@ -2338,41 +2338,135 @@ if (typeof bootstrap !== 'undefined') {
 }
 </script>
         
-        <script>
-    function submitInspection() {
-        let formData = new FormData(document.getElementById('vehicleInspectionForm'));
-
-        $.ajax({
-            url: "{{ route('vehicle-inspection-submit') }}", // Adjust route as needed
-            method: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-            },
-            success: function(response) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: 'Inspection submitted successfully!',
-                    confirmButtonColor: '#3085d6',
-                    confirmButtonText: 'OK'
-                });
-                location.reload();
-            },
-            error: function(xhr) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Submission Failed',
-                    text: xhr.responseJSON?.message || 'An unexpected error occurred.',
-                    confirmButtonColor: '#d33',
-                    confirmButtonText: 'Try Again'
-                });
-            }
+<script>
+function submitInspection(event) {
+    const submitBtn = event ? event.target : document.querySelector('button[onclick*="submitInspection"]');
+    const originalBtnHtml = submitBtn.innerHTML;
+    
+    // Validate customer selection
+    const customerId = document.getElementById('customer_id').value;
+    if (!customerId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Validation Error',
+            text: 'Please select a customer before submitting.',
+            confirmButtonColor: '#ffc107'
         });
+        return;
     }
+    
+    // Show loading state
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Submitting...';
+    
+    let formData = new FormData(document.getElementById('vehicleInspectionForm'));
+
+    $.ajax({
+        url: "{{ route('vehicle-inspection-submit') }}",
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
+        xhr: function() {
+            const xhr = new window.XMLHttpRequest();
+            // Optional: Upload progress tracking
+            xhr.upload.addEventListener("progress", function(evt) {
+                if (evt.lengthComputable) {
+                    const percentComplete = Math.round((evt.loaded / evt.total) * 100);
+                    submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Uploading... ${percentComplete}%`;
+                }
+            }, false);
+            return xhr;
+        },
+        success: function(response) {
+            // Success state
+            submitBtn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Submitted Successfully!';
+            submitBtn.classList.remove('btn-primary');
+            submitBtn.classList.add('btn-success');
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: response.message || 'Inspection submitted successfully!',
+                confirmButtonColor: '#28a745',
+                confirmButtonText: 'OK',
+                timer: 2000
+            }).then(() => {
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('standard-modal'));
+                if (modal) {
+                    modal.hide();
+                }
+                
+                // Reload page
+                location.reload();
+            });
+        },
+        error: function(xhr) {
+            // Restore original button state
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnHtml;
+            
+            let errorMessage = 'An unexpected error occurred.';
+            
+            if (xhr.status === 422) {
+                // Validation errors
+                const errors = xhr.responseJSON?.errors;
+                if (errors) {
+                    errorMessage = Object.values(errors).flat().join('<br>');
+                }
+            } else if (xhr.responseJSON?.message) {
+                errorMessage = xhr.responseJSON.message;
+            }
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Submission Failed',
+                html: errorMessage,
+                confirmButtonColor: '#dc3545',
+                confirmButtonText: 'Try Again'
+            });
+        }
+    });
+}
 </script>
+
+<style>
+/* Ensure spinner animation works */
+@keyframes spinner-border {
+    to { transform: rotate(360deg); }
+}
+
+.spinner-border {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    vertical-align: text-bottom;
+    border: 0.15em solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner-border 0.75s linear infinite;
+}
+
+.spinner-border-sm {
+    width: 0.875rem;
+    height: 0.875rem;
+    border-width: 0.125em;
+}
+
+.submit-btn {
+    min-width: 180px;
+    transition: all 0.3s ease;
+}
+
+.submit-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+</style>
 <script>
         $('#HirePurchaseForm').on('submit', function(e) {
         e.preventDefault();
@@ -2799,41 +2893,6 @@ $(document).ready(function() {
 </script>
 
 
-        <script>
-    function submitInspection() {
-        let formData = new FormData(document.getElementById('vehicleInspectionForm'));
-
-        $.ajax({
-            url: "{{ route('vehicle-inspection-submit') }}", // Adjust route as needed
-            method: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-            },
-            success: function(response) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: 'Inspection submitted successfully!',
-                    confirmButtonColor: '#3085d6',
-                    confirmButtonText: 'OK'
-                });
-                location.reload();
-            },
-            error: function(xhr) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Submission Failed',
-                    text: xhr.responseJSON?.message || 'An unexpected error occurred.',
-                    confirmButtonColor: '#d33',
-                    confirmButtonText: 'Try Again'
-                });
-            }
-        });
-    }
-</script>
 
         <script>
         $('#carForm').on('submit', function(e) {
