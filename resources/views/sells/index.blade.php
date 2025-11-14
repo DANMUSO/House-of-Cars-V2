@@ -412,7 +412,20 @@
                         </div>
                     </div>
                     <div class="col-md-6">
-                    <div class="signature-box delivered-by-section" style="padding: 20px;  background-color: white;">
+                        <div class="section-control mb-2">
+        <div class="form-check form-switch">
+            <input class="form-check-input section-toggle" type="checkbox" 
+                data-section="a1" 
+                data-card="{{ $sale->id ?? $vehicle->id }}" 
+                id="toggle-a1-{{ $sale->id ?? $vehicle->id }}" 
+                checked>
+            <label class="form-check-label" for="toggle-a1-{{ $sale->id ?? $vehicle->id }}">
+                
+            </label>
+        </div>
+    </div>
+    <div class="signature-box delivered-by-section" style="padding: 20px;  background-color: white;">
+    <div class="section-a1">
     <div style="margin-bottom: 15px; font-weight: bold;  color: black !important;" >
         Vehicle delivered by:
     </div>
@@ -428,14 +441,29 @@
         <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Date:</div>
         <div class="delivered-by-date" style="height: 25px; border-bottom: 1px solid #000; width: 120px;"></div>
     </div>
+</div>
     <br>
+    <div class="section-control mb-2">
+        <div class="form-check form-switch">
+            <input class="form-check-input section-toggle" type="checkbox" 
+                data-section="a2" 
+                data-card="{{ $sale->id ?? $vehicle->id }}" 
+                id="toggle-a2-{{ $sale->id ?? $vehicle->id }}" 
+                checked>
+            <label class="form-check-label" for="toggle-a2-{{ $sale->id ?? $vehicle->id }}">
+                
+            </label>
+        </div>
+    </div>
                              <div class="signature-box delivered-by-section" style="padding: 20px;  background-color: white;">
+                                 <div class="section-a2">
                                 <div style="margin-bottom: 15px; font-weight: bold;  color: black !important;" >
                                     Vehicle released by:
                                 </div>
                                 <div class="form-group mb-3">
                                     <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Name:</div>
                                     <div  style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px;"></div>
+                                </div>
                                 </div>
                                 <!-- Company Stamp Area -->
                                 <div class="mt-5">
@@ -452,8 +480,21 @@
 </div>
                     </div>
                     <div class="col-md-6">
-                         <div class="signature-box" style="padding: 20px; height: 200px; background-color: white;">
-                            <div style="margin-bottom: 15px; font-weight: bold;   color: black !important;">
+                     <div class="section-control mb-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input section-toggle" type="checkbox" 
+                                data-section="b1" 
+                                data-card="{{ $sale->id ?? $vehicle->id }}" 
+                                id="toggle-b1-{{ $sale->id ?? $vehicle->id }}" 
+                                checked>
+                            <label class="form-check-label" for="toggle-b1-{{ $sale->id ?? $vehicle->id }}">
+                               
+                            </label>
+                        </div>
+                     </div>
+                     <div class="section-b1-container">
+                        <div class="signature-box section-b1" style="padding: 20px; height: 200px; background-color: white;">
+                            <div style="margin-bottom: 15px; font-weight: bold; color: black !important;">
                                 Vehicle received by:
                             </div>
                             <div class="form-group mb-3">
@@ -490,8 +531,23 @@
                                 <div style="height: 25px; border-bottom: 1px solid #000; width: 120px;"></div>
                             </div>
                         </div>
+                        </div>
                         <br><br><br>
-                                    <div class="signature-box" style="padding: 20px; height: 200px; background-color: white;">
+                          <div class="section-control mb-2">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input section-toggle" type="checkbox" 
+                                    data-section="b2" 
+                                    data-card="{{ $sale->id ?? $vehicle->id }}" 
+                                    id="toggle-b2-{{ $sale->id ?? $vehicle->id }}" 
+                                    checked>
+                                <label class="form-check-label" for="toggle-b2-{{ $sale->id ?? $vehicle->id }}">
+                                
+                                </label>
+                            </div>
+                        </div>
+                        <div class="section-b2-container">
+                        <div class="signature-box section-b2" style="padding: 20px; height: 200px; background-color: white;">
+                                        <div class="section-b2">
                                         <div style="margin-bottom: 15px; font-weight: bold;   color: black !important;">
                                             Vehicle received on Behalf:
                                         </div>
@@ -507,8 +563,9 @@
                                             </div>
                                             <div style="height: 35px; border-bottom: 1px solid #000; margin-bottom: 10px; color: black !important;"></div>
                                         </div>
-                                        
+                                    </div>
                                     </div>  
+</div>
                     </div>
                 </div>
                 
@@ -1609,6 +1666,115 @@ function testAuth() {
     .catch(error => console.error('Auth test error:', error));
 }
     </script>
+    <script>
+class IndividualSectionToggle {
+    constructor() {
+        this.initializeToggles();
+        this.loadSavedStates();
+    }
+
+    initializeToggles() {
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('section-toggle')) {
+                const section = e.target.dataset.section;
+                const cardId = e.target.dataset.card;
+                const isVisible = e.target.checked;
+                
+                this.toggleSection(cardId, section, isVisible);
+                this.updateIcon(e.target, isVisible);
+                this.saveState(cardId, section, isVisible);
+            }
+        });
+    }
+
+    toggleSection(cardId, section, isVisible) {
+    const gatePassCard = document.getElementById(`gate-pass-${cardId}`);
+    if (!gatePassCard) return;
+
+    const sectionElement = gatePassCard.querySelector(`.section-${section}`);
+    
+    if (sectionElement) {
+        if (isVisible) {
+            // Show section
+            sectionElement.style.display = '';
+            sectionElement.style.visibility = '';
+            sectionElement.style.height = '';
+            sectionElement.style.overflow = '';
+            sectionElement.classList.remove('d-none', 'section-hidden');
+            
+            // Show parent container if it exists
+            const container = sectionElement.closest(`.section-${section}-container`);
+            if (container) {
+                container.style.display = '';
+            }
+            
+            // Show spacers for B1
+            if (section === 'b1') {
+                const spacers = gatePassCard.querySelectorAll('.b1-spacer');
+                spacers.forEach(spacer => spacer.style.display = '');
+            }
+        } else {
+            // Hide section completely
+            sectionElement.style.display = 'none';
+            sectionElement.style.visibility = 'hidden';
+            sectionElement.style.height = '0';
+            sectionElement.style.overflow = 'hidden';
+            sectionElement.classList.add('d-none', 'section-hidden');
+            
+            // Hide parent container to remove space
+            const container = sectionElement.closest(`.section-${section}-container`);
+            if (container) {
+                container.style.display = 'none';
+            }
+            
+            // Hide spacers for B1 to remove gap
+            if (section === 'b1') {
+                const spacers = gatePassCard.querySelectorAll('.b1-spacer');
+                spacers.forEach(spacer => spacer.style.display = 'none');
+            }
+        }
+    }
+}
+
+    updateIcon(toggle, isVisible) {
+        const label = toggle.nextElementSibling;
+        if (label) {
+            const icon = label.querySelector('i');
+            if (icon) {
+                icon.className = isVisible ? 'fas fa-eye' : 'fas fa-eye-slash';
+            }
+        }
+    }
+
+    saveState(cardId, section, isVisible) {
+        const key = `gatepass-${cardId}-section-${section}`;
+        localStorage.setItem(key, isVisible ? 'visible' : 'hidden');
+    }
+
+    loadSavedStates() {
+        const toggles = document.querySelectorAll('.section-toggle');
+        
+        toggles.forEach(toggle => {
+            const section = toggle.dataset.section;
+            const cardId = toggle.dataset.card;
+            const key = `gatepass-${cardId}-section-${section}`;
+            const savedState = localStorage.getItem(key);
+            
+            if (savedState) {
+                const isVisible = savedState === 'visible';
+                toggle.checked = isVisible;
+                this.toggleSection(cardId, section, isVisible);
+                this.updateIcon(toggle, isVisible);
+            }
+        });
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    window.individualSectionToggle = new IndividualSectionToggle();
+});
+</script>
 <!-- Enhanced CSS -->
 <style>
 .gate-pass-card {
@@ -1780,7 +1946,95 @@ function testAuth() {
     font-weight: 600;
 }
 </style>
+<style>
+/* Container styling for collapsible sections */
+.section-a1-container,
+.section-a2-container,
+.section-b1-container,
+.section-b2-container {
+    transition: all 0.3s ease;
+}
 
+/* When containers are hidden, they take no space */
+.section-a1-container:has(.section-hidden),
+.section-a2-container:has(.section-hidden),
+.section-b1-container:has(.section-hidden),
+.section-b2-container:has(.section-hidden) {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 0 !important;
+}
+
+/* Hide spacers when not needed */
+.b1-spacer {
+    display: block;
+    transition: all 0.3s ease;
+}
+</style>
+<style>
+/* Section control styling */
+.section-control {
+    background: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+}
+
+.section-control .form-check {
+    margin: 0;
+}
+
+.section-control .form-check-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #495057;
+    cursor: pointer;
+    user-select: none;
+}
+
+.section-control .form-check-label i {
+    margin-right: 5px;
+    transition: all 0.2s ease;
+}
+
+.form-check-input.section-toggle {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.form-check-input.section-toggle:checked {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.form-check-input.section-toggle:focus {
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+/* Force hidden sections to be completely invisible */
+.section-hidden {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+}
+
+/* Hide section controls when printing */
+@media print {
+    .section-control {
+        display: none !important;
+    }
+}
+
+/* Smooth transition for sections */
+.section-a1, .section-a2, .section-b1, .section-b2 {
+    transition: all 0.3s ease;
+}
+</style>
 <style>
 @media print, (max-width: 0px) {
     .gate-pass-card {
