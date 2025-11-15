@@ -410,20 +410,54 @@
                         <div class="notice-box" style="background-color: #dc3545; color: white; padding: 20px; display: flex; align-items: center; justify-content: center; text-align: center; font-weight: bold; border-radius: 8px;">
                             I/We have received the motor vehicle above in good order and condition
                         </div>
+                        <!-- ADD THIS NEW SECTION HERE -->
+                        <div class="col-md-12 mb-3">
+                            <div class="d-flex justify-content-between gap-2 p-3" style="background-color: #f8f9fa; border-radius: 6px; border: 1px solid #dee2e6;">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input section-toggle" type="checkbox" 
+                                        data-section="a1" 
+                                        data-card="{{ $sale->id }}" 
+                                        id="toggle-a1-{{ $sale->id }}" 
+                                        checked>
+                                    <label class="form-check-label" for="toggle-a1-{{ $sale->id }}" style="font-size: 0.85rem; font-weight: 600;">
+                                        Delivered by
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input section-toggle" type="checkbox" 
+                                        data-section="a2" 
+                                        data-card="{{ $sale->id }}" 
+                                        id="toggle-a2-{{ $sale->id }}" 
+                                        checked>
+                                    <label class="form-check-label" for="toggle-a2-{{ $sale->id }}" style="font-size: 0.85rem; font-weight: 600;">
+                                        Released by
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input section-toggle" type="checkbox" 
+                                        data-section="b1" 
+                                        data-card="{{ $sale->id }}" 
+                                        id="toggle-b1-{{ $sale->id }}" 
+                                        checked>
+                                    <label class="form-check-label" for="toggle-b1-{{ $sale->id }}" style="font-size: 0.85rem; font-weight: 600;">
+                                        Received by
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input section-toggle" type="checkbox" 
+                                        data-section="b2" 
+                                        data-card="{{ $sale->id }}" 
+                                        id="toggle-b2-{{ $sale->id }}" 
+                                        checked>
+                                    <label class="form-check-label" for="toggle-b2-{{ $sale->id }}" style="font-size: 0.85rem; font-weight: 600;">
+                                        On Behalf
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="section-control mb-2">
-        <div class="form-check form-switch">
-            <input class="form-check-input section-toggle" type="checkbox" 
-                data-section="a1" 
-                data-card="{{ $sale->id ?? $vehicle->id }}" 
-                id="toggle-a1-{{ $sale->id ?? $vehicle->id }}" 
-                checked>
-            <label class="form-check-label" for="toggle-a1-{{ $sale->id ?? $vehicle->id }}">
-                
-            </label>
-        </div>
-    </div>
+                        
     <div class="signature-box delivered-by-section" style="padding: 20px;  background-color: white;">
     <div class="section-a1">
     <div style="margin-bottom: 15px; font-weight: bold;  color: black !important;" >
@@ -443,18 +477,7 @@
     </div>
 </div>
     <br>
-    <div class="section-control mb-2">
-        <div class="form-check form-switch">
-            <input class="form-check-input section-toggle" type="checkbox" 
-                data-section="a2" 
-                data-card="{{ $sale->id ?? $vehicle->id }}" 
-                id="toggle-a2-{{ $sale->id ?? $vehicle->id }}" 
-                checked>
-            <label class="form-check-label" for="toggle-a2-{{ $sale->id ?? $vehicle->id }}">
-                
-            </label>
-        </div>
-    </div>
+   
                              <div class="signature-box delivered-by-section" style="padding: 20px;  background-color: white;">
                                  <div class="section-a2">
                                 <div style="margin-bottom: 15px; font-weight: bold;  color: black !important;" >
@@ -465,7 +488,10 @@
                                     <div  style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px;"></div>
                                 </div>
                                 </div>
-                                <!-- Company Stamp Area -->
+                               
+                                
+                            </div>
+                             <!-- Company Stamp Area -->
                                 <div class="mt-5">
                                     <div style="width: 200px; height: 100px; border: 3px dashed #dc3545; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
                                         <div class="text-center">
@@ -475,23 +501,9 @@
                                         </div>
                                     </div>
                                 </div>
-                                
-                            </div>
 </div>
                     </div>
                     <div class="col-md-6">
-                     <div class="section-control mb-2">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input section-toggle" type="checkbox" 
-                                data-section="b1" 
-                                data-card="{{ $sale->id ?? $vehicle->id }}" 
-                                id="toggle-b1-{{ $sale->id ?? $vehicle->id }}" 
-                                checked>
-                            <label class="form-check-label" for="toggle-b1-{{ $sale->id ?? $vehicle->id }}">
-                               
-                            </label>
-                        </div>
-                     </div>
                      <div class="section-b1-container">
                         <div class="signature-box section-b1" style="padding: 20px; height: 200px; background-color: white;">
                             <div style="margin-bottom: 15px; font-weight: bold; color: black !important;">
@@ -529,22 +541,11 @@
                              <div class="form-group">
                                 <div style="margin-bottom: 5px; font-size: 14px;   color: black !important;">Date:</div>
                                 <div style="height: 25px; border-bottom: 1px solid #000; width: 120px;"></div>
+                                
                             </div>
                         </div>
                         </div>
                         <br><br><br>
-                          <div class="section-control mb-2">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input section-toggle" type="checkbox" 
-                                    data-section="b2" 
-                                    data-card="{{ $sale->id ?? $vehicle->id }}" 
-                                    id="toggle-b2-{{ $sale->id ?? $vehicle->id }}" 
-                                    checked>
-                                <label class="form-check-label" for="toggle-b2-{{ $sale->id ?? $vehicle->id }}">
-                                
-                                </label>
-                            </div>
-                        </div>
                         <div class="section-b2-container">
                         <div class="signature-box section-b2" style="padding: 20px; height: 200px; background-color: white;">
                                         <div class="section-b2">
@@ -850,8 +851,54 @@
                                         I/We have received the motor vehicle above in good order and condition
                                     </div>
                                 </div>
+                                <!-- ADD THIS NEW SECTION HERE -->
+                                <div class="col-md-12 mb-3">
+                                    <div class="d-flex justify-content-between gap-2 p-3" style="background-color: #f8f9fa; border-radius: 6px; border: 1px solid #dee2e6;">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input section-toggle" type="checkbox" 
+                                                data-section="v1" 
+                                                data-card="{{ $vehicle->id }}" 
+                                                id="toggle-v1-{{ $vehicle->id }}" 
+                                                checked>
+                                            <label class="form-check-label" for="toggle-v1-{{ $vehicle->id }}" style="font-size: 0.85rem; font-weight: 600;">
+                                                Delivered by
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input section-toggle" type="checkbox" 
+                                                data-section="v2" 
+                                                data-card="{{ $vehicle->id }}" 
+                                                id="toggle-v2-{{ $vehicle->id }}" 
+                                                checked>
+                                            <label class="form-check-label" for="toggle-v2-{{ $vehicle->id }}" style="font-size: 0.85rem; font-weight: 600;">
+                                                Released by
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input section-toggle" type="checkbox" 
+                                                data-section="v3" 
+                                                data-card="{{ $vehicle->id }}" 
+                                                id="toggle-v3-{{ $vehicle->id }}" 
+                                                checked>
+                                            <label class="form-check-label" for="toggle-v3-{{ $vehicle->id }}" style="font-size: 0.85rem; font-weight: 600;">
+                                                Received by
+                                            </label>
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input section-toggle" type="checkbox" 
+                                                data-section="v4" 
+                                                data-card="{{ $vehicle->id }}" 
+                                                id="toggle-v4-{{ $vehicle->id }}" 
+                                                checked>
+                                            <label class="form-check-label" for="toggle-v4-{{ $vehicle->id }}" style="font-size: 0.85rem; font-weight: 600;">
+                                                On Behalf
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="col-md-5">
-                                <div class="signature-box delivered-by-section" style="padding: 20px;  background-color: white;">
+                                <div class="signature-box delivered-by-section section-v1" style="padding: 20px;  background-color: white;">
+                                 <div class="section-v1">
                                 <div style="margin-bottom: 15px; font-weight: bold;  color: black !important;" >
                                     Vehicle delivered by:
                                 </div>
@@ -867,9 +914,11 @@
                                     <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Date:</div>
                                     <div class="delivered-by-date" style="height: 25px; border-bottom: 1px solid #000; width: 120px;"></div>
                                 </div>
+                                </div>
                             </div>
                             <br>
-                             <div class="signature-box delivered-by-section" style="padding: 20px;  background-color: white;">
+                             <div class="signature-box delivered-by-section section-v2" style="padding: 20px;  background-color: white;">
+                                <div class="section-v2">
                                 <div style="margin-bottom: 15px; font-weight: bold;  color: black !important;" >
                                     Vehicle released by:
                                 </div>
@@ -877,7 +926,13 @@
                                     <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Name:</div>
                                     <div  style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px;"></div>
                                     <!-- Company Stamp Area -->
-                                <div class="mt-5">
+                                 </div>
+                                  </div>
+                               
+                               
+                                
+                            </div>
+                             <div class="mt-5">
                                     <div style="width: 200px; height: 100px; border: 3px dashed #dc3545; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
                                         <div class="text-center">
                                             <small class="d-block" style="color: #495057; font-weight: 600;">KELMER'S HOUSE OF CARS LTD.</small>
@@ -887,11 +942,9 @@
                                     </div>
                                 </div>
                                 </div>
-                                
-                            </div>
-                                </div>
                                 <div class="col-md-7">
-                                     <div class="signature-box" style="padding: 20px; height: 200px; background-color: white;">
+                                     <div class="signature-box section-v3" style="padding: 20px; height: 200px; background-color: white;">
+                                       <div class="section-v3">
                                         <div style="margin-bottom: 15px; font-weight: bold;   color: black !important;">
                                             Vehicle received by:
                                         </div>
@@ -911,9 +964,12 @@
                                             <div style="margin-bottom: 5px; font-size: 14px;   color: black !important;">Date:</div>
                                             <div style="height: 25px; border-bottom: 1px solid #000; width: 120px;"></div>
                                         </div>
+                                     </div>
                                     </div>
-                                    <br><br>
-                                    <div class="signature-box" style="padding: 20px; height: 200px; background-color: white;">
+                                    <br><br><br>
+                                  
+                                    <div class="signature-box section-v4" style="padding: 20px; height: 200px; background-color: white;">
+                                        <div class="section-v4">
                                         <div style="margin-bottom: 15px; font-weight: bold;   color: black !important;">
                                             Vehicle received on Behalf:
                                         </div>
@@ -929,7 +985,7 @@
                                             </div>
                                             <div style="height: 35px; border-bottom: 1px solid #000; margin-bottom: 10px; color: black !important;"></div>
                                         </div>
-                                        
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1687,52 +1743,90 @@ class IndividualSectionToggle {
         });
     }
 
-    toggleSection(cardId, section, isVisible) {
+toggleSection(cardId, section, isVisible) {
+    console.log(`Toggling section: ${section} in card: ${cardId}, visible: ${isVisible}`);
+    
     const gatePassCard = document.getElementById(`gate-pass-${cardId}`);
-    if (!gatePassCard) return;
+    if (!gatePassCard) {
+        console.error(`Card not found: gate-pass-${cardId}`);
+        return;
+    }
 
+    // Find the section element
     const sectionElement = gatePassCard.querySelector(`.section-${section}`);
+    
+    // Find wrapper with multiple possible selectors
+    const wrapperElement = gatePassCard.querySelector(`.section-${section}-wrapper`) ||
+                          gatePassCard.querySelector(`[class*="section-${section}"]`).closest('[class*="-wrapper"]');
+    
+    // Find parent signature-box
+    const parentBox = sectionElement ? sectionElement.closest('.signature-box') : null;
+    
+    console.log('Found elements:', { sectionElement, wrapperElement, parentBox });
     
     if (sectionElement) {
         if (isVisible) {
             // Show section
             sectionElement.style.display = '';
-            sectionElement.style.visibility = '';
-            sectionElement.style.height = '';
-            sectionElement.style.overflow = '';
+            sectionElement.style.visibility = 'visible';
+            sectionElement.style.height = 'auto';
+            sectionElement.style.overflow = 'visible';
             sectionElement.classList.remove('d-none', 'section-hidden');
             
-            // Show parent container if it exists
-            const container = sectionElement.closest(`.section-${section}-container`);
-            if (container) {
-                container.style.display = '';
+            // Show wrapper
+            if (wrapperElement) {
+                wrapperElement.style.display = 'block';
+                wrapperElement.style.height = 'auto';
+                wrapperElement.style.visibility = 'visible';
+                wrapperElement.style.marginBottom = '15px';
             }
             
-            // Show spacers for B1
-            if (section === 'b1') {
-                const spacers = gatePassCard.querySelectorAll('.b1-spacer');
-                spacers.forEach(spacer => spacer.style.display = '');
+            // Show parent box
+            if (parentBox) {
+                parentBox.style.display = 'block';
+                parentBox.style.visibility = 'visible';
+                parentBox.style.height = 'auto';
             }
         } else {
-            // Hide section completely
+            // Hide section completely - ZERO SPACE
             sectionElement.style.display = 'none';
             sectionElement.style.visibility = 'hidden';
             sectionElement.style.height = '0';
             sectionElement.style.overflow = 'hidden';
+            sectionElement.style.margin = '0';
+            sectionElement.style.padding = '0';
             sectionElement.classList.add('d-none', 'section-hidden');
             
-            // Hide parent container to remove space
-            const container = sectionElement.closest(`.section-${section}-container`);
-            if (container) {
-                container.style.display = 'none';
+            // Hide wrapper completely - ZERO SPACE
+            if (wrapperElement) {
+                wrapperElement.style.display = 'none';
+                wrapperElement.style.visibility = 'hidden';
+                wrapperElement.style.height = '0';
+                wrapperElement.style.margin = '0';
+                wrapperElement.style.padding = '0';
+                wrapperElement.style.overflow = 'hidden';
             }
             
-            // Hide spacers for B1 to remove gap
-            if (section === 'b1') {
-                const spacers = gatePassCard.querySelectorAll('.b1-spacer');
-                spacers.forEach(spacer => spacer.style.display = 'none');
+            // Hide parent box completely - ZERO SPACE
+            if (parentBox) {
+                // Check if all sections in this box are hidden
+                const allSectionsInBox = parentBox.querySelectorAll('[class*="section-"]');
+                const allHidden = Array.from(allSectionsInBox).every(el => 
+                    el.classList.contains('section-hidden') || 
+                    window.getComputedStyle(el).display === 'none'
+                );
+                
+                if (allHidden) {
+                    parentBox.style.display = 'none';
+                    parentBox.style.visibility = 'hidden';
+                    parentBox.style.height = '0';
+                    parentBox.style.margin = '0';
+                    parentBox.style.padding = '0';
+                }
             }
         }
+    } else {
+        console.warn(`Section element .section-${section} not found in card ${cardId}`);
     }
 }
 
@@ -1917,7 +2011,26 @@ document.addEventListener('DOMContentLoaded', function() {
     background: transparent;
     position: relative;
 }
+.section-v1-container,
+.section-v2-container,
+.section-v3-container,
+.section-v4-container {
+    transition: all 0.3s ease;
+}
 
+.section-v1-container:has(.section-hidden),
+.section-v2-container:has(.section-hidden),
+.section-v3-container:has(.section-hidden),
+.section-v4-container:has(.section-hidden) {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 0 !important;
+}
+.section-a1, .section-a2, .section-a3, .section-b1, .section-b2,
+.section-v1, .section-v2, .section-v3, .section-v4 {
+    transition: all 0.3s ease;
+}
 .signature-area::after {
     content: '';
     display: none;
@@ -1950,6 +2063,7 @@ document.addEventListener('DOMContentLoaded', function() {
 /* Container styling for collapsible sections */
 .section-a1-container,
 .section-a2-container,
+.section-a3-container,
 .section-b1-container,
 .section-b2-container {
     transition: all 0.3s ease;
@@ -1958,6 +2072,7 @@ document.addEventListener('DOMContentLoaded', function() {
 /* When containers are hidden, they take no space */
 .section-a1-container:has(.section-hidden),
 .section-a2-container:has(.section-hidden),
+.section-a3-container:has(.section-hidden),
 .section-b1-container:has(.section-hidden),
 .section-b2-container:has(.section-hidden) {
     display: none !important;
@@ -2031,7 +2146,7 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 /* Smooth transition for sections */
-.section-a1, .section-a2, .section-b1, .section-b2 {
+.section-a1, .section-a2, .section-a3, .section-b1, .section-b2 {
     transition: all 0.3s ease;
 }
 </style>
