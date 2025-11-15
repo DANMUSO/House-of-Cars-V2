@@ -420,7 +420,7 @@
                                         id="toggle-a1-{{ $sale->id }}" 
                                         checked>
                                     <label class="form-check-label" for="toggle-a1-{{ $sale->id }}" style="font-size: 0.85rem; font-weight: 600;">
-                                        Delivered by
+                                        Released by
                                     </label>
                                 </div>
                                 <div class="form-check form-switch">
@@ -430,7 +430,7 @@
                                         id="toggle-a2-{{ $sale->id }}" 
                                         checked>
                                     <label class="form-check-label" for="toggle-a2-{{ $sale->id }}" style="font-size: 0.85rem; font-weight: 600;">
-                                        Released by
+                                         Delivered by
                                     </label>
                                 </div>
                                 <div class="form-check form-switch">
@@ -457,40 +457,43 @@
                         </div>
                     </div>
                     <div class="col-md-6">
+                        <div class="signature-box delivered-by-section" style="padding: 20px;  background-color: white;">
+                            <div class="section-a1">
+                        <div style="margin-bottom: 15px; font-weight: bold;  color: black !important;" >
+                            Vehicle released by 1:
+                        </div>
+                        <div class="form-group mb-3">
+                            <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Name:</div>
+                            <div class="delivered-by-name" style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px;"></div>
+                        </div>
+                         <div class="form-group">
+                                    <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Date:</div>
+                                    <div class="delivered-by-date" style="height: 25px; border-bottom: 1px solid #000; width: 120px;"></div>
+                                </div>
                         
-    <div class="signature-box delivered-by-section" style="padding: 20px;  background-color: white;">
-    <div class="section-a1">
-    <div style="margin-bottom: 15px; font-weight: bold;  color: black !important;" >
-        Vehicle delivered by:
-    </div>
-    <div class="form-group mb-3">
-        <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Name:</div>
-        <div class="delivered-by-name" style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px;"></div>
-    </div>
-    <div class="form-group mb-3">
-        <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Sign:</div>
-        <div class="delivered-by-email" style="height: 35px; border-bottom: 1px solid #000; margin-bottom: 10px;"></div>
-    </div>
-    <div class="form-group">
-        <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Date:</div>
-        <div class="delivered-by-date" style="height: 25px; border-bottom: 1px solid #000; width: 120px;"></div>
-    </div>
-</div>
-    <br>
-   
-                             <div class="signature-box delivered-by-section" style="padding: 20px;  background-color: white;">
-                                 <div class="section-a2">
+                        </div>
+                         </div>
+                          <div class="signature-box delivered-by-section" style="padding: 20px;  background-color: white;">
+                             <div class="section-a2">
                                 <div style="margin-bottom: 15px; font-weight: bold;  color: black !important;" >
-                                    Vehicle released by:
+                                    Vehicle delivered by: 
                                 </div>
                                 <div class="form-group mb-3">
                                     <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Name:</div>
                                     <div  style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px;"></div>
                                 </div>
+                                <div class="form-group mb-3">
+                                    <div style="margin-bottom: 5px; font-size: 14px; color: black !important;">Sign:</div>
+                                    <div class="" style="height: 35px; border-bottom: 1px solid #000; margin-bottom: 10px;"></div>
                                 </div>
                                
-                                
+                                </div>
                             </div>
+                        <div class="signature-box delivered-by-section" style="padding: 20px;  background-color: white;">
+                       
+                        <br>
+   
+                            
                              <!-- Company Stamp Area -->
                                 <div class="mt-5">
                                     <div style="width: 200px; height: 100px; border: 3px dashed #dc3545; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
@@ -551,6 +554,12 @@
                                         <div class="section-b2">
                                         <div style="margin-bottom: 15px; font-weight: bold;   color: black !important;">
                                             Vehicle received on Behalf:
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <div style="margin-bottom: 5px; font-size: 14px;   color: black !important;">Name : 
+                                               
+                                                </div>
+                                            <div style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px; color: black !important;"></div>
                                         </div>
                                         <div class="form-group mb-3">
                                             <div style="margin-bottom: 5px; font-size: 14px;   color: black !important;">ID : 
@@ -972,6 +981,12 @@
                                         <div class="section-v4">
                                         <div style="margin-bottom: 15px; font-weight: bold;   color: black !important;">
                                             Vehicle received on Behalf:
+                                        </div>
+                                        <div class="form-group mb-3">
+                                            <div style="margin-bottom: 5px; font-size: 14px;   color: black !important;">Name : 
+                                               
+                                                </div>
+                                            <div style="height: 25px; border-bottom: 1px solid #000; margin-bottom: 10px; color: black !important;"></div>
                                         </div>
                                         <div class="form-group mb-3">
                                             <div style="margin-bottom: 5px; font-size: 14px;   color: black !important;">ID : 
